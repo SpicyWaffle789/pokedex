@@ -190,6 +190,20 @@ header h1{
 .set-card-item .sc-info{padding:6px 8px 10px}
 .set-card-item .sc-name{font-size:11px;font-weight:600;text-transform:capitalize}
 .set-card-item .sc-meta{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px}
+.moves-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:20px;max-width:1400px;margin:0 auto}
+.move-card{background:rgba(255,255,255,0.04);border-radius:14px;border:1px solid rgba(255,255,255,0.06);padding:14px 12px;text-align:center;cursor:pointer;transition:all .25s ease}
+.move-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-4px);border-color:rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.move-card .move-name{font-size:13px;font-weight:600;text-transform:capitalize;margin-bottom:6px}
+.move-card .move-info{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+.move-card .move-info span{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.dc-physical{background:#ff6b35;color:#fff}.dc-special{background:#6390f0;color:#fff}.dc-status{background:#a8a77a;color:#1a1a1a}
+.move-card .move-pp{font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px}
+.abilities-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:20px;max-width:1400px;margin:0 auto}
+.ability-card{background:rgba(255,255,255,0.04);border-radius:14px;border:1px solid rgba(255,255,255,0.06);padding:14px 16px;cursor:pointer;transition:all .25s ease}
+.ability-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-4px);border-color:rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.ability-card .ability-name{font-size:14px;font-weight:600;text-transform:capitalize;margin-bottom:4px}
+.ability-card .ability-gen{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.5px}
+#attackPage,#abilityPage,#attackFilters,#abilityFilters{display:none}
 @media(max-width:600px){
   header{padding:12px 16px}
   header h1{font-size:18px}
@@ -212,7 +226,7 @@ header h1{
   <div class="header-top">
     <h1>Pokédex</h1>
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search Pokemon..." oninput="filterPokemon()">
+      <input type="text" id="searchInput" placeholder="Search Pokemon..." oninput="filterCurrent()">
     </div>
     <div class="filter-group" id="pokeFilters">
       <select id="typeFilter" onchange="filterPokemon()"><option value="">All Types</option></select>
@@ -225,10 +239,39 @@ header h1{
         <option value="9">Gen 9</option>
       </select>
     </div>
+    <div class="filter-group" id="attackFilters">
+      <select id="moveTypeFilter" onchange="filterMoves()"><option value="">All Types</option></select>
+      <select id="moveDcFilter" onchange="filterMoves()">
+        <option value="">All Classes</option>
+        <option value="physical">Physical</option>
+        <option value="special">Special</option>
+        <option value="status">Status</option>
+      </select>
+      <select id="moveGenFilter" onchange="filterMoves()">
+        <option value="">All Gens</option>
+        <option value="generation-i">Gen 1</option><option value="generation-ii">Gen 2</option>
+        <option value="generation-iii">Gen 3</option><option value="generation-iv">Gen 4</option>
+        <option value="generation-v">Gen 5</option><option value="generation-vi">Gen 6</option>
+        <option value="generation-vii">Gen 7</option><option value="generation-viii">Gen 8</option>
+        <option value="generation-ix">Gen 9</option>
+      </select>
+    </div>
+    <div class="filter-group" id="abilityFilters">
+      <select id="abilityGenFilter" onchange="filterAbilities()">
+        <option value="">All Gens</option>
+        <option value="generation-i">Gen 1</option><option value="generation-ii">Gen 2</option>
+        <option value="generation-iii">Gen 3</option><option value="generation-iv">Gen 4</option>
+        <option value="generation-v">Gen 5</option><option value="generation-vi">Gen 6</option>
+        <option value="generation-vii">Gen 7</option><option value="generation-viii">Gen 8</option>
+        <option value="generation-ix">Gen 9</option>
+      </select>
+    </div>
   </div>
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('pokemon')">Pokémon</button>
-    <button class="tab" onclick="switchTab('sets')">Card Sets</button>
+    <button class="tab active" data-tab="pokemon" onclick="switchTab('pokemon')">Pokémon</button>
+    <button class="tab" data-tab="sets" onclick="switchTab('sets')">Card Sets</button>
+    <button class="tab" data-tab="attacks" onclick="switchTab('attacks')">Attacks</button>
+    <button class="tab" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
   </div>
 </header>
 <div id="pokePage">
@@ -251,14 +294,38 @@ header h1{
   </div>
 </div>
 
+<div id="moveDetailModal" class="modal-overlay" onclick="if(event.target===this)closeMoveDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeMoveDetail()">&times;</button>
+    <div id="moveDetailContent"></div>
+  </div>
+</div>
+
+<div id="abilityDetailModal" class="modal-overlay" onclick="if(event.target===this)closeAbilityDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAbilityDetail()">&times;</button>
+    <div id="abilityDetailContent"></div>
+  </div>
+</div>
+
 <div id="setsPage">
   <div id="setsContent"></div>
+</div>
+
+<div id="attackPage">
+  <div id="movesLoading" class="loading"><div class="spinner"></div><div>Loading moves...</div></div>
+  <div id="movesGrid" class="moves-grid" style="display:none"></div>
+</div>
+
+<div id="abilityPage">
+  <div id="abilitiesLoading" class="loading"><div class="spinner"></div><div>Loading abilities...</div></div>
+  <div id="abilitiesGrid" class="abilities-grid" style="display:none"></div>
 </div>
 
 <script>
 const TYPES=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
 const GEN_LIMITS=[0,151,251,386,493,649,721,809,905,1025]
-let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0
+let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0,currentTab='pokemon',allMoves=[],allAbilities=[],moveCache={},abilityCache={}
 const PAGE_SIZE=9999
 async function init(){
   const res=await fetch('https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0')
@@ -437,19 +504,34 @@ function renderCards(cards,grid,name){
 function closeDetail(){document.getElementById('detailModal').classList.remove('active');document.body.style.overflow=''}
 function closeSetDetail(){document.getElementById('setDetailModal').classList.remove('active');document.body.style.overflow=''}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeDetail();closeSetDetail()}
+  if(e.key==='Escape'){closeDetail();closeSetDetail();closeMoveDetail();closeAbilityDetail()}
 })
 
 let allSets=[],setCardsCache={}
 
 function switchTab(tab){
+  currentTab=tab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
-  event.target.classList.add('active')
+  document.querySelector('.tab[data-tab="'+tab+'"]').classList.add('active')
   document.getElementById('pokePage').style.display=tab==='pokemon'?'block':'none'
   document.getElementById('setsPage').style.display=tab==='sets'?'block':'none'
-  document.querySelector('.search-container').style.display=tab==='pokemon'?'block':'none'
+  document.getElementById('attackPage').style.display=tab==='attacks'?'block':'none'
+  document.getElementById('abilityPage').style.display=tab==='abilities'?'block':'none'
+  document.querySelector('.search-container').style.display=tab==='sets'?'none':'block'
   document.getElementById('pokeFilters').style.display=tab==='pokemon'?'flex':'none'
+  document.getElementById('attackFilters').style.display=tab==='attacks'?'flex':'none'
+  document.getElementById('abilityFilters').style.display=tab==='abilities'?'flex':'none'
+  const inp=document.getElementById('searchInput')
+  if(tab==='pokemon')inp.placeholder='Search Pokemon...'
+  else if(tab==='attacks')inp.placeholder='Search moves...'
+  else if(tab==='abilities')inp.placeholder='Search abilities...'
+  inp.value=''
   if(tab==='sets'&&!allSets.length)loadSets()
+  if(tab==='attacks'&&!allMoves.length)loadMoves()
+  if(tab==='abilities'&&!allAbilities.length)loadAbilities()
+  if(tab==='pokemon')filterPokemon()
+  if(tab==='attacks')filterMoves()
+  if(tab==='abilities')filterAbilities()
 }
 
 async function loadSets(){
@@ -593,6 +675,221 @@ function openCardPrices(idx){
   document.getElementById('setDetailContent').appendChild(div)
   div.scrollIntoView({behavior:'smooth'})
 }
+
+function filterCurrent(){
+  if(currentTab==='pokemon')filterPokemon()
+  else if(currentTab==='attacks')filterMoves()
+  else if(currentTab==='abilities')filterAbilities()
+}
+
+async function loadMoves(){
+  document.getElementById('movesLoading').style.display='flex'
+  document.getElementById('movesGrid').style.display='none'
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/move?limit=100000')
+    const data=await res.json()
+    allMoves=data.results.map(m=>{
+      const match=m.url.match(/\/(\d+)\/$/);return{...m,id:match?parseInt(match[1]):0}
+    })
+    const sel=document.getElementById('moveTypeFilter')
+    TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
+    filterMoves()
+    document.getElementById('movesLoading').style.display='none'
+    document.getElementById('movesGrid').style.display='grid'
+    batchLoadMoveTypes()
+  }catch(e){
+    document.getElementById('movesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load moves</div>'
+  }
+}
+
+function filterMoves(){
+  const q=document.getElementById('searchInput').value.toLowerCase().trim()
+  const type=document.getElementById('moveTypeFilter').value.toLowerCase()
+  const dc=document.getElementById('moveDcFilter').value.toLowerCase()
+  const gen=document.getElementById('moveGenFilter').value.toLowerCase()
+  const filtered=allMoves.filter(m=>{
+    if(q&&!m.name.toLowerCase().includes(q)&&!m.id.toString().includes(q))return false
+    if(type&&m.type!==type)return false
+    if(dc&&m.damageClass!==dc)return false
+    if(gen&&m.generation!==gen)return false
+    return true
+  })
+  renderMoves(filtered)
+}
+
+function renderMoves(moves){
+  const grid=document.getElementById('movesGrid')
+  if(!moves.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,0.4)">No moves found</div>'
+    return
+  }
+  grid.innerHTML=moves.map(m=>{
+    const typeHtml=m.type?'<span class="type-badge type-'+m.type+'">'+m.type+'</span>':''
+    const dcHtml=m.damageClass?'<span class="dc-'+m.damageClass+'">'+m.damageClass+'</span>':''
+    const ppHtml=m.pp!=null?'PP '+m.pp:''
+    return '<div class="move-card" onclick="openMoveDetail('+m.id+')">'+
+      '<div class="move-name">'+m.name.replace(/-/g,' ')+'</div>'+
+      '<div class="move-info">'+typeHtml+dcHtml+'</div>'+
+      (ppHtml?'<div class="move-pp">'+ppHtml+'</div>':'')+
+    '</div>'
+  }).join('')
+}
+
+async function batchLoadMoveTypes(){
+  for(let i=0;i<allMoves.length;i+=50){
+    const batch=allMoves.slice(i,i+50)
+    await Promise.allSettled(batch.map(async m=>{
+      try{
+        const res=await fetch('https://pokeapi.co/api/v2/move/'+m.id)
+        const data=await res.json()
+        m.type=data.type?.name||''
+        m.damageClass=data.damage_class?.name||''
+        m.pp=data.pp||null
+        m.power=data.power||null
+        m.accuracy=data.accuracy||null
+        m.generation=data.generation?.name||''
+        m.effectEntry=data.effect_entries?.find(e=>e.language.name==='en')||null
+      }catch(e){}
+    }))
+    filterMoves()
+  }
+}
+
+async function openMoveDetail(id){
+  document.getElementById('moveDetailContent').innerHTML='<div class="loading" style="padding:60px"><div class="spinner"></div></div>'
+  document.getElementById('moveDetailModal').classList.add('active')
+  document.body.style.overflow='hidden'
+  if(moveCache[id]){renderMoveDetail(moveCache[id]);return}
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/move/'+id)
+    const data=await res.json()
+    moveCache[id]=data
+    renderMoveDetail(data)
+  }catch(e){
+    document.getElementById('moveDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load move data</div>'
+  }
+}
+
+function renderMoveDetail(m){
+  const type=m.type?.name||''
+  const dc=m.damage_class?.name||''
+  const gen=m.generation?.name?.replace('generation-','Gen ').toUpperCase()||''
+  const eff=m.effect_entries?.find(e=>e.language.name==='en')?.short_effect||m.effect_entries?.find(e=>e.language.name==='en')?.effect||''
+  const flavor=m.flavor_text_entries?.find(e=>e.language.name==='en')?.flavor_text||''
+  document.getElementById('moveDetailContent').innerHTML=
+    '<div class="modal-header">'+
+      '<div class="poke-name" style="font-size:26px;text-transform:capitalize">'+m.name.replace(/-/g,' ')+'</div>'+
+      (type?'<div class="types" style="margin-top:6px"><span class="type-badge type-'+type+'">'+type+'</span>'+(dc?'<span class="dc-'+dc+'" style="font-size:13px;padding:4px 16px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-left:6px">'+dc+'</span>':'')+'</div>':'')+
+      (gen?'<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:6px">'+gen+'</div>':'')+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="info-grid">'+
+        (m.power!=null?'<div class="info-item"><div class="label">Power</div><div class="value" style="color:#ff6b35;font-size:18px">'+(m.power||'—')+'</div></div>':'')+
+        (m.accuracy!=null?'<div class="info-item"><div class="label">Accuracy</div><div class="value">'+(m.accuracy!=null?m.accuracy:'—')+'</div></div>':'')+
+        (m.pp!=null?'<div class="info-item"><div class="label">PP</div><div class="value">'+m.pp+'</div></div>':'')+
+        (m.priority?'<div class="info-item"><div class="label">Priority</div><div class="value">'+(m.priority>0?'+':'')+m.priority+'</div></div>':'')+
+        (m.contest_type?.name?'<div class="info-item"><div class="label">Contest</div><div class="value">'+m.contest_type.name+'</div></div>':'')+
+      '</div>'+
+      (eff?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Effect</h3><p style="font-size:14px;line-height:1.6;color:rgba(255,255,255,0.8)">'+eff+'</p></div>':'')+
+      (flavor?'<div><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Description</h3><p style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.5)">'+flavor+'</p></div>':'')+
+    '</div>'
+}
+
+function closeMoveDetail(){document.getElementById('moveDetailModal').classList.remove('active');document.body.style.overflow=''}
+
+async function loadAbilities(){
+  document.getElementById('abilitiesLoading').style.display='flex'
+  document.getElementById('abilitiesGrid').style.display='none'
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/ability?limit=100000')
+    const data=await res.json()
+    allAbilities=data.results.map(a=>{
+      const match=a.url.match(/\/(\d+)\/$/);return{...a,id:match?parseInt(match[1]):0}
+    })
+    filterAbilities()
+    document.getElementById('abilitiesLoading').style.display='none'
+    document.getElementById('abilitiesGrid').style.display='grid'
+    batchLoadAbilityData()
+  }catch(e){
+    document.getElementById('abilitiesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load abilities</div>'
+  }
+}
+
+function filterAbilities(){
+  const q=document.getElementById('searchInput').value.toLowerCase().trim()
+  const gen=document.getElementById('abilityGenFilter').value.toLowerCase()
+  const filtered=allAbilities.filter(a=>{
+    if(q&&!a.name.toLowerCase().includes(q)&&!a.id.toString().includes(q))return false
+    if(gen&&a.generation!==gen)return false
+    return true
+  })
+  renderAbilities(filtered)
+}
+
+function renderAbilities(abilities){
+  const grid=document.getElementById('abilitiesGrid')
+  if(!abilities.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,0.4)">No abilities found</div>'
+    return
+  }
+  grid.innerHTML=abilities.map(a=>{
+    const genLabel=a.generation?.replace('generation-','Gen ').toUpperCase()||''
+    return '<div class="ability-card" onclick="openAbilityDetail('+a.id+')">'+
+      '<div class="ability-name">'+a.name.replace(/-/g,' ')+'</div>'+
+      (genLabel?'<div class="ability-gen">'+genLabel+'</div>':'')+
+    '</div>'
+  }).join('')
+}
+
+async function batchLoadAbilityData(){
+  for(let i=0;i<allAbilities.length;i+=50){
+    const batch=allAbilities.slice(i,i+50)
+    await Promise.allSettled(batch.map(async a=>{
+      try{
+        const res=await fetch('https://pokeapi.co/api/v2/ability/'+a.id)
+        const data=await res.json()
+        a.generation=data.generation?.name||''
+        a.effectEntry=data.effect_entries?.find(e=>e.language.name==='en')||null
+        a.flavorText=data.flavor_text_entries?.find(e=>e.language.name==='en')?.flavor_text||''
+      }catch(e){}
+    }))
+    filterAbilities()
+  }
+}
+
+async function openAbilityDetail(id){
+  document.getElementById('abilityDetailContent').innerHTML='<div class="loading" style="padding:60px"><div class="spinner"></div></div>'
+  document.getElementById('abilityDetailModal').classList.add('active')
+  document.body.style.overflow='hidden'
+  if(abilityCache[id]){renderAbilityDetail(abilityCache[id]);return}
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/ability/'+id)
+    const data=await res.json()
+    abilityCache[id]=data
+    renderAbilityDetail(data)
+  }catch(e){
+    document.getElementById('abilityDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load ability data</div>'
+  }
+}
+
+function renderAbilityDetail(a){
+  const gen=a.generation?.name?.replace('generation-','Gen ').toUpperCase()||''
+  const eff=a.effect_entries?.find(e=>e.language.name==='en')?.short_effect||a.effect_entries?.find(e=>e.language.name==='en')?.effect||''
+  const flavor=a.flavor_text_entries?.find(e=>e.language.name==='en')?.flavor_text||''
+  const pkmn=(a.pokemon||[]).map(p=>p.pokemon?.name?.replace(/-/g,' ')).filter(Boolean)
+  document.getElementById('abilityDetailContent').innerHTML=
+    '<div class="modal-header">'+
+      '<div class="poke-name" style="font-size:26px;text-transform:capitalize">'+a.name.replace(/-/g,' ')+'</div>'+
+      (gen?'<div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:4px">'+gen+'</div>':'')+
+    '</div>'+
+    '<div class="modal-body">'+
+      (eff?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Effect</h3><p style="font-size:14px;line-height:1.6;color:rgba(255,255,255,0.8)">'+eff+'</p></div>':'')+
+      (flavor?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Description</h3><p style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.5)">'+flavor+'</p></div>':'')+
+      (pkmn.length?'<div><h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Pokemon with this ability</h3><div class="abilities-list">'+pkmn.map(p=>'<span class="ability-tag">'+p+'</span>').join('')+'</div></div>':'')+
+    '</div>'
+}
+
+function closeAbilityDetail(){document.getElementById('abilityDetailModal').classList.remove('active');document.body.style.overflow=''}
 
 init()
 </script>
