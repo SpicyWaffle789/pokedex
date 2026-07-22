@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokédex - All Pokemon</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:linear-gradient(135deg,#0a0a1a 0%,#1a1a2e 50%,#16213e 100%);
+  color:#e0e0e0;min-height:100vh
+}
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,10,26,0.9);backdrop-filter:blur(12px);
+  padding:16px 24px 12px;display:flex;flex-direction:column;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,0.08)
+}
+.header-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{
+  font-size:24px;font-weight:800;
+  background:linear-gradient(135deg,#ff6b35,#f7c948,#35d0ba);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap
+}
+.search-container{flex:1;min-width:200px}
+.search-container input{
+  width:100%;padding:10px 16px;border-radius:12px;
+  border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);
+  color:#fff;font-size:15px;outline:none;transition:.2s
+}
+.search-container input:focus{border-color:#ff6b35;background:rgba(255,255,255,0.1)}
+.search-container input::placeholder{color:rgba(255,255,255,0.35)}
+.filter-group{display:flex;gap:8px;flex-wrap:wrap}
+.filter-group select,.filter-group button{
+  padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);color:#e0e0e0;font-size:13px;cursor:pointer;transition:.2s
+}
+.filter-group select:hover,.filter-group button:hover{background:rgba(255,255,255,0.12)}
+.tabs{display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.tab{
+  padding:8px 20px;border:none;background:none;color:rgba(255,255,255,0.4);
+  font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+  transition:.2s;margin-bottom:-1px
+}
+.tab:hover{color:rgba(255,255,255,0.7)}
+.tab.active{color:#f7c948;border-bottom-color:#f7c948}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:20px}
+.spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,0.1);border-top-color:#ff6b35;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:12px;padding:20px;max-width:1400px;margin:0 auto
+}
+.pokemon-card{
+  background:rgba(255,255,255,0.04);border-radius:14px;
+  border:1px solid rgba(255,255,255,0.06);padding:12px 8px 10px;
+  text-align:center;cursor:pointer;transition:all .25s ease;
+  position:relative;overflow:hidden
+}
+.pokemon-card:hover{
+  background:rgba(255,255,255,0.1);transform:translateY(-4px);
+  border-color:rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.3)
+}
+.pokemon-card .id-badge{position:absolute;top:6px;right:8px;font-size:10px;color:rgba(255,255,255,0.3);font-weight:600}
+.pokemon-card img{width:80px;height:80px;object-fit:contain;image-rendering:pixelated;transition:transform .3s;margin-bottom:4px}
+.pokemon-card:hover img{transform:scale(1.12)}
+.pokemon-card .name{font-size:13px;font-weight:600;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.img-placeholder{width:80px;height:80px;margin:0 auto 4px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:rgba(255,255,255,0.2)}
+.img-placeholder span{text-transform:uppercase}
+.pokemon-card .types{display:flex;gap:4px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.type-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.type-normal{background:#A8A77A;color:#1a1a1a}.type-fire{background:#EE8130;color:#fff}
+.type-water{background:#6390F0;color:#fff}.type-electric{background:#F7D02C;color:#1a1a1a}
+.type-grass{background:#7AC74C;color:#1a1a1a}.type-ice{background:#96D9D6;color:#1a1a1a}
+.type-fighting{background:#C22E28;color:#fff}.type-poison{background:#A33EA1;color:#fff}
+.type-ground{background:#E2BF65;color:#1a1a1a}.type-flying{background:#A98FF3;color:#fff}
+.type-psychic{background:#F95587;color:#fff}.type-bug{background:#A6B91A;color:#1a1a1a}
+.type-rock{background:#B6A136;color:#1a1a1a}.type-ghost{background:#735797;color:#fff}
+.type-dragon{background:#6F35FC;color:#fff}.type-dark{background:#705746;color:#fff}
+.type-steel{background:#B7B7CE;color:#1a1a1a}.type-fairy{background:#D685AD;color:#1a1a1a}
+
+.modal-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:linear-gradient(145deg,#1e1e3a,#252548);
+  border-radius:20px;max-width:720px;width:100%;max-height:92vh;
+  overflow-y:auto;padding:0;position:relative;
+  border:1px solid rgba(255,255,255,0.1);box-shadow:0 24px 80px rgba(0,0,0,0.6)
+}
+.modal::-webkit-scrollbar{width:6px}
+.modal::-webkit-scrollbar-track{background:transparent}
+.modal::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px}
+.modal-close{
+  position:absolute;top:12px;right:16px;
+  background:none;border:none;color:rgba(255,255,255,0.5);
+  font-size:28px;cursor:pointer;z-index:10;line-height:1;transition:.2s
+}
+.modal-close:hover{color:#fff;transform:rotate(90deg)}
+.modal-header{padding:30px 30px 20px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,0.04),transparent)}
+.modal-header img{width:160px;height:160px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.4))}
+.detail-placeholder{width:160px;height:160px;margin:0 auto;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:700;color:rgba(255,255,255,0.15)}
+.detail-placeholder span{text-transform:uppercase}
+.modal-header .poke-id{font-size:14px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px}
+.modal-header .poke-name{font-size:28px;font-weight:800;text-transform:capitalize;margin:4px 0 10px}
+.modal-header .types{display:flex;gap:8px;justify-content:center}
+.modal-header .types .type-badge{font-size:13px;padding:4px 16px}
+.modal-body{padding:0 30px 30px}
+.stats-section{margin-bottom:24px}
+.stats-section h3{font-size:16px;font-weight:700;margin-bottom:12px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px}
+.stat-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.stat-label{width:80px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;flex-shrink:0}
+.stat-bar-bg{flex:1;height:10px;background:rgba(255,255,255,0.08);border-radius:6px;overflow:hidden}
+.stat-value{width:32px;text-align:right;font-size:13px;font-weight:700}
+.stat-bar{height:100%;border-radius:6px;transition:width .8s ease}
+.stat-bar.stat-hp{background:linear-gradient(90deg,#ff6b6b,#ee5a24)}
+.stat-bar.stat-attack{background:linear-gradient(90deg,#f0932b,#e67e22)}
+.stat-bar.stat-defense{background:linear-gradient(90deg,#f7d794,#f5cd79)}
+.stat-bar.stat-special-attack{background:linear-gradient(90deg,#74b9ff,#0984e3)}
+.stat-bar.stat-special-defense{background:linear-gradient(90deg,#81ecec,#00cec9)}
+.stat-bar.stat-speed{background:linear-gradient(90deg,#a29bfe,#6c5ce7)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.info-item{background:rgba(255,255,255,0.04);padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06)}
+.info-item .label{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.5px}
+.info-item .value{font-size:14px;font-weight:600;margin-top:2px;text-transform:capitalize}
+.abilities-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+.ability-tag{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:500;text-transform:capitalize}
+.ability-tag .hidden-ability{color:#f7c948;font-size:9px;margin-left:4px}
+
+.cards-section{margin-top:20px;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px}
+.cards-section h3{font-size:16px;font-weight:700;margin-bottom:12px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card-item{
+  background:rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);transition:.25s
+}
+.card-item:hover{background:rgba(255,255,255,0.1);transform:translateY(-3px);border-color:rgba(255,255,255,0.2)}
+.card-item img{width:100%;aspect-ratio:2.5/3.5;object-fit:contain;background:rgba(255,255,255,0.03);padding:8px;display:block}
+.card-item .card-info{padding:8px 10px 12px}
+.card-item .card-set{font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.5px}
+.card-item .card-name{font-size:12px;font-weight:600;text-transform:capitalize;margin:2px 0}
+.card-item .card-price{font-size:13px;font-weight:700;color:#7ac74c;margin:4px 0}
+.card-item .card-price .no-price{color:rgba(255,255,255,0.3);font-weight:400;font-size:11px}
+.card-item .pc-link{
+  display:inline-block;margin-top:4px;padding:4px 10px;border-radius:6px;
+  font-size:10px;font-weight:600;color:#fff;background:#6390f0;text-decoration:none;transition:.2s
+}
+.card-item .pc-link:hover{background:#4a7ad7}
+.fallback-box{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;padding:24px;text-align:center
+}
+.fallback-box p{margin-bottom:12px;color:rgba(255,255,255,0.5);font-size:14px}
+.fallback-box .btn-group{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.fallback-box .btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
+  text-decoration:none;transition:.2s;color:#fff
+}
+.fallback-box .btn-pc{background:#6390f0}.fallback-box .btn-pc:hover{background:#4a7ad7}
+.fallback-box .btn-tcg{background:#ff6b35}.fallback-box .btn-tcg:hover{background:#e55a25}
+.fallback-box .btn-ebay{background:#7ac74c}.fallback-box .btn-ebay:hover{background:#65b539}
+#setsPage{display:none}
+.sets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:20px;max-width:1400px;margin:0 auto}
+.set-card{
+  background:rgba(255,255,255,0.04);border-radius:14px;
+  border:1px solid rgba(255,255,255,0.06);padding:16px;
+  text-align:center;cursor:pointer;transition:all .25s ease;position:relative
+}
+.set-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-4px);border-color:rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.set-card .set-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.set-card .set-series{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.set-card .set-meta{font-size:11px;color:rgba(255,255,255,0.3)}
+.set-card .set-count{font-size:12px;font-weight:600;color:#f7c948;margin-top:6px}
+.set-card .set-logo{width:60px;height:60px;margin:0 auto 10px;border-radius:12px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:rgba(255,255,255,0.12);text-transform:uppercase;overflow:hidden}
+.series-group{margin-bottom:24px;padding:0 20px;max-width:1400px;margin-left:auto;margin-right:auto}
+.series-group h2{font-size:18px;font-weight:700;color:rgba(255,255,255,0.6);margin-bottom:12px;padding:0 4px;text-transform:uppercase;letter-spacing:1px}
+.set-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px;color:rgba(255,255,255,0.5)}
+.set-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:0 24px 24px}
+.set-card-item{
+  background:rgba(255,255,255,0.04);border-radius:10px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);transition:.25s;cursor:pointer
+}
+.set-card-item:hover{background:rgba(255,255,255,0.1);transform:translateY(-2px)}
+.set-card-item img{width:100%;aspect-ratio:2.5/3.5;object-fit:contain;background:rgba(255,255,255,0.03);padding:6px;display:block}
+.set-card-item .sc-info{padding:6px 8px 10px}
+.set-card-item .sc-name{font-size:11px;font-weight:600;text-transform:capitalize}
+.set-card-item .sc-meta{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px}
+@media(max-width:600px){
+  header{padding:12px 16px}
+  header h1{font-size:18px}
+  .grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+  .sets-grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .set-cards-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));padding:0 12px 12px}
+  .pokemon-card img{width:60px;height:60px}
+  .pokemon-card .name{font-size:11px}
+  .modal-header img{width:120px;height:120px}
+  .modal-body{padding:0 16px 16px}
+  .modal-header{padding:20px 16px 12px}
+  .fallback-box .btn-group{flex-direction:column}
+  .img-placeholder{width:60px;height:60px;font-size:22px}
+  .detail-placeholder{width:120px;height:120px;font-size:42px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <h1>Pokédex</h1>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search Pokemon..." oninput="filterPokemon()">
+    </div>
+    <div class="filter-group" id="pokeFilters">
+      <select id="typeFilter" onchange="filterPokemon()"><option value="">All Types</option></select>
+      <select id="genFilter" onchange="filterPokemon()">
+        <option value="">All Gens</option>
+        <option value="1">Gen 1</option><option value="2">Gen 2</option>
+        <option value="3">Gen 3</option><option value="4">Gen 4</option>
+        <option value="5">Gen 5</option><option value="6">Gen 6</option>
+        <option value="7">Gen 7</option><option value="8">Gen 8</option>
+        <option value="9">Gen 9</option>
+      </select>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('pokemon')">Pokémon</button>
+    <button class="tab" onclick="switchTab('sets')">Card Sets</button>
+  </div>
+</header>
+<div id="pokePage">
+<div id="loading" class="loading"><div class="spinner"></div><div style="color:rgba(255,255,255,0.5);font-size:15px">Loading Pokemon...</div></div>
+<div id="grid" class="grid" style="display:none"></div>
+
+<div id="detailModal" class="modal-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetail()">&times;</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+</div>
+
+<div id="setDetailModal" class="modal-overlay" onclick="if(event.target===this)closeSetDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSetDetail()">&times;</button>
+    <div id="setDetailContent"></div>
+  </div>
+</div>
+
+<div id="setsPage">
+  <div id="setsContent"></div>
+</div>
+
+<script>
+const TYPES=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+const GEN_LIMITS=[0,151,251,386,493,649,721,809,905,1025]
+let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0
+const PAGE_SIZE=9999
+async function init(){
+  const res=await fetch('https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0')
+  const data=await res.json()
+  allPokemon=data.results.map(p=>{
+    const match=p.url.match(/\/(\d+)\/$/);return{...p,id:match?parseInt(match[1]):0}
+  })
+  const sel=document.getElementById('typeFilter')
+  TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
+  filterPokemon()
+  document.getElementById('loading').style.display='none'
+  document.getElementById('grid').style.display='grid'
+  batchLoadTypes()
+}
+
+function filterPokemon(){
+  const q=document.getElementById('searchInput').value.toLowerCase().trim()
+  const type=document.getElementById('typeFilter').value.toLowerCase()
+  const gen=parseInt(document.getElementById('genFilter').value)||0
+  const startId=gen>0?GEN_LIMITS[gen-1]+1:0,endId=gen>0?GEN_LIMITS[gen]:Infinity
+  filteredPokemon=allPokemon.filter(p=>{
+    if(p.id<startId||p.id>endId)return false
+    if(q&&!p.name.includes(q)&&!p.id.toString().includes(q))return false
+    if(type&&p.types&&!p.types.includes(type))return false
+    return true
+  })
+  loadedCount=0;document.getElementById('grid').innerHTML='';loadMore()
+}
+
+function loadMore(){
+  const end=Math.min(loadedCount+PAGE_SIZE,filteredPokemon.length)
+  const batch=filteredPokemon.slice(loadedCount,end)
+  const grid=document.getElementById('grid')
+  batch.forEach(p=>{
+    const card=document.createElement('div')
+    card.className='pokemon-card';card.dataset.id=p.id
+    card.innerHTML='<span class="id-badge">#'+String(p.id).padStart(4,'0')+'</span>'+
+      '<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png" alt="'+p.name+'" loading="lazy" onerror="this.outerHTML=\'<div class=\\\'img-placeholder\\\'><span>\'+this.alt.charAt(0).toUpperCase()+\'</span></div>\'">'+
+      '<div class="name">'+p.name+'</div>'
+    card.onclick=()=>openDetail(p.id)
+    grid.appendChild(card)
+  })
+  loadedCount=end
+}
+
+async function batchLoadTypes(){
+  for(let i=0;i<allPokemon.length;i+=50){
+    const batch=allPokemon.slice(i,i+50)
+    await Promise.allSettled(batch.map(async p=>{
+      try{
+        const res=await fetch('https://pokeapi.co/api/v2/pokemon/'+p.id)
+        const data=await res.json()
+        p.types=data.types.map(t=>t.type.name)
+        const card=document.querySelector('.pokemon-card[data-id="'+p.id+'"]')
+        if(!card)return
+        const div=document.createElement('div');div.className='types'
+        p.types.forEach(t=>{const s=document.createElement('span');s.className='type-badge type-'+t;s.textContent=t;div.appendChild(s)})
+        card.appendChild(div)
+      }catch(e){}
+    }))
+  }
+}
+
+async function openDetail(id){
+  document.getElementById('detailContent').innerHTML='<div class="loading" style="padding:60px"><div class="spinner"></div></div>'
+  document.getElementById('detailModal').classList.add('active')
+  document.body.style.overflow='hidden'
+  if(pokemonCache[id]){renderDetail(pokemonCache[id]);return}
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/pokemon/'+id)
+    const data=await res.json()
+    let genus='',evos=[]
+    try{
+      const sr=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+id)
+      if(sr.ok){
+        const species=await sr.json()
+        genus=(species.genera.find(g=>g.language.name==='en')||{}).genus||''
+        const cr=await fetch(species.evolution_chain?.url||'')
+        const chainData=cr.ok?await cr.json():null
+        if(chainData){let e=[],c=chainData.chain;while(c){if(c.species)e.push(c.species.name);c=c.evolves_to?.[0]||null}evos=e}
+      }
+    }catch(e){}
+    pokemonCache[id]={...data,genus,evolutions:evos}
+    renderDetail(pokemonCache[id])
+  }catch(e){
+    document.getElementById('detailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load Pokemon data</div>'
+  }
+}
+
+function renderDetail(p){
+  const padId=String(p.id).padStart(4,'0')
+  const stats=p.stats.map(s=>({name:s.stat.name,value:s.base_stat}))
+  const total=stats.reduce((a,s)=>a+s.value,0)
+  const l={hp:'HP',attack:'ATK',defense:'DEF','special-attack':'SPA','special-defense':'SPD',speed:'SPE'}
+  const types=p.types.map(t=>t.type.name)
+  document.getElementById('detailContent').innerHTML=
+    '<div class="modal-header">'+
+      '<div class="poke-id">#'+padId+'</div>'+
+      '<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png" alt="'+p.name+'" onerror="this.outerHTML=\'<div class=\\\'detail-placeholder\\\'><span>\'+this.alt.charAt(0).toUpperCase()+\'</span></div>\'">'+
+      '<div class="poke-name">'+p.name+'</div>'+
+      (p.genus?'<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:8px">'+p.genus+'</div>':'')+
+      '<div class="types">'+types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="stats-section">'+
+        '<h3>Base Stats <span style="font-weight:400;font-size:12px;color:rgba(255,255,255,0.3)">(Total: '+total+')</span></h3>'+
+        stats.map(s=>'<div class="stat-row"><div class="stat-label">'+(l[s.name]||s.name)+'</div><div class="stat-bar-bg"><div class="stat-bar stat-'+s.name+'" style="width:'+Math.min((s.value/255)*100,100)+'%"></div></div><div class="stat-value">'+s.value+'</div></div>').join('')+
+      '</div>'+
+      '<div class="info-grid">'+
+        '<div class="info-item"><div class="label">Height</div><div class="value">'+(p.height/10).toFixed(1)+' m</div></div>'+
+        '<div class="info-item"><div class="label">Weight</div><div class="value">'+(p.weight/10).toFixed(1)+' kg</div></div>'+
+        '<div class="info-item"><div class="label">Base XP</div><div class="value">'+(p.base_experience||'N/A')+'</div></div>'+
+        (p.evolutions&&p.evolutions.length?'<div class="info-item"><div class="label">Evolutions</div><div class="value">'+p.evolutions.map(e=>e.charAt(0).toUpperCase()+e.slice(1)).join(' → ')+'</div></div>':'')+
+      '</div>'+
+      '<div>'+
+        '<h3 style="font-size:16px;font-weight:700;margin-bottom:10px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px">Abilities</h3>'+
+        '<div class="abilities-list">'+p.abilities.map(a=>'<span class="ability-tag">'+a.ability.name.replace('-',' ')+(a.is_hidden?'<span class="hidden-ability">(H)</span>':'')+'</span>').join('')+'</div>'+
+      '</div>'+
+      '<div class="cards-section">'+
+        '<h3>Pokemon Cards &amp; Prices</h3>'+
+        '<div id="cardsGrid" class="cards-grid"></div>'+
+      '</div>'+
+    '</div>'
+  loadCards(p.name,p.id)
+}
+
+async function loadCards(name,id){
+  const grid=document.getElementById('cardsGrid')
+  if(!grid)return
+  renderFallback(name,grid)
+  if(cardsCache[id])return
+  try{
+    const res=await fetch('https://api.pokemontcg.io/v2/cards?q=name:'+encodeURIComponent(name)+'&orderBy=set.releaseDate&pageSize=20')
+    if(!res.ok)throw new Error('API Error')
+    const data=await res.json()
+    const cards=data.data||[]
+    cardsCache[id]=cards
+    if(cards.length)renderCards(cards,grid,name)
+  }catch(e){}
+}
+
+function renderFallback(name,grid){
+  const pc='https://www.pricecharting.com/search-products?q='+encodeURIComponent(name+' pokemon card')+'&type=prices'
+  const tcg='https://www.tcgplayer.com/search/all/product?q='+encodeURIComponent(name+' pokemon')
+  const ebay='https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(name+' pokemon card')
+  grid.innerHTML='<div class="fallback-box">'+
+    '<p>View '+name+' card prices on these marketplaces:</p>'+
+    '<div class="btn-group">'+
+      '<a href="'+pc+'" target="_blank" class="btn btn-pc">PriceCharting ↗</a>'+
+      '<a href="'+tcg+'" target="_blank" class="btn btn-tcg">TCGPlayer ↗</a>'+
+      '<a href="'+ebay+'" target="_blank" class="btn btn-ebay">eBay ↗</a>'+
+    '</div>'+
+  '</div>'
+}
+
+function renderCards(cards,grid,name){
+  renderFallback(name,grid)
+  grid.innerHTML=cards.map(c=>{
+    const price=c.cardmarket?.prices?.averageSellPrice||c.tcgplayer?.prices?.normal?.market
+    const priceHtml=price?'$'+price.toFixed(2):'<span class="no-price">Check PriceCharting</span>'
+    const img=c.images?.small||''
+  const num=c.number?' '+c.number+'/'+window._setTotal:''
+    const q=encodeURIComponent(c.name+num+' '+(c.set?.name||'')+' pokemon card')
+    return '<div class="card-item">'+
+      '<img src="'+img+'" alt="'+c.name+'" loading="lazy" onerror="this.style.display=\'none\'">'+
+      '<div class="card-info">'+
+        '<div class="card-set">'+(c.set?.name||'')+'</div>'+
+        '<div class="card-name">'+c.name+(c.rarity?' ('+c.rarity+')':'')+'</div>'+
+        '<div class="card-price">'+priceHtml+'</div>'+
+        '<a href="https://www.pricecharting.com/search-products?q='+q+'&type=prices" target="_blank" class="pc-link">PriceCharting ↗</a>'+
+      '</div>'+
+    '</div>'
+  }).join('')+'<div style="grid-column:1/-1">'+grid.querySelector('.fallback-box').outerHTML+'</div>'
+}
+
+function closeDetail(){document.getElementById('detailModal').classList.remove('active');document.body.style.overflow=''}
+function closeSetDetail(){document.getElementById('setDetailModal').classList.remove('active');document.body.style.overflow=''}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeDetail();closeSetDetail()}
+})
+
+let allSets=[],setCardsCache={}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  event.target.classList.add('active')
+  document.getElementById('pokePage').style.display=tab==='pokemon'?'block':'none'
+  document.getElementById('setsPage').style.display=tab==='sets'?'block':'none'
+  document.querySelector('.search-container').style.display=tab==='pokemon'?'block':'none'
+  document.getElementById('pokeFilters').style.display=tab==='pokemon'?'flex':'none'
+  if(tab==='sets'&&!allSets.length)loadSets()
+}
+
+async function loadSets(){
+  document.getElementById('setsContent').innerHTML='<div class="set-loading"><div class="spinner"></div><div>Loading sets...</div></div>'
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+    allSets=await res.json()
+    renderSets()
+  }catch(e){
+    document.getElementById('setsContent').innerHTML='<div class="set-loading">Failed to load sets</div>'
+  }
+}
+
+function renderSets(){
+  const series={}
+  allSets.forEach(s=>{
+    const key=s.series||'Other'
+    if(!series[key])series[key]=[]
+    series[key].push(s)
+  })
+  let html=''
+  Object.entries(series).forEach(([name,sets])=>{
+    html+='<div class="series-group"><h2>'+name+'</h2><div class="sets-grid">'
+    sets.forEach(s=>{
+      const year=s.releaseDate?s.releaseDate.split('/')[0]:''
+      const fallback=s.name.charAt(0)+s.name.charAt(s.name.length-1)
+      html+='<div class="set-card" onclick="openSet(\''+s.id+'\')">'+
+        '<div class="set-logo"><img src="'+(s.images?.logo||'')+'" alt="'+s.name+'" onerror="this.outerHTML=\''+fallback+'\'" style="max-width:100%;max-height:100%;object-fit:contain"></div>'+
+        '<div class="set-name">'+s.name+'</div>'+
+        '<div class="set-series">'+name+'</div>'+
+        '<div class="set-meta">'+(year?year+' · ':'')+s.printedTotal+' cards</div>'+
+        '</div>'
+    })
+    html+='</div></div>'
+  })
+  document.getElementById('setsContent').innerHTML=html
+}
+
+async function openSet(setId){
+  document.getElementById('setDetailContent').innerHTML='<div class="set-loading"><div class="spinner" style="width:32px;height:32px"></div><div>Loading cards...</div></div>'
+  document.getElementById('setDetailModal').classList.add('active')
+  document.body.style.overflow='hidden'
+  if(setCardsCache[setId]){renderSetDetail(setCardsCache[setId]);return}
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/'+setId+'.json')
+    const cards=await res.json()
+    setCardsCache[setId]=cards
+    renderSetDetail(cards)
+  }catch(e){
+    document.getElementById('setDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load set cards</div>'
+  }
+}
+
+function renderSetDetail(cards){
+  const set=allSets.find(s=>s.id===cards[0]?.id?.split('-')[0])
+  window._setCards=cards
+  window._setTotal=set?.printedTotal||0
+  document.getElementById('setDetailContent').innerHTML=
+    '<div class="modal-header">'+
+      '<div class="poke-name">'+(set?.name||'Set Cards')+'</div>'+
+      (set?'<div style="font-size:13px;color:rgba(255,255,255,0.4)">'+(set.series||'')+' · '+set.printedTotal+' cards · Released '+set.releaseDate.split('/').reverse().join('/')+'</div>':'')+
+    '</div>'+
+    '<div class="set-cards-grid">'+
+    cards.map((c,i)=>{
+      const types=(c.types||[]).map(t=>'<span class="type-badge type-'+t.toLowerCase()+'">'+t+'</span>').join('')
+      return '<div class="set-card-item" onclick="openCardPrices('+i+')">'+
+        '<img src="'+((c.images?.small||c.images?.large)||'')+'" alt="'+c.name+'" loading="lazy" onerror="this.outerHTML=\'<div style=\'width:100%;aspect-ratio:2.5/3.5;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);padding:6px;font-size:11px;color:rgba(255,255,255,0.2);text-align:center\' class=\'set-card-item\'>'+c.name+'</div>\'">'+
+        '<div class="sc-info">'+
+          '<div class="sc-name">'+c.name+(c.rarity?' <span style="color:rgba(255,255,255,0.3);font-weight:400">('+c.rarity+')</span>':'')+'</div>'+
+          (c.supertype? '<div class="sc-meta">'+c.supertype+(c.hp?' · '+c.hp+' HP':'')+'</div>':'')+
+          (types?'<div style="margin-top:4px">'+types+'</div>':'')+
+        '</div>'+
+      '</div>'
+    }).join('')+
+    '</div>'
+}
+
+function openCardPrices(idx){
+  const cards=window._setCards
+  if(!cards||!cards[idx])return
+  const c=cards[idx]
+    const num=c.number?' '+c.number+'/'+(c.set?.printedTotal||''):''
+  const setName=(c.set?.name||'')
+  const q=encodeURIComponent(c.name+num+' '+setName+' pokemon card')
+  const qe=encodeURIComponent(c.name+num+' pokemon')
+  const types=(c.types||[]).map(t=>'<span class="type-badge type-'+t.toLowerCase()+'">'+t+'</span>').join('')
+  const attacks=(c.attacks||[]).map(a=>
+    '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.06)">'+
+      '<div style="font-size:13px;font-weight:600">'+a.name+'</div>'+
+      (a.damage?'<div style="font-size:12px;color:#ff6b35;font-weight:600">'+a.damage+' damage</div>':'')+
+      (a.text?'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">'+a.text+'</div>':'')+
+    '</div>'
+  ).join('')
+  const abilities=(c.abilities||[]).map(a=>
+    '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.06)">'+
+      '<div style="font-size:12px;color:#f7c948;font-weight:600">Ability: '+a.name+'</div>'+
+      (a.text?'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">'+a.text+'</div>':'')+
+    '</div>'
+  ).join('')
+  const hp=c.hp?'<div class="info-item"><div class="label">HP</div><div class="value" style="color:#ff6b6b">'+c.hp+'</div></div>':''
+  const evo=c.evolvesFrom?'<div class="info-item"><div class="label">Evolves From</div><div class="value">'+c.evolvesFrom+'</div></div>':''
+  const weak=(c.weaknesses||[]).map(w=>w.type+(w.value?' '+w.value:'')).join(', ')
+  const resist=(c.resistances||[]).map(r=>r.type+(r.value?' '+r.value:'')).join(', ')
+  const retreat=c.retreatCost?.length||'—'
+  const typesHtml=types?'<div style="margin:6px 0 12px">'+types+'</div>':''
+  const old=document.getElementById('cardPriceDetail')
+  if(old)old.remove()
+  const div=document.createElement('div')
+  div.id='cardPriceDetail'
+  div.style.cssText='border-top:1px solid rgba(255,255,255,0.08);margin-top:12px'
+  div.innerHTML=
+    '<div class="modal-header" style="padding:16px 24px 8px;text-align:left;background:none">'+
+      '<div style="display:flex;gap:16px;align-items:start">'+
+        (c.images?.small||c.images?.large?'<img src="'+(c.images.small||c.images.large)+'" alt="'+c.name+'" style="width:80px;height:112px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,0.03);padding:4px;flex-shrink:0">':'')+
+        '<div>'+
+          '<div class="poke-name" style="font-size:18px;margin:0">'+c.name+'</div>'+
+          (c.set?.name?'<div style="font-size:11px;color:rgba(255,255,255,0.4)">'+c.set.name+(c.rarity?' · '+c.rarity:'')+(c.id?' · #'+c.id:'')+'</div>':'')+
+          (c.supertype?'<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px">'+c.supertype+(c.subtypes?.length?' ('+c.subtypes.join(', ')+')':'')+'</div>':'')+
+          typesHtml+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:0 24px 16px">'+
+      '<div class="info-grid" style="margin-bottom:12px">'+
+        hp+evo+
+        (weak?'<div class="info-item"><div class="label">Weakness</div><div class="value">'+weak+'</div></div>':'')+
+        (resist?'<div class="info-item"><div class="label">Resistance</div><div class="value">'+resist+'</div></div>':'')+
+        '<div class="info-item"><div class="label">Retreat</div><div class="value">'+retreat+'</div></div>'+
+      '</div>'+
+      (abilities?'<div style="margin-bottom:10px"><h3 style="font-size:13px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Abilities</h3>'+abilities+'</div>':'')+
+      (attacks?'<div style="margin-bottom:12px"><h3 style="font-size:13px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.5px">Attacks</h3>'+attacks+'</div>':'')+
+      '<div class="fallback-box" style="border:none;background:rgba(255,255,255,0.03);padding:12px;margin:0">'+
+        '<p style="margin-bottom:10px;font-size:13px">View prices on:</p>'+
+        '<div class="btn-group">'+
+          '<a href="https://www.pricecharting.com/search-products?q='+q+'&type=prices" target="_blank" class="btn btn-pc">PriceCharting ↗</a>'+
+          '<a href="https://www.tcgplayer.com/search/all/product?q='+qe+'" target="_blank" class="btn btn-tcg">TCGPlayer ↗</a>'+
+          '<a href="https://www.ebay.com/sch/i.html?_nkw='+q+'" target="_blank" class="btn btn-ebay">eBay ↗</a>'+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  document.getElementById('setDetailContent').appendChild(div)
+  div.scrollIntoView({behavior:'smooth'})
+}
+
+init()
+</script>
+</body>
+</html>
