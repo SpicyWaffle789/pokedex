@@ -203,21 +203,121 @@ header h1{
 .ability-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-4px);border-color:rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
 .ability-card .ability-name{font-size:14px;font-weight:600;text-transform:capitalize;margin-bottom:4px}
 .ability-card .ability-gen{font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.5px}
-#attackPage,#abilityPage,#attackFilters,#abilityFilters{display:none}
+#homePage,#pokePage,#setsPage,#attackPage,#abilityPage,#wordlePage,#battlePage,#attackFilters,#abilityFilters{display:none}
+.wg-grid{max-width:360px;margin:0 auto 16px}
+.wg-row{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:4px}
+.wg-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;border-radius:6px;text-transform:uppercase;color:#fff;transition:.15s}
+.wg-correct{background:#4caf50;border:2px solid #4caf50;animation:pulse .3s}
+.wg-present{background:#f7c948;border:2px solid #f7c948;color:#1a1a1a;animation:pulse .3s}
+.wg-absent{background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.3)}
+.wg-empty{background:rgba(255,255,255,0.03);border:2px solid rgba(255,255,255,0.06)}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.wg-input-area{display:flex;gap:8px;max-width:400px;margin:0 auto}
+.wg-input{flex:1;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#fff;font-size:16px;outline:none;text-align:center;letter-spacing:4px;text-transform:uppercase}
+.wg-input:focus{border-color:#ff6b35;background:rgba(255,255,255,0.1)}
+.wg-input::placeholder{letter-spacing:normal;color:rgba(255,255,255,0.25)}
+.wg-btn{padding:12px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,#ff6b35,#f7c948);color:#1a1a1a;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap}
+.wg-header{text-align:center;margin-bottom:20px}
+.wg-header h2{font-size:22px;font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7c948);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.wg-header p{color:rgba(255,255,255,0.5);font-size:13px}
+.wg-status{text-align:center;margin-top:16px;font-size:14px}
+.wg-info{text-align:center;color:rgba(255,255,255,0.3);font-size:11px;margin-top:8px}
+.home-page{max-width:900px;margin:0 auto;padding:40px 20px;text-align:center}
+.home-page h1{font-size:38px;font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7c948,#35d0ba);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.home-page .subtitle{color:rgba(255,255,255,0.5);font-size:15px;margin-bottom:32px;line-height:1.5}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.home-card{border-radius:16px;padding:24px 20px;cursor:pointer;transition:all .3s ease;text-align:left;position:relative;overflow:hidden;border:1px solid transparent}
+.home-card:hover{transform:translateY(-6px);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+.home-card .icon{font-size:32px;margin-bottom:10px}
+.home-card h3{font-size:17px;font-weight:700;margin-bottom:4px}
+.home-card p{font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5}
+.home-card .arrow{position:absolute;bottom:14px;right:18px;font-size:18px;color:rgba(255,255,255,0.15);transition:.3s}
+.home-card:hover .arrow{right:14px;color:rgba(255,255,255,0.5)}
+.card-pokemon{background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(247,201,72,0.1));border-color:rgba(255,107,53,0.2)}
+.card-sets{background:linear-gradient(135deg,rgba(99,144,240,0.15),rgba(53,208,186,0.1));border-color:rgba(99,144,240,0.2)}
+.card-attacks{background:linear-gradient(135deg,rgba(247,200,72,0.15),rgba(255,107,53,0.1));border-color:rgba(247,200,72,0.2)}
+.card-abilities{background:linear-gradient(135deg,rgba(163,62,161,0.15),rgba(99,144,240,0.1));border-color:rgba(163,62,161,0.2)}
+.card-wordle{background:linear-gradient(135deg,rgba(76,175,80,0.15),rgba(247,200,72,0.1));border-color:rgba(76,175,80,0.2)}
+#battlePage{display:none}
+.b-container{max-width:600px;margin:0 auto;padding:20px}
+.b-title{text-align:center;font-size:22px;font-weight:800;margin-bottom:20px;background:linear-gradient(135deg,#ff6b35,#f7c948);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.b-start-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.b-start-card{border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;transition:.25s;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)}
+.b-start-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-4px);border-color:#f7c948}
+.b-start-card img{width:80px;height:80px;image-rendering:pixelated}
+.b-start-card .name{font-size:15px;font-weight:700;text-transform:capitalize;margin:6px 0 4px}
+.b-start-card .types{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+.b-field{text-align:center;padding:20px 0}
+.b-field .active-pkmn{background:rgba(255,255,255,0.04);border-radius:14px;padding:20px;border:1px solid rgba(255,255,255,0.06);margin-bottom:16px}
+.b-field .active-pkmn img{width:96px;height:96px;image-rendering:pixelated}
+.b-field .active-pkmn .name{font-size:18px;font-weight:700;text-transform:capitalize}
+.b-field .active-pkmn .level{font-size:13px;color:rgba(255,255,255,0.5)}
+.b-bar-bg{height:10px;background:rgba(255,255,255,0.08);border-radius:6px;overflow:hidden;margin:6px 0}
+.b-bar-fill{height:100%;border-radius:6px;transition:width .5s}
+.b-bar-hp{background:linear-gradient(90deg,#4caf50,#8bc34a)}
+.b-bar-xp{background:linear-gradient(90deg,#2196f3,#03a9f4)}
+.b-bar-text{font-size:11px;color:rgba(255,255,255,0.4)}
+.b-btn{display:inline-block;padding:10px 24px;border-radius:12px;border:none;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;margin:4px}
+.b-btn-primary{background:linear-gradient(135deg,#ff6b35,#f7c948);color:#1a1a1a}
+.b-btn-primary:hover{transform:translateY(-2px)}
+.b-btn-secondary{background:rgba(255,255,255,0.08);color:#e0e0e0;border:1px solid rgba(255,255,255,0.12)}
+.b-btn-secondary:hover{background:rgba(255,255,255,0.15)}
+.battle-area{position:relative}
+.battle-panel{background:rgba(255,255,255,0.04);border-radius:14px;padding:16px;border:1px solid rgba(255,255,255,0.06);margin-bottom:12px}
+.battle-panel .pkmn-header{display:flex;align-items:center;gap:12px}
+.battle-panel img{width:64px;height:64px;image-rendering:pixelated}
+.battle-panel .info{flex:1}
+.battle-panel .info .name{font-size:16px;font-weight:700;text-transform:capitalize}
+.battle-panel .info .level{font-size:12px;color:rgba(255,255,255,0.4)}
+.battle-panel .info .hp-row{display:flex;align-items:center;gap:8px}
+.battle-panel .info .hp-row .hp-text{font-size:12px;font-weight:600;min-width:55px;text-align:right}
+.b-move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.b-move-btn{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:#e0e0e0;cursor:pointer;transition:.2s;text-align:center}
+.b-move-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.2)}
+.b-move-btn .move-name{font-size:13px;font-weight:600;text-transform:capitalize}
+.b-move-btn .move-meta{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px}
+.b-move-btn.type-badge{font-size:9px;padding:1px 6px;display:inline-block;margin-top:4px}
+.b-log{background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:13px;color:rgba(255,255,255,0.7);min-height:40px;line-height:1.5}
+.b-party-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.b-party-card{border-radius:12px;padding:12px;cursor:pointer;transition:.2s;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px}
+.b-party-card:hover{background:rgba(255,255,255,0.1)}
+.b-party-card img{width:48px;height:48px;image-rendering:pixelated}
+.b-party-card .info{flex:1;min-width:0}
+.b-party-card .info .name{font-size:13px;font-weight:600;text-transform:capitalize}
+.b-party-card .info .level{font-size:11px;color:rgba(255,255,255,0.4)}
+.b-party-card .info .bar-row{display:flex;align-items:center;gap:4px;margin-top:4px}
+.b-party-card .info .bar-row .bar-bg{flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden}
+.b-party-card .info .bar-row .bar-fill{height:100%;border-radius:3px;transition:.3s}
+.b-party-card .fainted{opacity:0.4}
+.b-catch{text-align:center;padding:30px 0}
+.b-catch img{width:96px;height:96px;image-rendering:pixelated;margin-bottom:12px}
+.b-catch h3{font-size:20px;font-weight:700;margin-bottom:6px}
+.b-catch p{color:rgba(255,255,255,0.5);margin-bottom:16px}
 @media(max-width:600px){
-  header{padding:12px 16px}
-  header h1{font-size:18px}
-  .grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
-  .sets-grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
-  .set-cards-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));padding:0 12px 12px}
-  .pokemon-card img{width:60px;height:60px}
-  .pokemon-card .name{font-size:11px}
-  .modal-header img{width:120px;height:120px}
-  .modal-body{padding:0 16px 16px}
-  .modal-header{padding:20px 16px 12px}
-  .fallback-box .btn-group{flex-direction:column}
-  .img-placeholder{width:60px;height:60px;font-size:22px}
-  .detail-placeholder{width:120px;height:120px;font-size:42px}
+  .home-page{padding:24px 16px}
+  .home-page h1{font-size:28px}
+  .home-grid{grid-template-columns:1fr}
+  .home-card{padding:20px 16px}
+}
+@media(max-width:600px){
+  .wg-cell{font-size:20px}
+  .wg-grid{max-width:300px}
+  .wg-input{font-size:14px;letter-spacing:2px}
+}
+@media(max-width:600px){
+header{padding:12px 16px}
+header h1{font-size:18px}
+.grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+.sets-grid{padding:12px;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.set-cards-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));padding:0 12px 12px}
+.pokemon-card img{width:60px;height:60px}
+.pokemon-card .name{font-size:11px}
+.modal-header img{width:120px;height:120px}
+.modal-body{padding:0 16px 16px}
+.modal-header{padding:20px 16px 12px}
+.fallback-box .btn-group{flex-direction:column}
+.img-placeholder{width:60px;height:60px;font-size:22px}
+.detail-placeholder{width:120px;height:120px;font-size:42px}
 }
 </style>
 </head>
@@ -268,12 +368,57 @@ header h1{
     </div>
   </div>
   <div class="tabs">
-    <button class="tab active" data-tab="pokemon" onclick="switchTab('pokemon')">Pokémon</button>
+    <button class="tab active" data-tab="home" onclick="switchTab('home')">Home</button>
+    <button class="tab" data-tab="pokemon" onclick="switchTab('pokemon')">Pokémon</button>
     <button class="tab" data-tab="sets" onclick="switchTab('sets')">Card Sets</button>
     <button class="tab" data-tab="attacks" onclick="switchTab('attacks')">Attacks</button>
     <button class="tab" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
+    <button class="tab" data-tab="wordle" onclick="switchTab('wordle')">Wordle</button>
+    <button class="tab" data-tab="battle" onclick="switchTab('battle')">Battle</button>
   </div>
 </header>
+<div id="homePage" class="home-page">
+  <h1>Pokédex</h1>
+  <div class="subtitle">Your complete Pokémon reference — explore 1025+ Pokémon, TCG sets, attacks, abilities, and more</div>
+  <div class="home-grid">
+    <div class="home-card card-pokemon" onclick="switchTab('pokemon')">
+      <div class="icon">⚡</div>
+      <h3>Pokémon</h3>
+      <p>Browse all Pokémon with stats, types, evolutions, abilities, and card marketplace links</p>
+      <div class="arrow">→</div>
+    </div>
+    <div class="home-card card-sets" onclick="switchTab('sets')">
+      <div class="icon">🃏</div>
+      <h3>Card Sets</h3>
+      <p>Explore TCG sets by series, view individual cards with stats and pricing links</p>
+      <div class="arrow">→</div>
+    </div>
+    <div class="home-card card-attacks" onclick="switchTab('attacks')">
+      <div class="icon">💥</div>
+      <h3>Attacks</h3>
+      <p>Complete move list with type, damage class, power, accuracy, PP, and effects</p>
+      <div class="arrow">→</div>
+    </div>
+    <div class="home-card card-abilities" onclick="switchTab('abilities')">
+      <div class="icon">✨</div>
+      <h3>Abilities</h3>
+      <p>All abilities with effects, flavor text, and Pokémon that have them</p>
+      <div class="arrow">→</div>
+    </div>
+    <div class="home-card card-wordle" onclick="switchTab('wordle')">
+      <div class="icon">🎯</div>
+      <h3>Wordle</h3>
+      <p>Guess the 6-letter Pokémon — classic Wordle with letter-based hints and autocomplete</p>
+      <div class="arrow">→</div>
+    </div>
+    <div class="home-card" style="background:linear-gradient(135deg,rgba(244,67,54,0.15),rgba(255,152,0,0.1));border-color:rgba(244,67,54,0.2)" onclick="switchTab('battle')">
+      <div class="icon">⚔️</div>
+      <h3>Battle</h3>
+      <p>Choose a starter, battle wild Pokémon, gain XP, level up, and catch them all!</p>
+      <div class="arrow">→</div>
+    </div>
+  </div>
+</div>
 <div id="pokePage">
 <div id="loading" class="loading"><div class="spinner"></div><div style="color:rgba(255,255,255,0.5);font-size:15px">Loading Pokemon...</div></div>
 <div id="grid" class="grid" style="display:none"></div>
@@ -322,12 +467,74 @@ header h1{
   <div id="abilitiesGrid" class="abilities-grid" style="display:none"></div>
 </div>
 
+<div id="wordlePage">
+  <div style="max-width:500px;margin:0 auto;padding:20px">
+    <div class="wg-header">
+      <h2>Pokémon Wordle</h2>
+      <p>Guess the 6-letter Pokémon!<br>🟩 correct · 🟨 wrong spot · ⬜ not in word</p>
+    </div>
+    <div id="wgGrid" class="wg-grid"></div>
+    <div class="wg-input-area">
+      <input type="text" class="wg-input" id="wgInput" list="wgDatalist" placeholder="6-letter Pokémon" maxlength="6" autocomplete="off" onkeydown="if(event.key==='Enter')submitWg()">
+      <datalist id="wgDatalist"></datalist>
+      <button class="wg-btn" onclick="submitWg()">Guess</button>
+    </div>
+    <div class="wg-info">Only 6-letter Pokémon names are valid guesses</div>
+    <div id="wgStatus" class="wg-status"></div>
+  </div>
+</div>
+
+<div id="battlePage">
+  <div class="b-container">
+    <div id="bStarter">
+      <div class="b-title">Choose your starter Pokémon!</div>
+      <div id="bStarterOptions" class="b-start-grid"></div>
+    </div>
+    <div id="bField" class="b-field" style="display:none">
+      <div id="bActivePkmn" class="active-pkmn"></div>
+      <div>
+        <button class="b-btn b-btn-primary" onclick="bExplore()">Explore</button>
+        <button class="b-btn b-btn-secondary" onclick="bShowParty()">Party</button>
+        <button class="b-btn b-btn-secondary" onclick="bHealAll()">Heal All</button>
+      </div>
+      <div id="bExploreMsg" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="battleScreen" style="display:none">
+      <div class="battle-area">
+        <div class="battle-panel" id="bEnemyPanel"></div>
+        <div class="battle-panel" id="bPlayerPanel"></div>
+        <div class="b-move-grid" id="bMoveGrid"></div>
+        <div class="b-log" id="bBattleLog">A wild Pokémon appeared!</div>
+        <div style="text-align:center;margin-top:8px">
+          <button class="b-btn b-btn-secondary" onclick="bRun()">Run</button>
+        </div>
+      </div>
+    </div>
+    <div id="bParty" style="display:none">
+      <div class="b-title">Your Party</div>
+      <div id="bPartyGrid" class="b-party-grid"></div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="b-btn b-btn-primary" onclick="bBackToField()">Back</button>
+      </div>
+    </div>
+    <div id="bCatch" style="display:none">
+      <div class="b-catch">
+        <img id="bCatchImg" src="" alt="">
+        <h3 id="bCatchTitle">Gotcha!</h3>
+        <p id="bCatchMsg">Wild Pokémon was caught!</p>
+        <button class="b-btn b-btn-primary" onclick="bAfterCatch()">Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const TYPES=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
 const GEN_LIMITS=[0,151,251,386,493,649,721,809,905,1025]
-let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0,currentTab='pokemon',allMoves=[],allAbilities=[],moveCache={},abilityCache={}
+let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0,currentTab='home',allMoves=[],allAbilities=[],moveCache={},abilityCache={}
 const PAGE_SIZE=9999
 async function init(){
+  switchTab('home')
   const res=await fetch('https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0')
   const data=await res.json()
   allPokemon=data.results.map(p=>{
@@ -513,11 +720,14 @@ function switchTab(tab){
   currentTab=tab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
   document.querySelector('.tab[data-tab="'+tab+'"]').classList.add('active')
+  document.getElementById('homePage').style.display=tab==='home'?'block':'none'
   document.getElementById('pokePage').style.display=tab==='pokemon'?'block':'none'
   document.getElementById('setsPage').style.display=tab==='sets'?'block':'none'
   document.getElementById('attackPage').style.display=tab==='attacks'?'block':'none'
   document.getElementById('abilityPage').style.display=tab==='abilities'?'block':'none'
-  document.querySelector('.search-container').style.display=tab==='sets'?'none':'block'
+  document.getElementById('wordlePage').style.display=tab==='wordle'?'block':'none'
+  document.getElementById('battlePage').style.display=tab==='battle'?'block':'none'
+  document.querySelector('.search-container').style.display=tab==='home'||tab==='sets'||tab==='wordle'||tab==='battle'?'none':'block'
   document.getElementById('pokeFilters').style.display=tab==='pokemon'?'flex':'none'
   document.getElementById('attackFilters').style.display=tab==='attacks'?'flex':'none'
   document.getElementById('abilityFilters').style.display=tab==='abilities'?'flex':'none'
@@ -532,6 +742,8 @@ function switchTab(tab){
   if(tab==='pokemon')filterPokemon()
   if(tab==='attacks')filterMoves()
   if(tab==='abilities')filterAbilities()
+  if(tab==='wordle')initWordle()
+  if(tab==='battle')initBattle()
 }
 
 async function loadSets(){
@@ -890,6 +1102,356 @@ function renderAbilityDetail(a){
 }
 
 function closeAbilityDetail(){document.getElementById('abilityDetailModal').classList.remove('active');document.body.style.overflow=''}
+
+let wgTarget='',wgGuesses=[],wgOver=false,wgStarted=false,wgSixLetter=[]
+
+function initWordle(){
+  if(wgStarted)return
+  wgStarted=true
+  wgSixLetter=allPokemon.filter(p=>p.name.length===6).map(p=>p.name)
+  const dl=document.getElementById('wgDatalist')
+  wgSixLetter.forEach(n=>{const o=document.createElement('option');o.value=n;dl.appendChild(o)})
+  newWg()
+}
+
+function newWg(){
+  wgTarget=wgSixLetter[Math.floor(Math.random()*wgSixLetter.length)]
+  wgGuesses=[];wgOver=false
+  document.getElementById('wgGrid').innerHTML=''
+  document.getElementById('wgStatus').innerHTML=''
+  const inp=document.getElementById('wgInput');inp.value='';inp.disabled=false;inp.focus()
+  renderWg()
+}
+
+function submitWg(){
+  if(wgOver)return
+  const inp=document.getElementById('wgInput')
+  const word=inp.value.trim().toLowerCase()
+  if(word.length!==6){shake(inp);return}
+  if(!wgSixLetter.includes(word)){shake(inp);return}
+  if(wgGuesses.some(g=>g.word===word)){shake(inp);return}
+  const colors=getWgColors(word)
+  wgGuesses.push({word,colors})
+  inp.value=''
+  renderWg()
+  if(word===wgTarget){
+    wgOver=true
+    document.getElementById('wgStatus').innerHTML='<div style="color:#4caf50;font-size:20px;font-weight:800">✓ '+(wgTarget.charAt(0).toUpperCase()+wgTarget.slice(1))+'! '+wgGuesses.length+'/6</div><button class="wg-btn" onclick="newWg()" style="margin-top:12px">New Game</button>'
+    inp.disabled=true
+  }else if(wgGuesses.length>=6){
+    wgOver=true
+    document.getElementById('wgStatus').innerHTML='<div style="color:rgba(255,255,255,0.6);font-size:18px;font-weight:700">'+wgTarget.charAt(0).toUpperCase()+wgTarget.slice(1)+'</div><button class="wg-btn" onclick="newWg()" style="margin-top:12px">New Game</button>'
+    inp.disabled=true
+  }
+}
+
+function shake(el){el.style.borderColor='#f44336';setTimeout(()=>el.style.borderColor='',500)}
+
+function getWgColors(guess){
+  const colors=Array(6).fill('absent')
+  const t=wgTarget.split(''),g=guess.split('')
+  for(let i=0;i<6;i++)if(g[i]===t[i]){colors[i]='correct';t[i]=null;g[i]=null}
+  for(let i=0;i<6;i++)if(g[i]!==null){const idx=t.indexOf(g[i]);if(idx!==-1){colors[i]='present';t[idx]=null}}
+  return colors
+}
+
+function renderWg(){
+  const grid=document.getElementById('wgGrid')
+  let html=''
+  for(let r=0;r<6;r++){
+    html+='<div class="wg-row">'
+    for(let c=0;c<6;c++){
+      if(r<wgGuesses.length){
+        const g=wgGuesses[r]
+        html+='<div class="wg-cell wg-'+g.colors[c]+'" style="animation-delay:'+(c*0.1)+'s">'+g.word[c]+'</div>'
+      }else if(r===wgGuesses.length){
+        html+='<div class="wg-cell wg-empty"></div>'
+      }else{
+        html+='<div class="wg-cell wg-empty"></div>'
+      }
+    }
+    html+='</div>'
+  }
+  grid.innerHTML=html
+}
+
+// ===== BATTLE GAME =====
+const TYPE_MOVES={
+  normal:[{n:'Tackle',p:40,a:100,t:'normal',c:'physical'},{n:'Quick Attack',p:40,a:100,t:'normal',c:'physical'},{n:'Body Slam',p:85,a:100,t:'normal',c:'physical'}],
+  fire:[{n:'Ember',p:40,a:100,t:'fire',c:'special'},{n:'Fire Punch',p:75,a:100,t:'fire',c:'physical'},{n:'Flamethrower',p:90,a:100,t:'fire',c:'special'}],
+  water:[{n:'Water Gun',p:40,a:100,t:'water',c:'special'},{n:'Waterfall',p:80,a:100,t:'water',c:'physical'},{n:'Hydro Pump',p:110,a:80,t:'water',c:'special'}],
+  electric:[{n:'Thunder Shock',p:40,a:100,t:'electric',c:'special'},{n:'Spark',p:65,a:100,t:'electric',c:'physical'},{n:'Thunderbolt',p:90,a:100,t:'electric',c:'special'}],
+  grass:[{n:'Vine Whip',p:45,a:100,t:'grass',c:'physical'},{n:'Razor Leaf',p:55,a:95,t:'grass',c:'physical'},{n:'Solar Beam',p:120,a:100,t:'grass',c:'special'}],
+  ice:[{n:'Ice Shard',p:40,a:100,t:'ice',c:'physical'},{n:'Ice Beam',p:90,a:100,t:'ice',c:'special'},{n:'Blizzard',p:110,a:70,t:'ice',c:'special'}],
+  fighting:[{n:'Rock Smash',p:40,a:100,t:'fighting',c:'physical'},{n:'Brick Break',p:75,a:100,t:'fighting',c:'physical'},{n:'Close Combat',p:120,a:100,t:'fighting',c:'physical'}],
+  poison:[{n:'Poison Sting',p:15,a:100,t:'poison',c:'physical'},{n:'Sludge',p:65,a:100,t:'poison',c:'special'},{n:'Sludge Bomb',p:90,a:100,t:'poison',c:'special'}],
+  ground:[{n:'Mud-Slap',p:20,a:100,t:'ground',c:'special'},{n:'Dig',p:80,a:100,t:'ground',c:'physical'},{n:'Earthquake',p:100,a:100,t:'ground',c:'physical'}],
+  flying:[{n:'Peck',p:35,a:100,t:'flying',c:'physical'},{n:'Wing Attack',p:60,a:100,t:'flying',c:'physical'},{n:'Fly',p:90,a:95,t:'flying',c:'physical'}],
+  psychic:[{n:'Confusion',p:50,a:100,t:'psychic',c:'special'},{n:'Psybeam',p:65,a:100,t:'psychic',c:'special'},{n:'Psychic',p:90,a:100,t:'psychic',c:'special'}],
+  bug:[{n:'Fury Cutter',p:40,a:95,t:'bug',c:'physical'},{n:'Bug Bite',p:60,a:100,t:'bug',c:'physical'},{n:'X-Scissor',p:80,a:100,t:'bug',c:'physical'}],
+  rock:[{n:'Rock Throw',p:50,a:90,t:'rock',c:'physical'},{n:'Rock Tomb',p:60,a:95,t:'rock',c:'physical'},{n:'Stone Edge',p:100,a:80,t:'rock',c:'physical'}],
+  ghost:[{n:'Lick',p:30,a:100,t:'ghost',c:'physical'},{n:'Shadow Claw',p:70,a:100,t:'ghost',c:'physical'},{n:'Shadow Ball',p:80,a:100,t:'ghost',c:'special'}],
+  dragon:[{n:'Dragon Breath',p:60,a:100,t:'dragon',c:'special'},{n:'Dragon Claw',p:80,a:100,t:'dragon',c:'physical'},{n:'Dragon Pulse',p:85,a:100,t:'dragon',c:'special'}],
+  dark:[{n:'Bite',p:60,a:100,t:'dark',c:'physical'},{n:'Faint Attack',p:60,a:100,t:'dark',c:'physical'},{n:'Crunch',p:80,a:100,t:'dark',c:'physical'}],
+  steel:[{n:'Metal Claw',p:50,a:95,t:'steel',c:'physical'},{n:'Iron Head',p:80,a:100,t:'steel',c:'physical'},{n:'Flash Cannon',p:80,a:100,t:'steel',c:'special'}],
+  fairy:[{n:'Fairy Wind',p:40,a:100,t:'fairy',c:'special'},{n:'Draining Kiss',p:50,a:100,t:'fairy',c:'special'},{n:'Moonblast',p:95,a:100,t:'fairy',c:'special'}]
+}
+const TYPE_EFF={
+  normal:{rock:.5,ghost:0,steel:.5},fire:{fire:.5,water:.5,grass:2,ice:2,bug:2,rock:.5,dragon:.5,steel:2},
+  water:{fire:2,water:.5,grass:.5,ground:2,rock:2,dragon:.5},electric:{water:2,electric:.5,grass:.5,ground:0,flying:2,dragon:.5},
+  grass:{fire:.5,water:2,grass:.5,poison:.5,ground:2,flying:.5,bug:.5,rock:2,dragon:.5,steel:.5},
+  ice:{fire:.5,water:.5,grass:2,ice:.5,ground:2,flying:2,dragon:2,steel:.5},
+  fighting:{normal:2,ice:2,poison:.5,flying:.5,psychic:.5,bug:.5,rock:2,ghost:0,dark:2,steel:2,fairy:.5},
+  poison:{grass:2,poison:.5,ground:.5,rock:.5,ghost:.5,steel:0,fairy:2},
+  ground:{fire:2,grass:.5,electric:2,flying:0,bug:.5,rock:2,poison:2,steel:2},
+  flying:{grass:2,electric:.5,fighting:2,bug:2,rock:.5,steel:.5},
+  psychic:{fighting:2,poison:2,psychic:.5,steel:.5,dark:0},
+  bug:{fire:.5,grass:2,fighting:.5,poison:.5,flying:.5,psychic:2,ghost:.5,dark:2,steel:.5,fairy:.5},
+  rock:{fire:2,ice:2,fighting:.5,ground:.5,flying:2,bug:2,steel:.5},
+  ghost:{normal:0,psychic:2,ghost:2,dark:.5},
+  dragon:{fire:.5,water:.5,electric:.5,grass:.5,ice:2,dragon:2,steel:.5,fairy:0},
+  dark:{fighting:.5,psychic:2,ghost:2,dark:.5,fairy:.5},
+  steel:{fire:.5,water:.5,electric:.5,ice:2,rock:2,steel:.5,fairy:2},
+  fairy:{fire:.5,fighting:2,poison:.5,dragon:2,dark:2,steel:.5}
+}
+const STARTER_IDS=[1,4,7]
+let bg={team:[],wildGroup:[],wildIdx:0,locked:false,starterData:[],pokeballs:3,encounterXp:0}
+
+function si(id){return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+id+'.png'}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function getMoves(types){
+  const pool=[],used=new Set
+  types.forEach(t=>{(TYPE_MOVES[t]||TYPE_MOVES.normal).forEach(m=>{if(!used.has(m.n)){used.add(m.n);pool.push({...m})}})})
+  if(pool.length<2)(TYPE_MOVES.normal).forEach(m=>{if(!used.has(m.n)){used.add(m.n);pool.push({...m})}})
+  while(pool.length>4)pool.pop()
+  while(pool.length<4)pool.push({n:'Struggle',p:50,a:100,t:'normal',c:'physical'})
+  return pool.slice(0,4)
+}
+function calcS(base,level,iv){return Math.floor((2*base+iv)*level/100)+5}
+function calcH(base,level,iv){return Math.floor((2*base+iv)*level/100)+level+10}
+async function fetchPkmn(id){
+  const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+id)
+  const d=await r.json()
+  return {id:d.id,name:d.name,types:d.types.map(t=>t.type.name),stats:{hp:d.stats[0].base_stat,attack:d.stats[1].base_stat,defense:d.stats[2].base_stat,spAttack:d.stats[3].base_stat,spDefense:d.stats[4].base_stat,speed:d.stats[5].base_stat}}
+}
+function makePkmn(d,lvl){
+  const iv=Object.fromEntries(Object.keys(d.stats).map(k=>[k,Math.floor(Math.random()*32)]))
+  const mh=calcH(d.stats.hp,lvl,iv.hp),moves=getMoves(d.types)
+  return{id:d.id,name:d.name,types:d.types,level:lvl,xp:0,xpNext:lvl*100,baseStats:d.stats,iv,
+    stats:Object.fromEntries(Object.keys(d.stats).map(k=>[k,calcS(d.stats[k],lvl,iv[k])])),maxHp:mh,currentHp:mh,moves}
+}
+function showScr(id){['bStarter','bField','battleScreen','bParty','bCatch'].forEach(s=>document.getElementById(s).style.display=s===id?'block':'none')}
+function pbSprite(){return '<span style="font-size:18px">🔴</span>'}
+function imgTag(id,size){return '<img src="'+si(id)+'" alt="" style="width:'+size+';height:'+size+';object-fit:contain" onerror="this.src=\'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png\'" onerror2="this.style.display=\'none\'">'}
+
+function initBattle(){
+  if(bg.team.length)return
+  showScr('bStarter')
+  const grid=document.getElementById('bStarterOptions')
+  grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner" style="width:32px;height:32px;margin:0 auto"></div></div>'
+  Promise.all(STARTER_IDS.map(id=>fetchPkmn(id))).then(cards=>{
+    bg.starterData=cards
+    grid.innerHTML=cards.map(d=>'<div class="b-start-card" onclick="selectStarter('+d.id+')">'+
+      imgTag(d.id,'80px')+
+      '<div class="name">'+d.name+'</div><div class="types">'+d.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div></div>').join('')
+  })
+}
+
+function selectStarter(id){
+  const d=bg.starterData.find(p=>p.id===id)
+  const p=makePkmn(d,5);p.xp=0;p.xpNext=500
+  bg.team=[p];bg.pokeballs=3
+  showField()
+}
+
+function showField(){showScr('bField');renderField()}
+
+function renderField(){
+  const p=bg.team[0]
+  const hpPct=Math.max(0,p.currentHp/p.maxHp*100),xpPct=Math.min(100,p.xp/p.xpNext*100)
+  document.getElementById('bActivePkmn').innerHTML=
+    imgTag(p.id,'120px')+
+    '<div class="name">'+cap(p.name)+'</div><div class="level">Lv.'+p.level+'</div>'+
+    '<div class="b-bar-text">HP: '+p.currentHp+'/'+p.maxHp+'</div>'+
+    '<div class="b-bar-bg"><div class="b-bar-fill b-bar-hp" style="width:'+hpPct+'%"></div></div>'+
+    '<div class="b-bar-text">XP: '+p.xp+'/'+p.xpNext+'</div>'+
+    '<div class="b-bar-bg"><div class="b-bar-fill b-bar-xp" style="width:'+xpPct+'%"></div></div>'+
+    '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center">'+p.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'
+  document.getElementById('bExploreMsg').innerHTML='Pokéballs: '+(bg.pokeballs||'0')+'  ·  Team: '+bg.team.length+'/3'
+}
+
+async function bExplore(){
+  if(bg.team.every(p=>p.currentHp<=0)){document.getElementById('bExploreMsg').textContent='All fainted! Heal first.';return}
+  if(bg.team.every(p=>p.currentHp<=0))return
+  document.getElementById('bExploreMsg').textContent='Searching...'
+  const count=1+Math.floor(Math.random()*3)
+  try{
+    bg.wildGroup=[]
+    for(let i=0;i<count;i++){
+      const id=Math.floor(Math.random()*151)+1
+      const d=await fetchPkmn(id)
+      const lvl=Math.max(1,Math.min(20,Math.floor(Math.random()*6)+Math.max(1,bg.team[0].level-3)))
+      bg.wildGroup.push(makePkmn(d,lvl))
+    }
+    bg.wildIdx=0;bg.encounterXp=0
+    document.getElementById('bBattleLog').innerHTML='A group of '+count+' wild Pokémon appeared!'
+    await sleep(600)
+    bg.wild=bg.wildGroup[0];startBattle()
+  }catch(e){document.getElementById('bExploreMsg').textContent='Nothing found...'}
+}
+
+function startBattle(){
+  showScr('battleScreen');bg.locked=false;renderBattle()
+  document.getElementById('bBattleLog').innerHTML='Wild '+cap(bg.wild.name)+' (Lv.'+bg.wild.level+') appeared!'+(bg.wildGroup.length>1?' <span style="color:rgba(255,255,255,0.4)">('+(bg.wildIdx+1)+'/'+bg.wildGroup.length+')</span>':'')
+}
+
+function getActive(){return bg.team.find(p=>p.currentHp>0)||bg.team[0]}
+
+function renderBattle(){
+  const e=bg.wild,p=getActive()
+  const eHp=Math.max(0,e.currentHp/e.maxHp*100),pHp=Math.max(0,p.currentHp/p.maxHp*100)
+  document.getElementById('bEnemyPanel').innerHTML='<div class="pkmn-header">'+imgTag(e.id,'80px')+'<div class="info"><div class="name">'+cap(e.name)+' <span class="level">Lv.'+e.level+'</span>'+(bg.wildGroup.length>1?' <span style="font-size:11px;color:rgba(255,255,255,0.3)">'+(bg.wildIdx+1)+'/'+bg.wildGroup.length+'</span>':'')+'</div><div class="hp-row"><div class="b-bar-bg" style="flex:1"><div class="b-bar-fill b-bar-hp" style="width:'+eHp+'%"></div></div><span class="hp-text">'+Math.max(0,e.currentHp)+'/'+e.maxHp+'</span></div></div></div>'
+  document.getElementById('bPlayerPanel').innerHTML='<div class="pkmn-header">'+imgTag(p.id,'80px')+'<div class="info"><div class="name">'+cap(p.name)+' <span class="level">Lv.'+p.level+'</span></div><div class="hp-row"><div class="b-bar-bg" style="flex:1"><div class="b-bar-fill b-bar-hp" style="width:'+pHp+'%"></div></div><span class="hp-text">'+p.currentHp+'/'+p.maxHp+'</span></div></div></div>'
+  document.getElementById('bMoveGrid').innerHTML=p.moves.map((m,i)=>'<div class="b-move-btn" onclick="playerMove('+i+')"><div class="move-name">'+m.n+'</div><div class="move-meta">'+m.t+' · '+(m.c==='physical'?'⚔':'✨')+' · '+m.p+'pwr</div></div>').join('')
+}
+
+function getEff(mt,dt){let m=1;dt.forEach(t=>{if(TYPE_EFF[mt]&&TYPE_EFF[mt][t]!==undefined)m*=TYPE_EFF[mt][t]});return m}
+function calcDmg(atk,def,move){
+  const as=move.c==='physical'?atk.stats.attack:atk.stats.spAttack
+  const ds=move.c==='physical'?def.stats.defense:def.stats.spDefense
+  const stab=atk.types.includes(move.t)?1.5:1,eff=getEff(move.t,def.types)
+  return{damage:Math.max(1,Math.floor(((2*atk.level/5+2)*move.p*as/ds/50+2)*stab*eff*(0.85+Math.random()*0.15))),eff,stab}
+}
+
+async function playerMove(idx){
+  if(bg.locked)return;bg.locked=true
+  const p=getActive(),e=bg.wild,m=p.moves[idx],r=calcDmg(p,e,m)
+  e.currentHp=Math.max(0,e.currentHp-r.damage)
+  let log=cap(p.name)+' used '+m.n+'!'
+  if(r.stab)log+='<br>STAB!'
+  if(r.eff>1)log+='<br><span style="color:#4caf50;font-weight:700">Super effective!</span>'
+  if(r.eff===0)log+='<br><span style="color:#f44336">No effect...</span>'
+  if(r.eff>0&&r.eff<1)log+='<br><span style="color:rgba(255,255,255,0.5)">Not very effective...</span>'
+  document.getElementById('bBattleLog').innerHTML=log;renderBattle()
+  if(e.currentHp<=0){
+    bg.encounterXp+=Math.floor(e.level*25+15)
+    bg.wildIdx++
+    if(bg.wildIdx<bg.wildGroup.length){
+      bg.wild=bg.wildGroup[bg.wildIdx];bg.wild.currentHp=bg.wild.maxHp
+      document.getElementById('bBattleLog').innerHTML=cap(e.name)+' defeated!<br>Wild '+cap(bg.wild.name)+' (Lv.'+bg.wild.level+') appears! <span style="color:rgba(255,255,255,0.4)">('+(bg.wildIdx+1)+'/'+bg.wildGroup.length+')</span>'
+      renderBattle();bg.locked=false
+    }else{bWin()}
+    return
+  }
+  await sleep(600);enemyTurn()
+}
+
+function enemyTurn(){
+  const p=getActive(),e=bg.wild,valid=e.moves.filter(m=>m.p>0)
+  if(!valid.length){bg.locked=false;return}
+  const m=valid[Math.floor(Math.random()*valid.length)],r=calcDmg(e,p,m)
+  p.currentHp=Math.max(0,p.currentHp-r.damage)
+  let log=cap(e.name)+' used '+m.n+'!'
+  if(r.eff>1)log+='<br><span style="color:#4caf50;font-weight:700">Super effective!</span>'
+  if(r.eff===0)log+='<br><span style="color:#f44336">No effect...</span>'
+  if(r.eff>0&&r.eff<1)log+='<br><span style="color:rgba(255,255,255,0.5)">Not very effective...</span>'
+  document.getElementById('bBattleLog').innerHTML=log;renderBattle()
+  if(p.currentHp<=0){
+    const next=bg.team.find(x=>x.id!==p.id&&x.currentHp>0)
+    if(next)document.getElementById('bBattleLog').innerHTML=log+'<br>'+cap(p.name)+' fainted!<br>Go, '+cap(next.name)+'!'
+    else{document.getElementById('bBattleLog').innerHTML=log+'<br>All fainted!';bg.locked=true;setTimeout(bLose,1000);return}
+  }
+  bg.locked=false
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function bWin(){
+  bg.locked=true
+  const p=getActive(),oldLvl=p.level
+  const pbReward=Math.random()<.6?1:Math.random()<.4?2:0
+  if(pbReward>0)bg.pokeballs+=pbReward
+  const totalXp=bg.encounterXp
+  let msg='All wild Pokémon defeated!<br>+'+totalXp+' total XP'
+  if(pbReward>0)msg+='<br>+'+pbReward+' Pokéball'+(pbReward>1?'s':'')+' found!'
+  document.getElementById('bBattleLog').innerHTML=msg
+  await gainXp(p,totalXp)
+  if(p.level>oldLvl)document.getElementById('bBattleLog').innerHTML+='<br><span style="color:#f7c948;font-weight:700">Level up! Lv.'+p.level+'</span>'
+  await sleep(1000)
+  bg._catchIdx=0
+  showCatch()
+}
+
+function bLose(){bg.team.forEach(p=>p.currentHp=p.maxHp);document.getElementById('bBattleLog').innerHTML='Blacked out... Healed!';setTimeout(showField,1200)}
+
+async function gainXp(pkmn,amt){
+  pkmn.xp+=amt
+  while(pkmn.xp>=pkmn.xpNext){
+    pkmn.xp-=pkmn.xpNext;pkmn.level++
+    pkmn.xpNext=pkmn.level*100
+    Object.keys(pkmn.stats).forEach(k=>{pkmn.stats[k]=calcS(pkmn.baseStats[k],pkmn.level,pkmn.iv[k])})
+    pkmn.maxHp=calcH(pkmn.baseStats.hp,pkmn.level,pkmn.iv.hp);pkmn.currentHp=pkmn.maxHp
+  }
+}
+
+function bRun(){if(bg.locked)return;document.getElementById('bBattleLog').textContent='You fled!';setTimeout(showField,600)}
+
+function showCatch(){
+  document.getElementById('bCatch').style.display='block';document.getElementById('battleScreen').style.display='none'
+  if(bg._catchIdx>=bg.wildGroup.length||bg.team.length>=3||!(bg.pokeballs>0)){
+    document.getElementById('bCatchTitle').textContent='All done!'
+    document.getElementById('bCatchMsg').textContent=bg.team.length>=3?'Your team is full!':'No Pokéballs left!'
+    document.getElementById('bCatchImg').style.display='none'
+    document.getElementById('bCatchBtn').textContent='Back to Field'
+    bg._catchDone=true;return
+  }
+  const w=bg.wildGroup[bg._catchIdx];bg._catchDone=false
+  const img=document.getElementById('bCatchImg');img.style.display='block'
+  img.src=si(w.id);img.onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+w.id+'.png'}
+  document.getElementById('bCatchTitle').textContent='Catch '+cap(w.name)+'?'
+  document.getElementById('bCatchMsg').textContent='Lv.'+w.level+' · Pokéballs: '+bg.pokeballs+'  ·  Team: '+bg.team.length+'/3'
+  document.getElementById('bCatchBtn').textContent='Throw Pokéball (1)'
+  img.style.filter='none'
+}
+
+function bCatchAttempt(){
+  if(bg._catchDone){bAfterCatch();return}
+  const w=bg.wildGroup[bg._catchIdx]
+  if(!(bg.pokeballs>0)){showCatch();return}
+  if(bg.team.length>=3){showCatch();return}
+  bg.pokeballs--
+  const rate=Math.min(90,Math.floor((1-w.currentHp/w.maxHp)*60+25))
+  const ok=Math.random()*100<rate
+  if(ok){
+    document.getElementById('bCatchTitle').textContent='Gotcha!'
+    document.getElementById('bCatchMsg').textContent=cap(w.name)+' was caught!'
+    w.currentHp=w.maxHp;bg.team.push(w)
+    document.getElementById('bCatchBtn').textContent='Continue'
+    bg._catchDone=true
+  }else{
+    document.getElementById('bCatchTitle').textContent='Oh no!'
+    document.getElementById('bCatchMsg').textContent=cap(w.name)+' broke free! Pokéball used.'
+    document.getElementById('bCatchBtn').textContent='Try again ('+bg.pokeballs+' left)'
+    if(!(bg.pokeballs>0))document.getElementById('bCatchBtn').textContent='No Pokéballs left'
+  }
+}
+
+function bAfterCatch(){
+  bg._catchIdx++
+  if(bg._catchIdx<bg.wildGroup.length&&bg.team.length<3&&bg.pokeballs>0)showCatch()
+  else{bg.wildGroup=[];bg.wild=null;bg.locked=false;showField()}
+}
+
+function bShowParty(){
+  showScr('bParty')
+  document.getElementById('bPartyGrid').innerHTML=bg.team.map(p=>{
+    const hpPct=Math.max(0,p.currentHp/p.maxHp*100),xpPct=Math.min(100,p.xp/p.xpNext*100),f=p.currentHp<=0?'fainted':''
+    return '<div class="b-party-card'+(f?' '+f:'')+'">'+imgTag(p.id,'56px')+'<div class="info"><div class="name">'+cap(p.name)+'</div><div class="level">Lv.'+p.level+(f?' · <span style="color:#f44336">FAINTED</span>':'')+'</div><div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#4caf50,#8bc34a)"></div></div><span style="font-size:10px">'+p.currentHp+'/'+p.maxHp+'</span></div><div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+xpPct+'%;background:linear-gradient(90deg,#2196f3,#03a9f4)"></div></div><span style="font-size:10px">XP '+p.xp+'/'+p.xpNext+'</span></div></div></div>'
+  }).join('')+(bg.team.length<3?'<div class="b-party-card" style="border:2px dashed rgba(255,255,255,0.1);cursor:default;opacity:0.5;justify-content:center;padding:24px"><span style="font-size:13px;color:rgba(255,255,255,0.3)">'+(3-bg.team.length)+' slot'+(3-bg.team.length>1?'s':'')+' open</span></div>':'')
+}
+
+function bBackToField(){showField()}
+function bHealAll(){bg.team.forEach(p=>p.currentHp=p.maxHp);renderField();document.getElementById('bExploreMsg').innerHTML='Pokéballs: '+(bg.pokeballs||'0')+'  ·  All healed!'}
 
 init()
 </script>
