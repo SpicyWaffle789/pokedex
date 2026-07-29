@@ -2996,12 +2996,13 @@ function saveNr(){
 }
 function getRollRarity(ep){
   if(ep<=0)return {label:'',color:'',emoji:''}
-  if(ep<20)return {label:'Common',color:'rgba(255,255,255,0.5)',emoji:'⬜'}
-  if(ep<80)return {label:'Uncommon',color:'#4fc3f7',emoji:'🟦'}
-  if(ep<200)return {label:'Rare',color:'#ab47bc',emoji:'🟣'}
-  if(ep<500)return {label:'Epic',color:'#ff6f00',emoji:'🟠'}
-  if(ep<1000)return {label:'Legendary',color:'#ffd700',emoji:'🌟'}
-  return {label:'Mythic',color:'#ff1744',emoji:'🔥'}
+  if(ep<400)return {label:'Common',color:'rgba(255,255,255,0.5)',emoji:'⬜'}
+  if(ep<500)return {label:'Uncommon',color:'#4fc3f7',emoji:'🟦'}
+  if(ep<600)return {label:'Rare',color:'#ab47bc',emoji:'🟣'}
+  if(ep<1000)return {label:'Epic',color:'#ff6f00',emoji:'🟠'}
+  if(ep<1500)return {label:'Legendary',color:'#ffd700',emoji:'🌟'}
+  if(ep<2300)return {label:'Mythic',color:'#ff1744',emoji:'🔥'}
+  return {label:'Godly',color:'#ff00ff',emoji:'👑'}
 }
 function renderNr(){
   const n=nrState.lastNumber
