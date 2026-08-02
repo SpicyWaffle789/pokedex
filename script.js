@@ -2,19 +2,68 @@ const TYPES=['normal','fire','water','electric','grass','ice','fighting','poison
 const GEN_LIMITS=[0,151,251,386,493,649,721,809,905,1025]
 let allPokemon=[],filteredPokemon=[],pokemonCache={},cardsCache={},loadedCount=0,currentTab='home',allMoves=[],allAbilities=[],moveCache={},abilityCache={}
 const PAGE_SIZE=9999
+function updateOfflineIndicator(){const el=document.getElementById('offlineIndicator');if(el)el.style.display=navigator.onLine?'none':'inline-block'}
+window.addEventListener('online',updateOfflineIndicator)
+window.addEventListener('offline',updateOfflineIndicator)
+document.addEventListener('DOMContentLoaded',updateOfflineIndicator)
 async function init(){
   switchTab('home')
-  const res=await fetch('https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0')
-  const data=await res.json()
-  allPokemon=data.results.map(p=>{
-    const match=p.url.match(/\/(\d+)\/$/);return{...p,id:match?parseInt(match[1]):0}
-  })
+  const cached=localStorage.getItem('pokeAllPokemonList')
+  if(cached){
+    try{allPokemon=JSON.parse(cached)}catch(e){}
+  }
+  try{
+    const res=await fetch('https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0')
+    const data=await res.json()
+    allPokemon=data.results.map(p=>{
+      const match=p.url.match(/\/(\d+)\/$/);return{...p,id:match?parseInt(match[1]):0}
+    })
+    localStorage.setItem('pokeAllPokemonList',JSON.stringify(allPokemon))
+  }catch(e){
+    if(!allPokemon.length){
+      document.getElementById('loading').innerHTML='<div style="color:var(--text-dim);font-size:14px;padding:20px">⚠️ Offline — cached data not available. Connect to load Pokémon.</div>'
+      return
+    }
+  }
   const sel=document.getElementById('typeFilter')
   TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
   filterPokemon()
   document.getElementById('loading').style.display='none'
   document.getElementById('grid').style.display='grid'
   batchLoadTypes()
+  preCacheOfflineData()
+}
+
+async function preCacheOfflineData(){
+  if(!localStorage.getItem('pokeTcgSets')){
+    try{
+      const sRes=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+      allSets=await sRes.json()
+      localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))
+    }catch(e){}
+  }else{
+    try{allSets=JSON.parse(localStorage.getItem('pokeTcgSets'))}catch(e){}
+  }
+  if(!localStorage.getItem('pokeAllMovesList')){
+    try{
+      const res=await fetch('https://pokeapi.co/api/v2/move?limit=100000')
+      const data=await res.json()
+      allMoves=data.results.map(m=>{const match=m.url.match(/\/(\d+)\/$/);return{...m,id:match?parseInt(match[1]):0}})
+      localStorage.setItem('pokeAllMovesList',JSON.stringify(allMoves))
+    }catch(e){}
+  }else{
+    try{allMoves=JSON.parse(localStorage.getItem('pokeAllMovesList'))}catch(e){}
+  }
+  if(!localStorage.getItem('pokeAllAbilitiesList')){
+    try{
+      const res=await fetch('https://pokeapi.co/api/v2/ability?limit=100000')
+      const data=await res.json()
+      allAbilities=data.results.map(a=>{const match=a.url.match(/\/(\d+)\/$/);return{...a,id:match?parseInt(match[1]):0}})
+      localStorage.setItem('pokeAllAbilitiesList',JSON.stringify(allAbilities))
+    }catch(e){}
+  }else{
+    try{allAbilities=JSON.parse(localStorage.getItem('pokeAllAbilitiesList'))}catch(e){}
+  }
 }
 
 function filterPokemon(){
@@ -52,9 +101,22 @@ async function batchLoadTypes(){
     const batch=allPokemon.slice(i,i+50)
     await Promise.allSettled(batch.map(async p=>{
       try{
+        const cacheKey='pokeTypes_'+p.id
+        const cached=localStorage.getItem(cacheKey)
+        if(cached){
+          p.types=JSON.parse(cached)
+          const card=document.querySelector('.pokemon-card[data-id="'+p.id+'"]')
+          if(card&&!card.querySelector('.types')){
+            const div=document.createElement('div');div.className='types'
+            p.types.forEach(t=>{const s=document.createElement('span');s.className='type-badge type-'+t;s.textContent=t;div.appendChild(s)})
+            card.appendChild(div)
+          }
+          return
+        }
         const res=await fetch('https://pokeapi.co/api/v2/pokemon/'+p.id)
         const data=await res.json()
         p.types=data.types.map(t=>t.type.name)
+        try{localStorage.setItem(cacheKey,JSON.stringify(p.types))}catch(e){}
         const card=document.querySelector('.pokemon-card[data-id="'+p.id+'"]')
         if(!card)return
         const div=document.createElement('div');div.className='types'
@@ -71,6 +133,11 @@ async function openDetail(id){
   document.body.style.overflow='hidden'
   const p=pokemonCache[id]
   if(p){renderDetail(p);rvAdd('pokemon',id,p.name,'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png');return}
+  const cacheKey='pokeDetail_'+id
+  const cached=localStorage.getItem(cacheKey)
+  if(cached){
+    try{pokemonCache[id]=JSON.parse(cached);renderDetail(pokemonCache[id]);rvAdd('pokemon',id,pokemonCache[id].name,'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png');return}catch(e){}
+  }
   try{
     const res=await fetch('https://pokeapi.co/api/v2/pokemon/'+id)
     const data=await res.json()
@@ -86,9 +153,11 @@ async function openDetail(id){
       }
     }catch(e){}
     pokemonCache[id]={...data,genus,evolutions:evos}
+    try{localStorage.setItem(cacheKey,JSON.stringify(pokemonCache[id]))}catch(e){}
     renderDetail(pokemonCache[id])
     rvAdd('pokemon',id,data.name,'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png')
   }catch(e){
+    if(cached){try{pokemonCache[id]=JSON.parse(cached);renderDetail(pokemonCache[id]);return}catch(e2){}}
     document.getElementById('detailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load Pokemon data</div>'
   }
 }
@@ -248,12 +317,27 @@ function switchTab(tab){
   else if(tab==='attacks')inp.placeholder='Search moves...'
   else if(tab==='abilities')inp.placeholder='Search abilities...'
   inp.value=''
-  if(tab==='sets'&&!allSets.length)loadSets()
-  if(tab==='attacks'&&!allMoves.length)loadMoves()
-  if(tab==='abilities'&&!allAbilities.length)loadAbilities()
+  if(tab==='sets'){
+    if(allSets.length)renderSets()
+    else loadSets()
+  }
+  if(tab==='attacks'){
+    if(allMoves.length){
+      const sel=document.getElementById('moveTypeFilter')
+      if(sel.options.length<=1)TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
+      document.getElementById('movesLoading').style.display='none'
+      document.getElementById('movesGrid').style.display='grid'
+      filterMoves()
+    }else loadMoves()
+  }
+  if(tab==='abilities'){
+    if(allAbilities.length){
+      document.getElementById('abilitiesLoading').style.display='none'
+      document.getElementById('abilitiesGrid').style.display='grid'
+      filterAbilities()
+    }else loadAbilities()
+  }
   if(tab==='pokemon')filterPokemon()
-  if(tab==='attacks')filterMoves()
-  if(tab==='abilities')filterAbilities()
   if(tab==='games')selectGame(currentGame||'wordle')
   if(tab==='leaderboard')renderLeaderboard()
   if(tab==='battle')initBattle()
@@ -262,12 +346,21 @@ function switchTab(tab){
 
 async function loadSets(){
   document.getElementById('setsContent').innerHTML='<div class="set-loading"><div class="spinner"></div><div>Loading sets...</div></div>'
+  const cached=localStorage.getItem('pokeTcgSets')
+  if(cached){
+    try{
+      allSets=JSON.parse(cached)
+      renderSets()
+      return
+    }catch(e){}
+  }
   try{
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
     allSets=await res.json()
+    try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     renderSets()
   }catch(e){
-    document.getElementById('setsContent').innerHTML='<div class="set-loading">Failed to load sets</div>'
+    document.getElementById('setsContent').innerHTML='<div class="set-loading">Failed to load sets — go online once to cache</div>'
   }
 }
 
@@ -301,13 +394,20 @@ async function openSet(setId){
   document.getElementById('setDetailModal').classList.add('active')
   document.body.style.overflow='hidden'
   if(setCardsCache[setId]){renderSetDetail(setCardsCache[setId]);rvAdd('card',setId,(allSets.find(s=>s.id===setId)?.name||setId),'');return}
+  const cacheKey='pokeSetCards_'+setId
+  const cached=localStorage.getItem(cacheKey)
+  if(cached){
+    try{const cards=JSON.parse(cached);setCardsCache[setId]=cards;renderSetDetail(cards);rvAdd('card',setId,(allSets.find(s=>s.id===setId)?.name||setId),'');return}catch(e){}
+  }
   try{
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/'+setId+'.json')
     const cards=await res.json()
     setCardsCache[setId]=cards
+    try{localStorage.setItem(cacheKey,JSON.stringify(cards))}catch(e){}
     renderSetDetail(cards)
     rvAdd('card',setId,(allSets.find(s=>s.id===setId)?.name||setId),'')
   }catch(e){
+    if(cached){try{const cards=JSON.parse(cached);setCardsCache[setId]=cards;renderSetDetail(cards);return}catch(e2){}}
     document.getElementById('setDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load set cards</div>'
   }
 }
@@ -416,20 +516,32 @@ function filterCurrent(){
 async function loadMoves(){
   document.getElementById('movesLoading').style.display='flex'
   document.getElementById('movesGrid').style.display='none'
+  const sel=document.getElementById('moveTypeFilter')
+  if(sel.options.length<=1)TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
+  const cached=localStorage.getItem('pokeAllMovesList')
+  if(cached){
+    try{
+      allMoves=JSON.parse(cached)
+      filterMoves()
+      document.getElementById('movesLoading').style.display='none'
+      document.getElementById('movesGrid').style.display='grid'
+      batchLoadMoveTypes()
+      return
+    }catch(e){}
+  }
   try{
     const res=await fetch('https://pokeapi.co/api/v2/move?limit=100000')
     const data=await res.json()
     allMoves=data.results.map(m=>{
       const match=m.url.match(/\/(\d+)\/$/);return{...m,id:match?parseInt(match[1]):0}
     })
-    const sel=document.getElementById('moveTypeFilter')
-    TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t.charAt(0).toUpperCase()+t.slice(1);sel.appendChild(o)})
+    try{localStorage.setItem('pokeAllMovesList',JSON.stringify(allMoves))}catch(e){}
     filterMoves()
     document.getElementById('movesLoading').style.display='none'
     document.getElementById('movesGrid').style.display='grid'
     batchLoadMoveTypes()
   }catch(e){
-    document.getElementById('movesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load moves</div>'
+    document.getElementById('movesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load moves — go online once to cache</div>'
   }
 }
 
@@ -471,6 +583,13 @@ async function batchLoadMoveTypes(){
     const batch=allMoves.slice(i,i+50)
     await Promise.allSettled(batch.map(async m=>{
       try{
+        const cacheKey='pokeMoveDetail_'+m.id
+        const cached=localStorage.getItem(cacheKey)
+        if(cached){
+          const d=JSON.parse(cached)
+          m.type=d.type;m.damageClass=d.damageClass;m.pp=d.pp;m.power=d.power;m.accuracy=d.accuracy;m.generation=d.generation;m.effectEntry=d.effectEntry
+          return
+        }
         const res=await fetch('https://pokeapi.co/api/v2/move/'+m.id)
         const data=await res.json()
         m.type=data.type?.name||''
@@ -480,6 +599,7 @@ async function batchLoadMoveTypes(){
         m.accuracy=data.accuracy||null
         m.generation=data.generation?.name||''
         m.effectEntry=data.effect_entries?.find(e=>e.language.name==='en')||null
+        try{localStorage.setItem(cacheKey,JSON.stringify({type:m.type,damageClass:m.damageClass,pp:m.pp,power:m.power,accuracy:m.accuracy,generation:m.generation,effectEntry:m.effectEntry}))}catch(e){}
       }catch(e){}
     }))
     filterMoves()
@@ -491,13 +611,18 @@ async function openMoveDetail(id){
   document.getElementById('moveDetailModal').classList.add('active')
   document.body.style.overflow='hidden'
   if(moveCache[id]){renderMoveDetail(moveCache[id]);rvAdd('move',id,moveCache[id].name,'');return}
+  const cacheKey='pokeMoveFull_'+id
+  const cached=localStorage.getItem(cacheKey)
+  if(cached){try{moveCache[id]=JSON.parse(cached);renderMoveDetail(moveCache[id]);rvAdd('move',id,moveCache[id].name,'');return}catch(e){}}
   try{
     const res=await fetch('https://pokeapi.co/api/v2/move/'+id)
     const data=await res.json()
     moveCache[id]=data
+    try{localStorage.setItem(cacheKey,JSON.stringify(data))}catch(e){}
     renderMoveDetail(data)
     rvAdd('move',id,data.name,'')
   }catch(e){
+    if(cached){try{moveCache[id]=JSON.parse(cached);renderMoveDetail(moveCache[id]);return}catch(e2){}}
     document.getElementById('moveDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load move data</div>'
   }
 }
@@ -533,18 +658,30 @@ function closeMoveDetail(){document.getElementById('moveDetailModal').classList.
 async function loadAbilities(){
   document.getElementById('abilitiesLoading').style.display='flex'
   document.getElementById('abilitiesGrid').style.display='none'
+  const cached=localStorage.getItem('pokeAllAbilitiesList')
+  if(cached){
+    try{
+      allAbilities=JSON.parse(cached)
+      filterAbilities()
+      document.getElementById('abilitiesLoading').style.display='none'
+      document.getElementById('abilitiesGrid').style.display='grid'
+      batchLoadAbilityData()
+      return
+    }catch(e){}
+  }
   try{
     const res=await fetch('https://pokeapi.co/api/v2/ability?limit=100000')
     const data=await res.json()
     allAbilities=data.results.map(a=>{
       const match=a.url.match(/\/(\d+)\/$/);return{...a,id:match?parseInt(match[1]):0}
     })
+    try{localStorage.setItem('pokeAllAbilitiesList',JSON.stringify(allAbilities))}catch(e){}
     filterAbilities()
     document.getElementById('abilitiesLoading').style.display='none'
     document.getElementById('abilitiesGrid').style.display='grid'
     batchLoadAbilityData()
   }catch(e){
-    document.getElementById('abilitiesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load abilities</div>'
+    document.getElementById('abilitiesLoading').innerHTML='<div style="color:rgba(255,255,255,0.5)">Failed to load abilities — go online once to cache</div>'
   }
 }
 
@@ -579,11 +716,19 @@ async function batchLoadAbilityData(){
     const batch=allAbilities.slice(i,i+50)
     await Promise.allSettled(batch.map(async a=>{
       try{
+        const cacheKey='pokeAbilDetail_'+a.id
+        const cached=localStorage.getItem(cacheKey)
+        if(cached){
+          const d=JSON.parse(cached)
+          a.generation=d.generation;a.effectEntry=d.effectEntry;a.flavorText=d.flavorText
+          return
+        }
         const res=await fetch('https://pokeapi.co/api/v2/ability/'+a.id)
         const data=await res.json()
         a.generation=data.generation?.name||''
         a.effectEntry=data.effect_entries?.find(e=>e.language.name==='en')||null
         a.flavorText=data.flavor_text_entries?.find(e=>e.language.name==='en')?.flavor_text||''
+        try{localStorage.setItem(cacheKey,JSON.stringify({generation:a.generation,effectEntry:a.effectEntry,flavorText:a.flavorText}))}catch(e){}
       }catch(e){}
     }))
     filterAbilities()
@@ -595,13 +740,18 @@ async function openAbilityDetail(id){
   document.getElementById('abilityDetailModal').classList.add('active')
   document.body.style.overflow='hidden'
   if(abilityCache[id]){renderAbilityDetail(abilityCache[id]);rvAdd('ability',id,abilityCache[id].name,'');return}
+  const cacheKey='pokeAbilFull_'+id
+  const cached=localStorage.getItem(cacheKey)
+  if(cached){try{abilityCache[id]=JSON.parse(cached);renderAbilityDetail(abilityCache[id]);rvAdd('ability',id,abilityCache[id].name,'');return}catch(e){}}
   try{
     const res=await fetch('https://pokeapi.co/api/v2/ability/'+id)
     const data=await res.json()
     abilityCache[id]=data
+    try{localStorage.setItem(cacheKey,JSON.stringify(data))}catch(e){}
     renderAbilityDetail(data)
     rvAdd('ability',id,data.name,'')
   }catch(e){
+    if(cached){try{abilityCache[id]=JSON.parse(cached);renderAbilityDetail(abilityCache[id]);return}catch(e2){}}
     document.getElementById('abilityDetailContent').innerHTML='<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.5)">Failed to load ability data</div>'
   }
 }
@@ -1356,15 +1506,27 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function calcS(base,lvl,iv){return Math.floor((2*base+iv)*lvl/100)+5}
 function calcH(base,lvl,iv){return (Math.floor((2*base+iv)*lvl/100)+lvl+10)*2}
 function calcCp(p){return Math.floor((p.stats.attack+p.stats.defense+p.stats.hp)*p.level/5/p.maxHp*200+10)}
-function imgTag(id,size){return '<img src="'+si(id)+'" alt="" style="width:'+size+';height:'+size+';object-fit:contain" onerror="this.src=\'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png\'">'}
+function imgTag(id,size){return '<img src="'+si(id)+'" alt="" style="width:'+size+';height:'+size+';object-fit:contain" onerror="this.onerror=null;this.src=\'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png\'">'}
 function getEff(mt,dt){let m=1;dt.forEach(t=>{if(CEFF[mt]&&CEFF[mt][t]!==undefined)m*=CEFF[mt][t]});return m}
 function showCh(id){const m={chStarter:'chStarter',chHub:'chHub',chBattle:'chBattle',chSwitch:'chSwitch',chParty:'chParty',chResults:'chResults',chWildCatch:'chWildCatch'};Object.keys(m).forEach(k=>document.getElementById(m[k]).style.display=k===id?'block':'none')}
 function rand(a,b){return a+Math.random()*(b-a)}
 
 async function fetchPkmn(id){
-  const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+id)
-  const d=await r.json()
-  return{id:d.id,name:d.name,types:d.types.map(t=>t.type.name),stats:{hp:d.stats[0].base_stat,attack:d.stats[1].base_stat,defense:d.stats[2].base_stat,spAttack:d.stats[3].base_stat,spDefense:d.stats[4].base_stat,speed:d.stats[5].base_stat}}
+  const cacheKey='pokeData_'+id
+  const cached=localStorage.getItem(cacheKey)
+  if(cached){
+    try{return JSON.parse(cached)}catch(e){}
+  }
+  try{
+    const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+id)
+    const d=await r.json()
+    const result={id:d.id,name:d.name,types:d.types.map(t=>t.type.name),stats:{hp:d.stats[0].base_stat,attack:d.stats[1].base_stat,defense:d.stats[2].base_stat,spAttack:d.stats[3].base_stat,spDefense:d.stats[4].base_stat,speed:d.stats[5].base_stat}}
+    try{localStorage.setItem(cacheKey,JSON.stringify(result))}catch(e){}
+    return result
+  }catch(e){
+    if(cached)try{return JSON.parse(cached)}catch(e2){}
+    throw e
+  }
 }
 function makePkmn(d,lvl){
   const iv=Object.fromEntries(Object.keys(d.stats).map(k=>[k,Math.floor(Math.random()*32)]))
@@ -3419,6 +3581,36 @@ function opWipeLeaderboard(){
   document.getElementById('opResult').textContent='✅ Leaderboard data wiped!'
   renderLeaderboard()
 }
+function opCacheStatus(){
+  let total=0;const counts={pokemon:0,moves:0,abilities:0,tcg:0,other:0}
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);const v=localStorage.getItem(k);total+=k.length+v.length
+    if(k.startsWith('pokeData_')||k.startsWith('pokeDetail_')||k.startsWith('pokeTypes_'))counts.pokemon++
+    else if(k.startsWith('pokeMove'))counts.moves++
+    else if(k.startsWith('pokeAbil'))counts.abilities++
+    else if(k.startsWith('pokeTcg')||k.startsWith('pokeSet'))counts.tcg++
+    else counts.other++
+  }
+  const mb=(total/1024/1024).toFixed(2)
+  document.getElementById('opResult').innerHTML=
+    '<div style="text-align:left;background:var(--surface);padding:16px;border-radius:12px;border:1px solid var(--border);margin-top:12px">'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:8px">📦 Cache Status</div>'+
+      '<div style="font-size:13px;color:var(--text-dim)">Total size: <b>'+mb+' MB</b> / ~5 MB limit</div>'+
+      '<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Pokémon cached: <b>'+counts.pokemon+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text-dim)">Moves cached: <b>'+counts.moves+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text-dim)">Abilities cached: <b>'+counts.abilities+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text-dim)">TCG data cached: <b>'+counts.tcg+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text-dim)">Other cached: <b>'+counts.other+'</b></div>'+
+    '</div>'
+}
+function opClearApiCache(){
+  if(!confirm('Clear all cached API data? (Pokemon, moves, abilities, TCG)'))return
+  const keys=[]
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('pokeData_')||k.startsWith('pokeDetail_')||k.startsWith('pokeTypes_')||k.startsWith('pokeMove')||k.startsWith('pokeAbil')||k.startsWith('pokeTcg')||k.startsWith('pokeSet')||k.startsWith('pokeAllPokemonList')||k.startsWith('pokeAllMovesList')||k.startsWith('pokeAllAbilitiesList'))keys.push(k)}
+  keys.forEach(k=>localStorage.removeItem(k))
+  if('caches' in window)caches.delete('pokedex-v1')
+  document.getElementById('opResult').textContent='✅ API cache cleared! ('+keys.length+' entries removed)'
+}
 function opWipeAll(){
   if(!confirm('This will delete EVERYTHING (all localStorage). Are you sure?'))return
   if(!confirm('Last chance! All progress, stats, saves, and settings will be gone.'))return
@@ -3944,9 +4136,11 @@ let bpSelectedPack='random'
 let bpSelectedSet=null
 let bpCardsCache={}
 let bpOpenedCards=[]
+let bpBattlePokemon=[]
+let bpBattleAdded=false
 
 async function initBoosterPack(){
-  bpOpenedCards=[]
+  bpOpenedCards=[];bpBattlePokemon=[];bpBattleAdded=false
   const el=document.getElementById('bpContent')
   el.innerHTML='<h2 style="text-align:center;margin-bottom:4px">📦 TCG Booster Packs</h2>'+
     '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:4px">Open real TCG booster packs with actual card images!</p>'+
@@ -3961,7 +4155,8 @@ async function initBoosterPack(){
     '<div id="bpSetPicker" style="margin-bottom:12px"></div>'+
     '<div style="text-align:center;margin-bottom:12px"><button class="b-btn b-btn-primary" style="font-size:14px;padding:12px 32px" onclick="bpOpenPack()" '+(ch.stardust<BOOSTER_COST?'disabled style="opacity:0.5"':'')+'>🎁 Open Pack ('+BOOSTER_COST+' SD)</button></div>'+
     '<div id="bpResult" style="margin-bottom:12px"></div>'+
-    '<div id="bpOpened" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>'
+    '<div id="bpOpened" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>'+
+    '<div id="bpBattlePokemon" style="margin-top:16px"></div>'
   bpRenderSetPicker()
 }
 function bpSelectPack(id){
@@ -3991,11 +4186,15 @@ function bpRenderSetPicker(){
     '<div style="display:flex;gap:4px;flex-wrap:wrap">'+recentSets.map(s=>'<button style="padding:4px 8px;border-radius:6px;border:1px solid '+(bpSelectedSet===s.id?'#f7c948':'var(--border)')+';background:'+(bpSelectedSet===s.id?'rgba(247,201,72,0.15)':'var(--surface)')+';color:var(--text);font-size:10px;cursor:pointer" onclick="bpSelectedSet=\''+s.id+'\';bpRenderSetPicker()">'+s.name+'</button>').join('')+'</div>'
 }
 async function loadSetsForBooster(){
+  const cached=localStorage.getItem('pokeTcgSets')
+  if(cached){try{allSets=JSON.parse(cached);bpRenderSetPicker();return}catch(e){}}
   try{
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
     allSets=await res.json()
+    try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     bpRenderSetPicker()
   }catch(e){
+    if(allSets.length){bpRenderSetPicker();return}
     const el=document.getElementById('chBpSetPicker')||document.getElementById('bpSetPicker')
     if(el)el.innerHTML='<div style="text-align:center;color:#f44336;font-size:11px">Failed to load sets</div>'
   }
@@ -4026,6 +4225,8 @@ async function bpOpenPack(){
   el.innerHTML='<div style="text-align:center;padding:8px"><div style="font-size:14px;font-weight:700;color:#f7c948">🎁 Pack Opened!</div><div style="font-size:11px;color:var(--text-dim)">'+packCards.length+' cards · '+packCards.filter(c=>c.rarity?.includes('Secret')||c.rarity?.includes('Ultra')).length+' special rare'+(packCards.filter(c=>c.rarity?.includes('Secret')||c.rarity?.includes('Ultra')).length!==1?'s':'')+'</div></div>'
   bpOpenedCards=packCards
   bpRenderOpenedCards()
+  bpBattlePokemon=[];bpBattleAdded=false
+  bpFetchBattlePokemon(packCards)
   const st=document.getElementById('chHubContent')
   if(st){
     const sdEl=st.querySelector('.hub-stats')
@@ -4035,21 +4236,37 @@ async function bpOpenPack(){
 async function bpFetchSetCards(setId){
   try{
     if(!allSets.length){
+      const cachedSets=localStorage.getItem('pokeTcgSets')
+      if(cachedSets){try{allSets=JSON.parse(cachedSets)}catch(e){}}
+    }
+    if(!allSets.length){
       const sRes=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
       allSets=await sRes.json()
+      try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     }
     const setInfo=allSets.find(s=>s.id===setId)
+    const cacheKey='pokeTcgCards_'+setId
+    const cached=localStorage.getItem(cacheKey)
+    if(cached){
+      try{const cards=JSON.parse(cached);return cards.filter(c=>c.images&&c.rarity).map(c=>({...c,set:setInfo?{id:setId,name:setInfo.name}:{id:setId,name:setId}}))}catch(e){}
+    }
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/'+setId+'.json')
     if(!res.ok)throw new Error()
     const cards=await res.json()
+    try{localStorage.setItem(cacheKey,JSON.stringify(cards))}catch(e){}
     return cards.filter(c=>c.images&&c.rarity).map(c=>({...c,set:setInfo?{id:setId,name:setInfo.name}:{id:setId,name:setId}}))
   }catch(e){return[]}
 }
 async function bpFetchRandomCards(count){
   try{
     if(!allSets.length){
+      const cachedSets=localStorage.getItem('pokeTcgSets')
+      if(cachedSets){try{allSets=JSON.parse(cachedSets)}catch(e){}}
+    }
+    if(!allSets.length){
       const sRes=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
       allSets=await sRes.json()
+      try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     }
     const playable=allSets.filter(s=>s.total&&s.total>20)
     const picks=[]
@@ -4115,6 +4332,72 @@ function bpAddAllToCollection(){
   })
   const el=document.getElementById('bpOpened')
   if(el)el.innerHTML+='<div style="grid-column:1/-1;text-align:center;padding:8px;color:#4caf50;font-weight:700">✅ All '+bpOpenedCards.length+' cards added to My Cards!</div>'
+}
+async function bpFetchBattlePokemon(cards){
+  const el=document.getElementById('bpBattlePokemon')
+  if(!el)return
+  el.innerHTML='<div style="text-align:center;padding:12px"><div class="spinner" style="width:20px;height:20px;margin:0 auto"></div><div style="font-size:11px;color:var(--text-dim);margin-top:6px">Summoning battle Pokémon...</div></div>'
+  const names=[...new Set(cards.map(c=>{
+    let n=c.name.toLowerCase().replace(/[-\s]+/g,'')
+      .replace(/ex$|gx$|v$|vmax$|vstar$|prime$|lv\.x$|legend$|level up$|break$|mega$/,'')
+      .replace(/\s*[-–]\s*.*/,'').trim()
+    return n
+  }))]
+  const picked=[];const used=new Set()
+  for(let i=0;i<3&&i<names.length*3;i++){
+    const nm=names[Math.floor(Math.random()*names.length)]
+    if(used.has(nm))continue
+    const match=allPokemon.find(p=>p.name===nm)
+    if(!match)continue
+    try{
+      const d=await fetchPkmn(match.id)
+      const lvl=Math.max(5,Math.min(25,Math.floor(Math.random()*15)+5))
+      const p=makePkmn(d,lvl)
+      picked.push(p);used.add(nm)
+    }catch(e){}
+  }
+  if(!picked.length){
+    for(let i=0;i<3;i++){
+      const id=Math.floor(Math.random()*151)+1
+      try{const d=await fetchPkmn(id);picked.push(makePkmn(d,Math.floor(Math.random()*15)+5))}catch(e){}
+    }
+  }
+  bpBattlePokemon=picked
+  el.innerHTML=
+    '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid rgba(247,201,72,0.3)">'+
+      '<div style="text-align:center;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:#f7c948">⚔️ Battle Pokémon</div><div style="font-size:11px;color:var(--text-dim)">These Pokémon are ready to join your team!</div></div>'+
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px">'+
+        picked.map((p,i)=>{
+          const hpPct=Math.round(p.currentHp/p.maxHp*100)
+          return '<div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--border);text-align:center;min-width:110px;animation:bpCardReveal 0.4s ease '+(i*0.15)+'s both">'+
+            '<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png" style="width:72px;height:72px;image-rendering:pixelated">'+
+            '<div style="font-size:12px;font-weight:700;margin-top:4px;text-transform:capitalize">'+p.name+'</div>'+
+            '<div style="font-size:10px;color:var(--text-dim)">Lv.'+p.level+'</div>'+
+            '<div style="display:flex;gap:3px;justify-content:center;margin-top:3px">'+p.types.map(t=>'<span class="type-badge type-'+t+'" style="font-size:8px;padding:1px 5px">'+t+'</span>').join('')+'</div>'+
+            '<div style="margin-top:4px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+hpPct+'%;background:'+(hpPct>50?'#4caf50':hpPct>25?'#ff9800':'#f44336')+';border-radius:3px"></div></div>'+
+            '<div style="font-size:8px;color:var(--text-muted);margin-top:2px">HP '+p.currentHp+'/'+p.maxHp+'</div>'+
+          '</div>'
+        }).join('')+
+      '</div>'+
+      '<div style="text-align:center"><button class="b-btn b-btn-primary" style="font-size:13px;padding:10px 24px'+(bpBattleAdded?';opacity:0.5':'')+'" onclick="bpAddBattlePokemon()"'+(bpBattleAdded?' disabled':'')+'>'+(bpBattleAdded?'✅ Added to Team':'➕ Add All to Team')+'</button></div>'+
+    '</div>'
+  chSave()
+}
+function bpAddBattlePokemon(){
+  if(bpBattleAdded||!bpBattlePokemon.length)return
+  bpBattlePokemon.forEach(p=>{if(ch.team.length<1000)ch.team.push(p)})
+  bpBattleAdded=true
+  const el=document.getElementById('bpBattlePokemon')
+  if(el){
+    const btn=el.querySelector('.b-btn')
+    if(btn){btn.textContent='✅ Added to Team';btn.disabled=true;btn.style.opacity='0.5'}
+  }
+  chSave()
+  const st=document.getElementById('chHubContent')
+  if(st){
+    const sdEl=st.querySelector('.hub-stats')
+    if(sdEl)sdEl.innerHTML=sdEl.innerHTML.replace(/⚔️\s*\d+/, '⚔️ '+ch.team.length)
+  }
 }
 
 // ===== DAILY WILD ENCOUNTER =====

@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='white' stroke='black' stroke-width='4'/><path d='M2,50 A48,48 0 0,1 98,50' fill='%23ee1515'/><rect x='2' y='46' width='96' height='8' fill='black'/><circle cx='50' cy='50' r='14' fill='white' stroke='black' stroke-width='4'/><circle cx='50' cy='50' r='8' fill='white' stroke='black' stroke-width='3'/></svg>">
 <link rel="stylesheet" href="style.css">
-
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
 <header>
@@ -52,6 +56,7 @@
       </select>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0">
+      <span id="offlineIndicator" style="display:none;font-size:11px;font-weight:700;color:#ff9800;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,152,0,0.3);background:rgba(255,152,0,0.1);white-space:nowrap">📡 Offline</span>
       <span id="themeToggle" style="font-size:15px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);white-space:nowrap;user-select:none" onclick="toggleTheme()">🌙</span>
       <span id="nrHeaderDisplay" style="font-size:13px;font-weight:700;color:#f7c948;padding:6px 12px;border-radius:8px;border:1px solid rgba(247,201,72,0.2);white-space:nowrap;font-family:monospace;cursor:pointer" onclick="switchTab('games');setTimeout(()=>selectGame('numberroll'),50)">🎲 ?</span>
       <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.5);cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);white-space:nowrap" onclick="switchTab('leaderboard')">📊</span>
@@ -68,7 +73,7 @@
     <button class="tab" data-tab="battle" onclick="switchTab('battle')">Battle</button>
     <button class="tab" data-tab="collection" onclick="switchTab('collection')">🃏 My Cards</button>
     <button class="tab" data-tab="about" onclick="switchTab('about')">ℹ️ About</button>
-    <button class="tab" data-tab="operator" onclick="switchTab('operator')" id="operatorTab" style="display:none">🔧 Operator</button>
+    <button class="tab" data-tab="operator" onclick="switchTab('operator')" id="operatorTab">🔧 Settings</button>
   </div>
 </header>
 <div id="rvBar" class="rv-bar"><span style="color:rgba(255,255,255,0.2);font-size:11px;white-space:nowrap">Recently Viewed</span></div>
@@ -411,9 +416,11 @@
 </div>
 
 <div id="operatorPage" style="padding:40px 20px;max-width:600px;margin:0 auto;text-align:center">
-  <h2 style="font-size:24px;font-weight:800;margin-bottom:4px">🔧 Operator Panel</h2>
-  <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:20px">Hidden admin tools</p>
+  <h2 style="font-size:24px;font-weight:800;margin-bottom:4px">⚙️ Settings</h2>
+  <p style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:20px">Cache management and data tools</p>
   <div style="display:flex;flex-direction:column;gap:10px">
+    <button onclick="opCacheStatus()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(247,201,72,0.3);background:rgba(247,201,72,0.1);color:#f7c948;font-size:14px;font-weight:700;cursor:pointer">📦 Show Cache Status</button>
+    <button onclick="opClearApiCache()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,152,0,0.3);background:rgba(255,152,0,0.1);color:#ff9800;font-size:14px;font-weight:700;cursor:pointer">🔄 Clear API Cache</button>
     <button onclick="opWipeLeaderboard()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.3);background:rgba(255,50,50,0.1);color:#ff5252;font-size:14px;font-weight:700;cursor:pointer">🗑️ Wipe All Leaderboard Data</button>
     <button onclick="opWipeAll()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.5);background:rgba(255,50,50,0.15);color:#ff1744;font-size:14px;font-weight:700;cursor:pointer">💀 Wipe EVERYTHING (all localStorage)</button>
   </div>
@@ -506,5 +513,8 @@
   </div>
 </div>
 <script src="script.js"></script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
 </body>
 </html>
