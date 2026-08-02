@@ -238,7 +238,8 @@ function switchTab(tab){
   document.getElementById('battlePage').style.display=tab==='battle'?'block':'none'
   document.getElementById('operatorPage').style.display=tab==='operator'?'block':'none'
   document.getElementById('collectionPage').style.display=tab==='collection'?'block':'none'
-  document.querySelector('.search-container').style.display=tab==='home'||tab==='sets'||tab==='games'||tab==='leaderboard'||tab==='battle'||tab==='operator'||tab==='collection'?'none':'block'
+  document.getElementById('aboutPage').style.display=tab==='about'?'block':'none'
+  document.querySelector('.search-container').style.display=tab==='home'||tab==='sets'||tab==='games'||tab==='leaderboard'||tab==='battle'||tab==='operator'||tab==='collection'||tab==='about'?'none':'block'
   document.getElementById('pokeFilters').style.display=tab==='pokemon'?'flex':'none'
   document.getElementById('attackFilters').style.display=tab==='attacks'?'flex':'none'
   document.getElementById('abilityFilters').style.display=tab==='abilities'?'flex':'none'
@@ -699,10 +700,11 @@ let currentGame='wordle'
 function selectGame(name){
   currentGame=name
   document.querySelectorAll('.gs-btn').forEach(b=>b.classList.toggle('active',b.dataset.game===name))
-  ;['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll'].forEach(g=>{
-    document.getElementById('game'+g.charAt(0).toUpperCase()+g.slice(1)).style.display=g===name?'block':'none'
+  ;['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','teambuilder','typecalc','teamcard'].forEach(g=>{
+    const id='game'+g.charAt(0).toUpperCase()+g.slice(1)
+    const el=document.getElementById(id)
+    if(el)el.style.display=g===name?'block':'none'
   })
-  // Reset state so game re-initializes fresh each visit
   if(name==='wordle'){wgStarted=false;initWordle()}
   if(name==='whosthat'){mg1={id:0,score:0,tries:0};initMg1()}
   if(name==='typespeed'){mg2={id:0,streak:0,score:0};initMg2()}
@@ -710,6 +712,233 @@ function selectGame(name){
   if(name==='speedrun'){mg4={time:30,score:0,names:[],active:false,interval:null};initMg4()}
   if(name==='typequiz'){mg5={score:0,total:0,used:[],answer:1};initMg5()}
   if(name==='numberroll'){nrStarted=false;initNr()}
+  if(name==='teambuilder')initTeamBuilder()
+  if(name==='typecalc')initTypeCalc()
+  if(name==='teamcard')initTeamCard()
+}
+
+// ===== TEAM BUILDER =====
+let tbTeam=[null,null,null,null,null,null]
+let tbSearch=''
+
+function initTeamBuilder(){
+  const el=document.getElementById('tbContent')
+  el.innerHTML=
+    '<h2 style="text-align:center;margin-bottom:4px">🏗️ Team Builder</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:16px">Build a team of up to 6 Pokémon and analyze type coverage</p>'+
+    '<div style="display:flex;gap:8px;margin-bottom:16px;justify-content:center;flex-wrap:wrap">'+
+      '<input type="text" id="tbSearch" placeholder="Search Pokémon..." autocomplete="off" style="padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;width:260px;outline:none" oninput="tbSearchPokemon(this.value)" onkeydown="if(event.key===\'Enter\')tbPickFirst()">'+
+      '<datalist id="tbDatalist"></datalist>'+
+    '</div>'+
+    '<div id="tbSlots" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:600px;margin:0 auto 16px"></div>'+
+    '<div id="tbCoverage" style="max-width:700px;margin:0 auto"></div>'+
+    '<div id="tbStats" style="max-width:700px;margin:16px auto 0"></div>'
+  tbRenderSlots()
+}
+
+function tbSearchPokemon(q){
+  tbSearch=q
+  const dl=document.getElementById('tbDatalist')
+  if(!dl||q.length<2)return
+  const matches=allPokemon.filter(p=>p.name.includes(q.toLowerCase())).slice(0,15)
+  dl.innerHTML=matches.map(p=>'<option value="'+p.name+'">').join('')
+}
+
+function tbPickFirst(){
+  const inp=document.getElementById('tbSearch')
+  if(!inp)return
+  const q=inp.value.toLowerCase()
+  const p=allPokemon.find(x=>x.name===q)
+  if(p)tbAddPokemon(p.id)
+}
+
+function tbAddPokemon(id){
+  const slot=tbTeam.indexOf(null)
+  if(slot===-1)return
+  const p=allPokemon.find(x=>x.id===id)
+  if(!p)return
+  if(tbTeam.some(x=>x&&x.id===id))return
+  tbTeam[slot]={id:p.id,name:p.name,types:p.types}
+  tbRenderSlots()
+  tbAnalyze()
+}
+
+function tbRemovePokemon(slot){
+  tbTeam[slot]=null
+  tbRenderSlots()
+  tbAnalyze()
+}
+
+function tbRenderSlots(){
+  const el=document.getElementById('tbSlots')
+  if(!el)return
+  el.innerHTML=tbTeam.map((p,i)=>{
+    if(!p)return '<div style="background:var(--surface);border:2px dashed var(--border);border-radius:14px;min-height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;cursor:pointer" onclick="document.getElementById(\'tbSearch\').focus()">+ Add Pokémon</div>'
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center;position:relative;cursor:pointer" onclick="tbRemovePokemon('+i+')">'+
+      '<div style="position:absolute;top:4px;right:8px;font-size:16px;color:var(--text-muted);cursor:pointer" title="Remove">✕</div>'+
+      '<img src="'+si(p.id)+'" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display=\'none\'">'+
+      '<div style="font-size:13px;font-weight:600;text-transform:capitalize;margin-top:4px">'+p.name+'</div>'+
+      '<div style="display:flex;gap:3px;justify-content:center;margin-top:4px">'+p.types.map(t=>'<span class="type-badge type-'+t+'" style="font-size:9px;padding:1px 6px">'+t+'</span>').join('')+'</div>'+
+    '</div>'
+  }).join('')
+}
+
+function tbAnalyze(){
+  const team=tbTeam.filter(Boolean)
+  if(!team.length){
+    document.getElementById('tbCoverage').innerHTML='<p style="text-align:center;color:var(--text-muted);font-size:13px">Add Pokémon to see type coverage analysis</p>'
+    document.getElementById('tbStats').innerHTML=''
+    return
+  }
+  // Type coverage analysis
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const coverage={};const weakTo={};const resistFrom={}
+  allTypes.forEach(t=>{coverage[t]=0;weakTo[t]=0;resistFrom[t]=0})
+  team.forEach(p=>{
+    p.types.forEach(atk=>{
+      if(CEFF[atk])allTypes.forEach(def=>{
+        const m=CEFF[atk][def]||1
+        if(m>1)coverage[def]+=m-1
+        if(m>1)coverage[def]+=m-1
+      })
+    })
+  })
+  // Calculate weaknesses and resistances for the team
+  team.forEach(p=>{
+    allTypes.forEach(atk=>{
+      let mult=1
+      p.types.forEach(def=>{if(CEFF[atk]&&CEFF[atk][def]!==undefined)mult*=CEFF[atk][def]})
+      if(mult>1)weakTo[atk]+=mult-1
+      if(mult<1)resistFrom[atk]+=(1-mult)
+    })
+  })
+  const offSorted=allTypes.slice().sort((a,b)=>coverage[b]-coverage[a])
+  const defSorted=allTypes.slice().sort((a,b)=>weakTo[b]-weakTo[a])
+  const resSorted=allTypes.slice().sort((a,b)=>resistFrom[b]-resistFrom[a])
+  document.getElementById('tbCoverage').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border)">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#4caf50">⚔️ Offensive Coverage</h3>'+
+        offSorted.filter(t=>coverage[t]>0).map(t=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="type-badge type-'+t+'" style="font-size:9px;padding:1px 6px;min-width:50px">'+t+'</span><div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,coverage[t]*25)+'%;background:#4caf50;border-radius:3px"></div></div><span style="font-size:10px;color:var(--text-dim);min-width:20px">'+coverage[t].toFixed(1)+'</span></div>').join('')+
+        (offSorted.every(t=>coverage[t]===0)?'<p style="color:var(--text-muted);font-size:11px">No type advantages</p>':'')+
+      '</div>'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border)">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#f44336">🛡️ Defensive Weaknesses</h3>'+
+        defSorted.filter(t=>weakTo[t]>0).map(t=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="type-badge type-'+t+'" style="font-size:9px;padding:1px 6px;min-width:50px">'+t+'</span><div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,weakTo[t]*25)+'%;background:#f44336;border-radius:3px"></div></div><span style="font-size:10px;color:var(--text-dim);min-width:20px">'+weakTo[t].toFixed(1)+'</span></div>').join('')+
+        '<h3 style="font-size:13px;font-weight:700;margin:12px 0 10px;color:#2196f3">🛡️ Resistances</h3>'+
+        resSorted.filter(t=>resistFrom[t]>0).slice(0,9).map(t=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="type-badge type-'+t+'" style="font-size:9px;padding:1px 6px;min-width:50px">'+t+'</span><div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,resistFrom[t]*25)+'%;background:#2196f3;border-radius:3px"></div></div><span style="font-size:10px;color:var(--text-dim);min-width:20px">'+resistFrom[t].toFixed(1)+'</span></div>').join('')+
+      '</div>'+
+    '</div>'
+  // Team stats summary
+  const statNames=['hp','attack','defense','spAttack','spDefense','speed']
+  const statColors=['#ff6b6b','#f0932b','#f7d794','#74b9ff','#81ecec','#a29bfe']
+  const statLabels=['HP','ATK','DEF','SPA','SPD','SPE']
+  document.getElementById('tbStats').innerHTML=
+    '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border);margin-top:12px">'+
+      '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px">📊 Team Stats Comparison</h3>'+
+      '<div style="display:grid;grid-template-columns:'+statNames.length+'fr;gap:8px">'+
+        statNames.map((s,i)=>{
+          const vals=team.map(p=>p.baseStats&&p.baseStats[s]?p.baseStats[s]:0)
+          const max=Math.max(...vals,100)
+          return '<div style="text-align:center"><div style="font-size:10px;font-weight:600;color:var(--text-dim);margin-bottom:4px">'+statLabels[i]+'</div>'+
+            team.map((p,j)=>'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,vals[j]/max*100)+'%;background:'+statColors[i]+';border-radius:3px"></div></div><span style="font-size:9px;color:var(--text-muted);min-width:20px">'+vals[j]+'</span></div>').join('')+
+          '</div>'
+        }).join('')+
+      '</div>'+
+    '</div>'
+}
+
+// ===== TYPE CALCULATOR =====
+let tcAtk='fire';let tcDef1='grass';let tcDef2=''
+
+function initTypeCalc(){
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const el=document.getElementById('tcContent')
+  el.innerHTML=
+    '<h2 style="text-align:center;margin-bottom:4px">📐 Type Calculator</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:20px">Check type effectiveness for any matchup</p>'+
+    '<div style="display:flex;gap:16px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px">'+
+      '<div style="text-align:center">'+
+        '<div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px">ATTACKING</div>'+
+        '<select id="tcAtkSel" onchange="tcAtk=this.value;tcCalc()" style="padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;min-width:120px">'+
+          allTypes.map(t=>'<option value="'+t+'"'+(t===tcAtk?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>').join('')+
+        '</select>'+
+      '</div>'+
+      '<div style="font-size:24px;color:var(--text-dim);padding-top:30px">→</div>'+
+      '<div style="text-align:center">'+
+        '<div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px">DEFENDING</div>'+
+        '<select id="tcDef1Sel" onchange="tcDef1=this.value;tcCalc()" style="padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;min-width:120px">'+
+          allTypes.map(t=>'<option value="'+t+'"'+(t===tcDef1?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>').join('')+
+        '</select>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">+ optional 2nd type</div>'+
+        '<select id="tcDef2Sel" onchange="tcDef2=this.value;tcCalc()" style="margin-top:4px;padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;cursor:pointer;min-width:120px">'+
+          '<option value="">None</option>'+
+          allTypes.map(t=>'<option value="'+t+'"'+(t===tcDef2?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>').join('')+
+        '</select>'+
+      '</div>'+
+    '</div>'+
+    '<div id="tcResult" style="text-align:center;margin-bottom:24px"></div>'+
+    '<div id="tcChart" style="max-width:700px;margin:0 auto"></div>'
+  tcCalc()
+}
+
+function tcCalc(){
+  let mult=1
+  const def=[tcDef1]
+  if(tcDef2&&tcDef2!==tcDef1)def.push(tcDef2)
+  def.forEach(d=>{if(CEFF[tcAtk]&&CEFF[tcAtk][d]!==undefined)mult*=CEFF[tcAtk][d]})
+  const effLabel=mult>1?'Super Effective':mult===1?'Normal':mult>0?'Not Very Effective':'No Effect'
+  const effColor=mult>1?'#4caf50':mult===1?'#f7c948':mult>0?'#ff9800':'#f44336'
+  const emoji=mult>1?'💥':mult===1?'⚖️':mult>0?'💧':'🚫'
+  document.getElementById('tcResult').innerHTML=
+    '<div style="background:var(--surface);border-radius:16px;padding:20px;border:2px solid '+effColor+';display:inline-block;min-width:200px">'+
+      '<div style="font-size:36px;margin-bottom:4px">'+emoji+'</div>'+
+      '<div style="font-size:28px;font-weight:800;color:'+effColor+'">'+mult+'x</div>'+
+      '<div style="font-size:14px;font-weight:600;color:var(--text)">'+effLabel+'</div>'+
+      '<div style="font-size:12px;color:var(--text-dim);margin-top:4px">'+cap(tcAtk)+' → '+def.map(cap).join('/')+'</div>'+
+    '</div>'
+  // Full chart: what beats this attacking type, what it beats, etc.
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const supereffective=[];const notvery=[];const noeffect=[];const weakto=[];const resist=[]
+  allTypes.forEach(t=>{
+    let m=1
+    def.forEach(d=>{if(CEFF[t]&&CEFF[t][d]!==undefined)m*=CEFF[t][d]})
+    if(m>1)supereffective.push({type:t,mult:m})
+    if(m<1&&m>0)notvery.push({type:t,mult:m})
+    if(m===0)noeffect.push({type:t})
+    // Check if defending type is weak/resistant to attack type
+    if(CEFF[tcAtk]&&CEFF[tcAtk][t]!==undefined){
+      if(CEFF[tcAtk][t]>1)weakto.push({type:t,mult:CEFF[tcAtk][t]})
+      if(CEFF[tcAtk][t]<1)resist.push({type:t,mult:CEFF[tcAtk][t]})
+    }
+  })
+  document.getElementById('tcChart').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:100%;overflow:hidden">'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border);min-width:0">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#4caf50">⚔️ '+cap(tcAtk)+' is Super Effective Against</h3>'+
+        (weakto.length?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+weakto.map(w=>'<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(76,175,80,0.1);border-radius:4px;border:1px solid rgba(76,175,80,0.2)"><span class="type-badge type-'+w.type+'" style="font-size:10px;padding:2px 6px">'+w.type+'</span><span style="font-size:10px;color:#4caf50;font-weight:700">'+w.mult+'x</span></div>').join('')+'</div>':'<p style="color:var(--text-muted);font-size:11px">None</p>')+
+      '</div>'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border);min-width:0">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#f44336">🛡️ '+cap(tcAtk)+' is Not Very Effective Against</h3>'+
+        (resist.length?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+resist.map(r=>'<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(244,67,54,0.1);border-radius:4px;border:1px solid rgba(244,67,54,0.2)"><span class="type-badge type-'+r.type+'" style="font-size:10px;padding:2px 6px">'+r.type+'</span><span style="font-size:10px;color:#ff9800;font-weight:700">'+r.mult+'x</span></div>').join('')+'</div>':'<p style="color:var(--text-muted);font-size:11px">None</p>')+
+      '</div>'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border);min-width:0">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#2196f3">Incoming: Deals '+mult+'x to '+def.map(cap).join('/')+'</h3>'+
+        (supereffective.length?'<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">These hit YOU for extra:</div><div style="display:flex;flex-wrap:wrap;gap:3px">'+supereffective.map(s=>'<span class="type-badge type-'+s.type+'" style="font-size:9px;padding:2px 6px">'+s.type+'</span>').join('')+'</div>':'')+
+        (notvery.length?'<div style="font-size:11px;color:var(--text-dim);margin:6px 0 4px">These are resisted:</div><div style="display:flex;flex-wrap:wrap;gap:3px">'+notvery.map(n=>'<span class="type-badge type-'+n.type+'" style="font-size:9px;padding:2px 6px">'+n.type+'</span>').join('')+'</div>':'')+
+        (noeffect.length?'<div style="font-size:11px;color:var(--text-dim);margin:6px 0 4px">No effect:</div><div style="display:flex;flex-wrap:wrap;gap:3px">'+noeffect.map(n=>'<span class="type-badge type-'+n.type+'" style="font-size:9px;padding:2px 6px">'+n.type+'</span>').join('')+'</div>':'')+
+      '</div>'+
+      '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border);min-width:0">'+
+        '<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#f7c948">Full Effectiveness Chart</h3>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        allTypes.map(t=>{
+          let fullMult=1;def.forEach(d=>{if(CEFF[t]&&CEFF[t][d]!==undefined)fullMult*=CEFF[t][d]})
+          const c=fullMult>1?'#4caf50':fullMult===1?'var(--text-dim)':fullMult>0?'#ff9800':'#f44336'
+          return '<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid rgba(255,255,255,0.06)"><span class="type-badge type-'+t+'" style="font-size:10px;padding:2px 8px">'+t+'</span><span style="font-size:11px;color:'+c+';font-weight:700">'+fullMult+'x</span></div>'
+        }).join('')+
+        '</div>'
+      '</div>'+
+    '</div>'
 }
 
 // ===== MINIGAME 1: Who's That Pokémon? =====
@@ -937,6 +1166,112 @@ const TRAINERS=[
   {title:'Elite Four',name:'Lance',class:'ELITE FOUR',icon:'👑',lvl:28,types:['dragon','flying'],rewards:{xp:700,sd:350}},
   {title:'Champion',name:'Red',class:'CHAMPION',icon:'🏆',lvl:32,types:['fire','water','grass','electric','psychic'],rewards:{xp:1000,sd:500}}
 ]
+
+// ===== TIME TRAVEL: TWO ERAS =====
+const ERAS={
+  medieval:{
+    name:'Medieval Era',icon:'⚔️',desc:'Ancient lands with primal Pokémon and tribal warriors',
+    bg:'linear-gradient(135deg,#2d1810,#1a0f0a)',
+    trainers:[
+      {title:'Tribal Scout',name:'Ashara',class:'SCOUT',icon:'🏹',lvl:5,types:['normal','bug'],rewards:{xp:90,sd:45},era:'medieval'},
+      {title:'Stone Keeper',name:'Grak',class:'STONEKEEPER',icon:'🪨',lvl:8,types:['rock','ground'],rewards:{xp:120,sd:60},era:'medieval'},
+      {title:'Bog Witch',name:'Mirella',class:'WITCH',icon:'🧙‍♀️',lvl:11,types:['poison','grass'],rewards:{xp:160,sd:80},era:'medieval'},
+      {title:'Frost Warden',name:'Ulf',class:'WARDEN',icon:'❄️',lvl:14,types:['ice','water'],rewards:{xp:200,sd:100},era:'medieval'},
+      {title:'Flame Druid',name:'Pyrus',class:'DRUID',icon:'🔥',lvl:17,types:['fire','grass'],rewards:{xp:250,sd:125},era:'medieval'},
+      {title:'Storm Shaman',name:'Voltar',class:'SHAMAN',icon:'⚡',lvl:20,types:['electric','flying'],rewards:{xp:300,sd:150},era:'medieval'},
+      {title:'Shadow Monk',name:'Nyx',class:'MONK',icon:'🌑',lvl:23,types:['dark','ghost'],rewards:{xp:360,sd:180},era:'medieval'},
+      {title:'Dragon Sage',name:'Drakov',class:'SAGE',icon:'🐉',lvl:26,types:['dragon','fire'],rewards:{xp:450,sd:225},era:'medieval'},
+      {title:'Steel Paladin',name:'Ferrum',class:'PALADIN',icon:'🛡️',lvl:29,types:['steel','fighting'],rewards:{xp:550,sd:275},era:'medieval'},
+      {title:'Elder Chief',name:'Tharok',class:'CHIEF',icon:'👑',lvl:32,types:['dragon','ground','rock'],rewards:{xp:700,sd:350},era:'medieval'},
+      {title:'Ancient Guardian',name:'Primus',class:'GUARDIAN',icon:'🗿',lvl:35,types:['rock','steel','ice'],rewards:{xp:900,sd:450},era:'medieval'},
+      {title:'Warlord King',name:'Ragnar',class:'WARLORD',icon:'⚔️',lvl:38,types:['fighting','dragon','dark'],rewards:{xp:1200,sd:600},era:'medieval'}
+    ],
+    wildRange:[1,151],
+    weather:'clear'
+  },
+  cyberpunk:{
+    name:'Cyberpunk Era',icon:'🤖',desc:'Neon-lit future with cybernetically enhanced Pokémon',
+    bg:'linear-gradient(135deg,#0a0020,#150030)',
+    trainers:[
+      {title:'Netrunner',name:'Glitch',class:'HACKER',icon:'💻',lvl:5,types:['electric','psychic'],rewards:{xp:90,sd:45},era:'cyberpunk'},
+      {title:'Chrome Brawler',name:'Tera',class:'BRAWLER',icon:'🥊',lvl:8,types:['steel','fighting'],rewards:{xp:120,sd:60},era:'cyberpunk'},
+      {title:'Neon Rogue',name:'Pixel',class:'ROGUE',icon:'🗡️',lvl:11,types:['dark','poison'],rewards:{xp:160,sd:80},era:'cyberpunk'},
+      {title:'Data Mage',name:'Cypher',class:'MAGE',icon:'🔮',lvl:14,types:['psychic','fairy'],rewards:{xp:200,sd:100},era:'cyberpunk'},
+      {title:'Bio Engineer',name:'Helix',class:'ENGINEER',icon:'🧬',lvl:17,types:['grass','poison'],rewards:{xp:250,sd:125},era:'cyberpunk'},
+      {title:'Cryo Specialist',name:'Frostbyte',class:'SPECIALIST',icon:'🧊',lvl:20,types:['ice','water'],rewards:{xp:300,sd:150},era:'cyberpunk'},
+      {title:'Flame Hacker',name:'Blaze',class:'HACKER',icon:'🔥',lvl:23,types:['fire','electric'],rewards:{xp:360,sd:180},era:'cyberpunk'},
+      {title:'Dragon Cyborg',name:'Nexus',class:'CYBORG',icon:'🐲',lvl:26,types:['dragon','steel'],rewards:{xp:450,sd:225},era:'cyberpunk'},
+      {title:'Void Walker',name:'Spectre',class:'WALKER',icon:'👻',lvl:29,types:['ghost','dark'],rewards:{xp:550,sd:275},era:'cyberpunk'},
+      {title:'System Admin',name:'Admin',class:'ADMIN',icon:'🖥️',lvl:32,types:['steel','electric','psychic'],rewards:{xp:700,sd:350},era:'cyberpunk'},
+      {title:'AI Overlord',name:'AICON',class:'OVERLORD',icon:'🤖',lvl:35,types:['steel','psychic','dragon'],rewards:{xp:900,sd:450},era:'cyberpunk'},
+      {title:'Singularity',name:'Omega',class:'SINGULARITY',icon:'🌟',lvl:38,types:['psychic','dragon','fairy'],rewards:{xp:1200,sd:600},era:'cyberpunk'}
+    ],
+    wildRange:[152,1010],
+    weather:'rain'
+  }
+}
+
+// ===== WEATHER SYSTEM =====
+const WEATHER_TYPES={
+  clear:{name:'Clear',icon:'☀️',boost:{fire:1.3,grass:1.2},weaken:{water:0.8},status:null},
+  rain:{name:'Rain',icon:'🌧️',boost:{water:1.3,electric:1.2},weaken:{fire:0.7,grass:0.8},status:null},
+  sun:{name:'Harsh Sun',icon:'🌞',boost:{fire:1.5,grass:1.3},weaken:{water:0.5},status:'brn'},
+  sandstorm:{name:'Sandstorm',icon:'🌪️',boost:{rock:1.3,ground:1.2,steel:1.1},weaken:{bug:0.8},status:null},
+  snow:{name:'Hail',icon:'🌨️',boost:{ice:1.4},weaken:{grass:0.8},status:null},
+  fog:{name:'Fog',icon:'🌫️',boost:{ghost:1.3,dark:1.2},weaken:{psychic:0.7},status:null}
+}
+
+// ===== ANCIENT & FUTURE FORMS =====
+const ALT_FORMS={
+  ancient:{
+    25:{id:26,name:'raichu-ancient',types:['electric','ground'],stats:{hp:60,attack:90,defense:55,spAttack:65,spDefense:65,speed:110},desc:'Primal Raichu with ground powers'},
+    39:{id:40,name:'wigglytuff-ancient',types:['normal','fairy'],stats:{hp:140,attack:70,defense:45,spAttack:75,spDefense:50,speed:45},desc:'Ancient Wigglytuff with ancient fairy magic'},
+    133:{id:134,name:'vaporeon-ancient',types:['water','ice'],stats:{hp:130,attack:65,defense:60,spAttack:110,spDefense:95,speed:65},desc:'Frozen Vaporeon from the ice age'},
+    143:{id:144,name:'snorlax-ancient',types:['normal','rock'],stats:{hp:200,attack:110,defense:85,spAttack:65,spDefense:110,speed:20},desc:'Stone-age Snorlax, harder than granite'}
+  },
+  future:{
+    25:{id:26,name:'raichu-future',types:['electric','psychic'],stats:{hp:55,attack:60,defense:50,spAttack:120,spDefense:80,speed:130},desc:'Cybernetic Raichu with psychic circuits'},
+    39:{id:40,name:'wigglytuff-future',types:['normal','fairy'],stats:{hp:120,attack:55,defense:60,spAttack:110,spDefense:85,speed:70},desc:'Nano-enhanced Wigglytuff'},
+    133:{id:134,name:'vaporeon-future',types:['water','steel'],stats:{hp:115,attack:60,defense:95,spAttack:100,spDefense:100,speed:75},desc:'Mechanical Vaporeon'},
+    143:{id:144,name:'snorlax-future',types:['normal','steel'],stats:{hp:180,attack:100,defense:110,spAttack:80,spDefense:90,speed:30},desc:'Cyber Snorlax with titanium armor'}
+  }
+}
+
+// ===== FUSION EVOLUTION =====
+const FUSION_PAIRS=[
+  {a:1,b:4,name:'Bulbizarre',types:['grass','fire'],stats:{hp:80,attack:95,defense:75,spAttack:90,spDefense:70,speed:70},icon:'🌿🔥'},
+  {a:4,b:7,name:'Squirtmander',types:['fire','water'],stats:{hp:80,attack:85,defense:80,spAttack:95,spDefense:75,speed:70},icon:'🔥💧'},
+  {a:1,b:7,name:'Ivyrtle',types:['grass','water'],stats:{hp:85,attack:75,defense:85,spAttack:90,spDefense:85,speed:65},icon:'🌿💧'},
+  {a:25,b:133,name:'Vapichu',types:['electric','water'],stats:{hp:90,attack:80,defense:65,spAttack:110,spDefense:80,speed:95},icon:'⚡💧'},
+  {a:35,b:122,name:'Clefablette',types:['fairy','psychic'],stats:{hp:95,attack:55,defense:75,spAttack:120,spDefense:100,speed:80},icon:'🧚🔮'},
+  {a:44,b:69,name:'Weepinchel',types:['grass','poison'],stats:{hp:90,attack:100,defense:70,spAttack:85,spDefense:65,speed:65},icon:'🌿☠️'},
+  {a:56,b:96,name:'Mandrowzee',types:['fighting','psychic'],stats:{hp:85,attack:100,defense:60,spAttack:90,spDefense:80,speed:85},icon:'🥊🔮'},
+  {a:74,b:95,name:'Geodactyl',types:['rock','ground'],stats:{hp:90,attack:105,defense:110,spAttack:50,spDefense:55,speed:55},icon:'🪨⛰️'}
+]
+
+// ===== FIELD RESEARCH TASKS =====
+const FIELD_TASKS=[
+  {id:'first_win',name:'First Victory',desc:'Win your first battle',reward:{xp:80,sd:40},check:(s)=>s.wins>=1},
+  {id:'catch_5',name:'Catcher',desc:'Catch 5 Pokémon total',reward:{xp:100,sd:50},check:(s)=>s.catches>=5},
+  {id:'super_eff',name:'Type Expert',desc:'Win a battle with a super-effective move',reward:{xp:120,sd:60},check:(s)=>s.superEffWins>=1},
+  {id:'streak_3',name:'Hot Streak',desc:'Win 3 battles in a row',reward:{xp:150,sd:75},check:(s)=>s.maxStreak>=3},
+  {id:'catch_15',name:'Pokédex Filler',desc:'Catch 15 Pokémon total',reward:{xp:180,sd:90},check:(s)=>s.catches>=15},
+  {id:'evolve_1',name:'Evolution Starter',desc:'Evolve a Pokémon for the first time',reward:{xp:200,sd:100},check:(s)=>s.evolutions>=1},
+  {id:'weather_win',name:'Weather Warrior',desc:'Win a battle while weather is active',reward:{xp:160,sd:80},check:(s)=>s.weatherWins>=1},
+  {id:'catch_type_3',name:'Type Collector',desc:'Catch Pokémon of 3 different types',reward:{xp:200,sd:100},check:(s)=>s.uniqueTypes>=3},
+  {id:'streak_5',name:'On Fire',desc:'Win 5 battles in a row',reward:{xp:250,sd:125},check:(s)=>s.maxStreak>=5},
+  {id:'catch_rare',name:'Rare Finder',desc:'Catch a Pokémon with base stats over 500',reward:{xp:250,sd:125},check:(s)=>s.caughtRare>=1},
+  {id:'win_10',name:'Veteran',desc:'Win 10 battles total',reward:{xp:300,sd:150},check:(s)=>s.wins>=10},
+  {id:'catch_30',name:'Collector',desc:'Catch 30 Pokémon total',reward:{xp:300,sd:150},check:(s)=>s.catches>=30},
+  {id:'evolve_3',name:'Evolution Expert',desc:'Evolve 3 Pokémon total',reward:{xp:350,sd:175},check:(s)=>s.evolutions>=3},
+  {id:'catch_type_8',name:'Type Master',desc:'Catch Pokémon of 8 different types',reward:{xp:350,sd:175},check:(s)=>s.uniqueTypes>=8},
+  {id:'streak_10',name:'Unstoppable',desc:'Win 10 battles in a row',reward:{xp:400,sd:200},check:(s)=>s.maxStreak>=10},
+  {id:'legendary',name:'Legendary Hunter',desc:'Catch a Legendary Pokémon (ID > 143)',reward:{xp:500,sd:250},check:(s)=>s.caughtLegendary>=1},
+  {id:'win_25',name:'Champion',desc:'Win 25 battles total',reward:{xp:500,sd:250},check:(s)=>s.wins>=25},
+  {id:'catch_50',name:'Master Collector',desc:'Catch 50 Pokémon total',reward:{xp:500,sd:250},check:(s)=>s.catches>=50},
+  {id:'evolve_5',name:'Evolution Master',desc:'Evolve 5 Pokémon total',reward:{xp:400,sd:200},check:(s)=>s.evolutions>=5},
+  {id:'catch_type_15',name:'Type Encyclopedia',desc:'Catch Pokémon of 15 different types',reward:{xp:600,sd:300},check:(s)=>s.uniqueTypes>=15}
+]
 const STARTER_IDS=[1,4,7]
 const STATUS_PARALYZE='par',STATUS_BURN='brn',STATUS_POISON='psn',STATUS_SLEEP='slp'
 const STATUS_CHANCE={par:0.1,brn:0.1,psn:0.15,slp:0.1}
@@ -1008,7 +1343,12 @@ const EVO_BRANCH={134:1,135:1,136:1} // Eevee evolutions flags
 let ch={team:[],starterData:[],trainerIdx:0,winStreak:0,maxStreak:0,totalWins:0,
   stardust:500,candy:{},pokeballs:5,
   battle:{},turnActive:false,selectedMove:-1,phase:'idle',
-  wildMode:false,catchActive:false,crPct:80,crDir:-1,crInt:null}
+  wildMode:false,catchActive:false,crPct:80,crDir:-1,crInt:null,
+  era:'medieval',weather:'clear',weatherTurns:0,
+  fusion:null,fusionTimer:0,
+  researchComplete:[],
+  wildBehavior:'normal',
+  researchStats:{wins:0,catches:0,superEffWins:0,maxStreak:0,evolutions:0,weatherWins:0,uniqueTypes:0,caughtRare:0,caughtLegendary:0,caughtTypeSet:[]}}
 
 function si(id){return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+id+'.png'}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
@@ -1066,11 +1406,26 @@ function chSelectStarter(id){
 function chShowHub(){
   showCh('chHub')
   const p=ch.team[0],hpPct=Math.max(0,p.currentHp/p.maxHp*100),xpPct=Math.min(100,p.xp/p.xpNext*100)
-  const t=TRAINERS[Math.min(ch.trainerIdx,TRAINERS.length-1)]
+  const trainers=ERAS[ch.era].trainers
+  const t=trainers[Math.min(ch.trainerIdx,trainers.length-1)]
   const rank=t?t.class:'CHAMPION'
   const candyAmt=ch.candy[p.name]||0
+  const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+  const activeTask=FIELD_TASKS.find(t=>!ch.researchComplete.includes(t.id))||FIELD_TASKS[0]
+  const fusionInfo=ch.fusion?ch.fusion:null
   document.getElementById('chHubContent').innerHTML=
-    '<div class="hub-header"><h2>Pokémon Champions</h2><div style="color:rgba(255,255,255,0.4);font-size:13px;margin-top:4px">Defeat trainers to climb the ranks!</div></div>'+
+    '<div class="hub-header"><h2>Pokémon Champions</h2>'+
+      '<div style="display:flex;gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap">'+
+        '<button class="b-btn '+(ch.era==='medieval'?'b-btn-primary':'b-btn-secondary')+'" onclick="chSetEra(\'medieval\')" style="font-size:12px;padding:6px 14px">⚔️ Medieval</button>'+
+        '<button class="b-btn '+(ch.era==='cyberpunk'?'b-btn-primary':'b-btn-secondary')+'" onclick="chSetEra(\'cyberpunk\')" style="font-size:12px;padding:6px 14px">🤖 Cyberpunk</button>'+
+      '</div>'+
+      '<div style="color:var(--text-dim);font-size:12px;margin-top:4px">'+ERAS[ch.era].desc+'</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin:8px 0;justify-content:center;flex-wrap:wrap">'+
+      '<div style="background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:11px">'+w.icon+' '+w.name+(ch.weatherTurns>0?' ('+ch.weatherTurns+' turns)':'')+'</div>'+
+      (fusionInfo?'<div style="background:rgba(247,201,72,0.15);padding:6px 12px;border-radius:8px;border:1px solid rgba(247,201,72,0.3);font-size:11px;color:#f7c948">'+fusionInfo.icon+' Fused: '+fusionInfo.name+'</div>':'')+
+      '<div style="background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:11px">📋 '+activeTask.name+'</div>'+
+    '</div>'+
     '<div class="hub-pokemon">'+imgTag(p.id,'110px')+
       '<div class="h-name">'+cap(p.name)+'</div>'+
       '<div class="h-cp">CP '+calcCp(p)+' · Lv.'+p.level+'</div>'+
@@ -1088,19 +1443,298 @@ function chShowHub(){
       '<span>🔴 '+ch.pokeballs+' Balls</span>'+
     '</div>'+
     '<div class="hub-actions">'+
-      '<button class="b-btn b-btn-primary" onclick="chStartTrainerBattle()">⚔️ Battle Trainer</button>'+
+      '<button class="b-btn b-btn-primary" onclick="chStartTrainerBattle()">⚔️ Battle Gym Leader</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chWildEncounter()">🌿 Find Wild Pokémon</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chShowParty()">👥 Party</button>'+
+      '<button class="b-btn b-btn-secondary" onclick="chShowFusion()">🔮 Fusion Lab</button>'+
+      '<button class="b-btn b-btn-secondary" onclick="chShowResearch()">📋 Field Research</button>'+
+      '<button class="b-btn b-btn-secondary" onclick="chShowTrainerShop()">🛍️ Shop</button>'+
+      '<button class="b-btn b-btn-secondary" onclick="chShowBooster()">📦 Booster</button>'+
+      '<button class="b-btn b-btn-secondary" onclick="chShowDaily()">🌟 Daily</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chHealAll()">💚 Heal All</button>'+
     '</div>'
+}
+function chSetEra(era){
+  ch.era=era;ch.trainerIdx=0;ch.winStreak=0
+  ch.weather=ERAS[era].weather;ch.weatherTurns=0
+  chSave();chShowHub()
+}
+function chShowFusion(){
+  const el=document.getElementById('chHubContent')
+  el.innerHTML='<div class="hub-header"><h2>🔮 Fusion Lab</h2><p style="color:var(--text-dim);font-size:12px">Merge two Pokémon into a powerful hybrid!</p></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:12px 0">'+
+    FUSION_PAIRS.map((f,i)=>{
+      const pa=allPokemon.find(p=>p.id===f.a),pb=allPokemon.find(p=>p.id===f.b)
+      const hasA=ch.team.some(p=>p.id===f.a),hasB=ch.team.some(p=>p.id===f.b)
+      return '<div style="background:var(--surface);border:1px solid '+(hasA&&hasB?'#f7c948':'var(--border)')+';border-radius:12px;padding:12px;text-align:center;opacity:'+(hasA&&hasB?1:0.5)+'">'+
+        '<div style="font-size:20px">'+f.icon+'</div>'+
+        '<div style="font-size:13px;font-weight:700;margin:4px 0">'+f.name+'</div>'+
+        '<div style="display:flex;gap:3px;justify-content:center">'+f.types.map(t=>'<span class="type-badge type-'+t+'" style="font-size:9px">'+t+'</span>').join('')+'</div>'+
+        '<div style="font-size:10px;color:var(--text-dim);margin-top:4px">'+(pa?cap(pa.name):'?')+' + '+(pb?cap(pb.name):'?')+'</div>'+
+        (hasA&&hasB?'<button class="b-btn b-btn-primary" style="font-size:11px;padding:4px 10px;margin-top:6px" onclick="chDoFusion('+i+')">FUSE!</button>':
+          '<div style="font-size:10px;color:var(--text-muted);margin-top:6px">Need both Pokémon</div>')+
+      '</div>'
+    }).join('')+
+    '</div>'+
+    '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
+}
+function chDoFusion(idx){
+  const f=FUSION_PAIRS[idx]
+  const iA=ch.team.findIndex(p=>p.id===f.a),iB=ch.team.findIndex(p=>p.id===f.b)
+  if(iA===-1||iB===-1)return
+  const pA=ch.team[iA],pB=ch.team[iB]
+  ch.fusion={name:f.name,types:f.types,stats:f.stats,icon:f.icon,baseA:pA.id,baseB:pB.id,
+    level:Math.max(pA.level,pB.level),currentHp:0}
+  const totalHp=f.stats.hp+Math.floor(Math.max(pA.level,pB.level)*1.5)
+  ch.fusion.currentHp=totalHp;ch.fusion.maxHp=totalHp
+  ch.fusion.stats=Object.fromEntries(Object.keys(f.stats).map(k=>[k,calcS(f.stats[k],ch.fusion.level,15)]))
+  ch.fusion.maxHp=calcH(f.stats.hp,ch.fusion.level,15)
+  ch.fusion.currentHp=ch.fusion.maxHp
+  ch.fusion.moves=getChMoves(f.types)
+  ch.fusion.iv=Object.fromEntries(Object.keys(f.stats).map(k=>[k,15]))
+  ch.fusion.baseStats=f.stats;ch.fusion.xp=0;ch.fusion.xpNext=ch.fusion.level*80
+  ch.fusion.id=1000+idx;ch.fusion.name=f.name.toLowerCase().replace(/\s/g,'-')
+  chSave();chShowHub()
+  document.getElementById('chHubContent').innerHTML+='<div style="text-align:center;color:#f7c948;font-size:14px;font-weight:700;margin-top:12px">✨ '+f.name+' fused! Check your party!</div>'
+}
+function chShowResearch(){
+  const el=document.getElementById('chHubContent')
+  const rs=ch.researchStats
+  el.innerHTML='<div class="hub-header"><h2>📋 Field Research</h2><p style="color:var(--text-dim);font-size:12px">Complete tasks in order to earn rewards!</p></div>'+
+    '<div style="display:grid;gap:8px;margin:12px 0">'+
+    FIELD_TASKS.map((t,i)=>{
+      const done=ch.researchComplete.includes(t.id)
+      const next=!done&&FIELD_TASKS.filter(tt=>!ch.researchComplete.includes(tt.id))[0]?.id===t.id
+      const locked=!done&&!next
+      const progress=getResearchProgress(t.id,rs)
+      return '<div class="ch-research-task '+(done?'done':'')+'" style="'+(locked?'opacity:0.4':'')+(next?'border-color:#f7c948;box-shadow:0 0 12px rgba(247,201,72,0.15)':'')+'">'+
+        '<div class="ri">'+(done?'✅':next?'📋':'🔒')+'</div>'+
+        '<div class="rd"><div class="rn">#'+(i+1)+' '+t.name+'</div><div class="rdesc">'+t.desc+'</div>'+
+        (next&&!done?'<div style="margin-top:4px"><div class="b-bar-bg" style="height:4px"><div class="b-bar-fill b-bar-xp" style="width:'+progress.pct+'%"></div></div><div style="font-size:9px;color:var(--text-muted);margin-top:2px">'+progress.label+'</div></div>':'')+
+        '</div>'+
+        '<div class="rr">'+(done?'✅':t.reward.xp+'XP +'+t.reward.sd+'SD')+'</div>'+
+      '</div>'
+    }).join('')+
+    '</div>'+
+    '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
+}
+function getResearchProgress(taskId,rs){
+  switch(taskId){
+    case'first_win':return{pct:Math.min(100,rs.wins/1*100),label:rs.wins+'/1 wins'}
+    case'catch_5':return{pct:Math.min(100,rs.catches/5*100),label:rs.catches+'/5 catches'}
+    case'super_eff':return{pct:Math.min(100,rs.superEffWins/1*100),label:rs.superEffWins+'/1 super-effective wins'}
+    case'streak_3':return{pct:Math.min(100,rs.maxStreak/3*100),label:rs.maxStreak+'/3 max streak'}
+    case'catch_15':return{pct:Math.min(100,rs.catches/15*100),label:rs.catches+'/15 catches'}
+    case'evolve_1':return{pct:Math.min(100,rs.evolutions/1*100),label:rs.evolutions+'/1 evolutions'}
+    case'weather_win':return{pct:Math.min(100,rs.weatherWins/1*100),label:rs.weatherWins+'/1 weather wins'}
+    case'catch_type_3':return{pct:Math.min(100,rs.uniqueTypes/3*100),label:rs.uniqueTypes+'/3 unique types'}
+    case'streak_5':return{pct:Math.min(100,rs.maxStreak/5*100),label:rs.maxStreak+'/5 max streak'}
+    case'catch_rare':return{pct:Math.min(100,rs.caughtRare/1*100),label:rs.caughtRare+'/1 rare caught'}
+    case'win_10':return{pct:Math.min(100,rs.wins/10*100),label:rs.wins+'/10 wins'}
+    case'catch_30':return{pct:Math.min(100,rs.catches/30*100),label:rs.catches+'/30 catches'}
+    case'evolve_3':return{pct:Math.min(100,rs.evolutions/3*100),label:rs.evolutions+'/3 evolutions'}
+    case'catch_type_8':return{pct:Math.min(100,rs.uniqueTypes/8*100),label:rs.uniqueTypes+'/8 unique types'}
+    case'streak_10':return{pct:Math.min(100,rs.maxStreak/10*100),label:rs.maxStreak+'/10 max streak'}
+    case'legendary':return{pct:Math.min(100,rs.caughtLegendary/1*100),label:rs.caughtLegendary+'/1 legendary caught'}
+    case'win_25':return{pct:Math.min(100,rs.wins/25*100),label:rs.wins+'/25 wins'}
+    case'catch_50':return{pct:Math.min(100,rs.catches/50*100),label:rs.catches+'/50 catches'}
+    case'evolve_5':return{pct:Math.min(100,rs.evolutions/5*100),label:rs.evolutions+'/5 evolutions'}
+    case'catch_type_15':return{pct:Math.min(100,rs.uniqueTypes/15*100),label:rs.uniqueTypes+'/15 unique types'}
+    default:return{pct:0,label:'???'}
+  }
+}
+
+// ===== BATTLE HUB: TRAINER SHOP =====
+function chShowTrainerShop(){
+  const el=document.getElementById('chHubContent')
+  loadCustom()
+  el.innerHTML='<div class="hub-header"><h2>🛍️ Trainer Shop</h2><p style="color:var(--text-dim);font-size:12px">Spend stardust to customize your trainer!</p></div>'+
+    '<div style="text-align:center;margin-bottom:12px;color:#f7c948;font-weight:700;font-size:14px">💰 Stardust: '+ch.stardust+'</div>'+
+    '<div style="display:grid;gap:12px">'+
+    chTsRenderSection('Avatars',SHOP_AVATARS,'avatar')+
+    chTsRenderSection('Badges',SHOP_BADGES,'badge')+
+    chTsRenderSection('Backgrounds',SHOP_BACKGROUNDS,'bg')+
+    '</div>'+
+    '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
+}
+function chTsRenderSection(title,items,type){
+  return '<div><h3 style="font-size:14px;margin-bottom:6px;color:var(--text)">'+title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px">'+
+    items.map(item=>{
+      const owned=chCustom.unlocked.includes(item.id)
+      const active=(type==='avatar'&&chCustom.avatar===item.id)||(type==='badge'&&chCustom.badge===item.id)||(type==='bg'&&chCustom.bg===item.id)
+      return '<div style="background:var(--surface);border:1px solid '+(active?'#f7c948':owned?'#4caf50':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer;opacity:'+(owned||ch.stardust>=item.cost?1:0.5)+'" onclick="chTsBuy(\''+item.id+'\',\''+type+'\','+item.cost+')">'+
+        '<div style="font-size:22px">'+item.icon+'</div>'+
+        '<div style="font-size:10px;font-weight:600;margin:4px 0">'+item.name+'</div>'+
+        '<div style="font-size:9px;color:var(--text-dim)">'+item.desc+'</div>'+
+        '<div style="font-size:10px;margin-top:4px;color:'+(owned?'#4caf50':'#f7c948')+'">'+(owned?(active?'✅ ACTIVE':'OWNED'):item.cost+' SD')+'</div>'+
+      '</div>'
+    }).join('')+'</div></div>'
+}
+function chTsBuy(id,type,cost){
+  if(chCustom.unlocked.includes(id)){
+    if(type==='avatar')chCustom.avatar=id
+    else if(type==='badge')chCustom.badge=chCustom.badge===id?null:id
+    else if(type==='bg')chCustom.bg=chCustom.bg===id?null:id
+    saveCustom();chShowTrainerShop();return
+  }
+  if(ch.stardust<cost)return
+  ch.stardust-=cost;chCustom.unlocked.push(id)
+  if(type==='avatar')chCustom.avatar=id
+  else if(type==='badge')chCustom.badge=id
+  else if(type==='bg')chCustom.bg=id
+  chSave();saveCustom();chShowTrainerShop()
+}
+
+// ===== BATTLE HUB: BOOSTER PACKS =====
+function chShowBooster(){
+  bpOpenedCards=[]
+  const el=document.getElementById('chHubContent')
+  el.innerHTML='<div class="hub-header"><h2>📦 TCG Booster Packs</h2><p style="color:var(--text-dim);font-size:12px">Open real TCG booster packs with actual card images!</p></div>'+
+    '<div style="text-align:center;margin-bottom:12px;color:#f7c948;font-weight:700;font-size:14px">💰 Stardust: '+ch.stardust+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:12px">'+
+    PACK_TYPES.map(p=>'<div style="background:var(--surface);border:1px solid '+(bpSelectedPack===p.id?'#f7c948':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer" onclick="chBpSelectPack(\''+p.id+'\')">'+
+      '<div style="font-size:20px">'+p.icon+'</div>'+
+      '<div style="font-size:10px;font-weight:600;margin:2px 0">'+p.name+'</div>'+
+      '<div style="font-size:9px;color:var(--text-dim)">'+p.desc+'</div>'+
+      '<div style="font-size:10px;color:#f7c948;margin-top:2px">'+p.cost+' SD</div>'+
+    '</div>').join('')+'</div>'+
+    '<div id="chBpSetPicker" style="margin-bottom:8px"></div>'+
+    '<div style="text-align:center;margin-bottom:8px"><button class="b-btn b-btn-primary" style="font-size:13px;padding:10px 28px" onclick="chBpOpenPack()">🎁 Open Pack ('+BOOSTER_COST+' SD)</button></div>'+
+    '<div id="chBpResult"></div>'+
+    '<div id="chBpOpened" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px"></div>'+
+    '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
+  chBpRenderSetPicker()
+}
+function chBpSelectPack(id){
+  bpSelectedPack=id
+  const pack=PACK_TYPES.find(p=>p.id===id)
+  if(pack&&pack.sets)bpSelectedSet=pack.sets[Math.floor(Math.random()*pack.sets.length)]
+  else bpSelectedSet=null
+  chShowBooster()
+}
+function chBpRenderSetPicker(){
+  const el=document.getElementById('chBpSetPicker')
+  if(!el)return
+  if(bpSelectedPack!=='random'){
+    el.innerHTML='<div style="text-align:center;color:var(--text-dim);font-size:11px">Pack: <b>'+PACK_TYPES.find(p=>p.id===bpSelectedPack)?.name+'</b></div>'
+    return
+  }
+  if(!allSets.length){el.innerHTML='<div style="text-align:center;color:var(--text-dim);font-size:11px">Loading sets...</div>';loadSetsForBooster();return}
+  const recentSets=allSets.filter(s=>s.total&&s.total>10).slice(-15).reverse()
+  el.innerHTML='<div style="font-size:11px;font-weight:600;margin-bottom:4px">Choose a Set:</div>'+
+    '<div style="display:flex;gap:3px;flex-wrap:wrap">'+recentSets.map(s=>'<button style="padding:3px 6px;border-radius:5px;border:1px solid '+(bpSelectedSet===s.id?'#f7c948':'var(--border)')+';background:'+(bpSelectedSet===s.id?'rgba(247,201,72,0.15)':'var(--surface)')+';color:var(--text);font-size:9px;cursor:pointer" onclick="bpSelectedSet=\''+s.id+'\';chBpRenderSetPicker()">'+s.name+'</button>').join('')+'</div>'
+}
+async function chBpOpenPack(){
+  const pack=PACK_TYPES.find(p=>p.id===bpSelectedPack)
+  const cost=pack?pack.cost:BOOSTER_COST
+  if(ch.stardust<cost)return
+  ch.stardust-=cost;chSave()
+  const el=document.getElementById('chBpResult')
+  const openedEl=document.getElementById('chBpOpened')
+  openedEl.innerHTML=''
+  el.innerHTML='<div style="text-align:center;padding:16px"><div class="spinner" style="width:24px;height:24px;margin:0 auto"></div><div style="font-size:12px;color:var(--text-dim);margin-top:8px">Fetching cards from TCG API...</div></div>'
+  let cards=[]
+  const setId=bpSelectedSet||(pack?.sets?pack.sets[Math.floor(Math.random()*pack.sets.length)]:null)
+  if(setId)cards=await bpFetchSetCards(setId)
+  else cards=await bpFetchRandomCards(250)
+  if(!cards.length){
+    el.innerHTML='<div style="text-align:center;color:#f44336;padding:12px">Failed to fetch cards. Try again!</div>'
+    ch.stardust+=cost;chSave();return
+  }
+  const packCards=bpDistributeRarity(cards)
+  el.innerHTML='<div style="text-align:center;padding:8px"><div style="font-size:14px;font-weight:700;color:#f7c948">🎁 Pack Opened!</div><div style="font-size:11px;color:var(--text-dim)">'+packCards.length+' cards</div></div>'
+  bpOpenedCards=packCards
+  chBpRenderOpened()
+  const sdStats=document.querySelector('.hub-stats')
+  if(sdStats)sdStats.innerHTML=sdStats.innerHTML.replace(/💰\s*\d+/, '💰 '+ch.stardust)
+}
+function chBpRenderOpened(){
+  const el=document.getElementById('chBpOpened')
+  if(!el||!bpOpenedCards.length)return
+  el.innerHTML=bpOpenedCards.map((c,i)=>{
+    const r=(c.rarity||'Common').toLowerCase()
+    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')
+    const isRare=r.includes('rare')||r.includes('holo')
+    const borderCol=isUltra?'#f7c948':isRare?'#6390f0':r.includes('uncommon')?'#4caf50':'var(--border)'
+    const glow=isUltra?'box-shadow:0 0 16px rgba(247,201,72,0.4)':isRare?'box-shadow:0 0 10px rgba(99,144,240,0.3)':''
+    const img=c.images?.small||''
+    const pokeId=parseInt((c.id||'').replace(/[^0-9]/g,'').substring(0,3))||1
+    return '<div style="background:var(--surface);border:2px solid '+borderCol+';border-radius:8px;overflow:hidden;animation:bpCardReveal 0.3s ease '+(i*0.06)+'s both;'+glow+'">'+
+      '<div style="position:relative;background:linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));padding:8px;text-align:center">'+
+        (img?'<img src="'+img+'" alt="'+c.name+'" style="max-width:100%;max-height:180px;border-radius:6px" loading="lazy" onerror="this.onerror=null;this.src=\''+si(pokeId)+'\';this.style.maxHeight=\'100px\';this.style.imageRendering=\'pixelated\'">':
+          '<img src="'+si(pokeId)+'" alt="'+c.name+'" style="height:80px;image-rendering:pixelated">')+
+      '</div>'+
+      '<div style="padding:4px 6px;border-top:1px solid '+borderCol+'">'+
+        '<div style="font-size:9px;font-weight:600">'+c.name+'</div>'+
+        '<div style="font-size:7px;color:'+(isUltra?'#f7c948':isRare?'#6390f0':'var(--text-muted)')+'">'+(c.rarity||'Common')+'</div>'+
+        '<div style="font-size:7px;color:var(--text-muted)">'+(c.set?.name||'')+' #'+(c.number||'?')+'</div>'+
+      '</div></div>'
+  }).join('')+
+  '<div style="grid-column:1/-1;text-align:center;margin-top:4px"><button class="b-btn b-btn-secondary" style="font-size:11px;padding:6px 14px" onclick="chBpAddAll()">✅ Add All to My Cards</button></div>'
+}
+function chBpAddAll(){
+  bpOpenedCards.forEach(c=>{
+    const cid=c.id||c.name+'_'+Date.now()+'_'+Math.random()
+    pcAddCard(cid,c.name,c.set?.name||'',0,c.images?.small||'')
+  })
+  const el=document.getElementById('chBpOpened')
+  if(el)el.innerHTML+='<div style="grid-column:1/-1;text-align:center;padding:8px;color:#4caf50;font-weight:700;font-size:12px">✅ All '+bpOpenedCards.length+' cards added!</div>'
+}
+
+// ===== BATTLE HUB: DAILY ENCOUNTER =====
+function chShowDaily(){
+  const el=document.getElementById('chHubContent')
+  const last=localStorage.getItem('pokeDailyDate')
+  const now=new Date()
+  const today=now.toISOString().split('T')[0]
+  const claimed=last===today
+  const nextDaily=new Date(now);nextDaily.setHours(24,0,0,0)
+  const msLeft=nextDaily-now
+  const hLeft=Math.floor(msLeft/3600000)
+  const mLeft=Math.floor((msLeft%3600000)/60000)
+  el.innerHTML='<div class="hub-header"><h2>🌟 Daily Wild Encounter</h2><p style="color:var(--text-dim);font-size:12px">A rare Pokémon appears once every 24 hours! 15% chance of Shiny!</p></div>'+
+    '<div id="chDailyContent" style="text-align:center">'+(claimed?
+      '<div style="padding:20px"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-weight:700;font-size:16px">Claimed today!</div><div style="color:var(--text-dim);font-size:12px;margin-top:6px">Next encounter in '+hLeft+'h '+mLeft+'m</div></div>':
+      '<div><button class="b-btn b-btn-primary" style="font-size:16px;padding:14px 40px" onclick="chDailyClaim()">🌟 Claim Encounter</button></div>')+'</div>'+
+    '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
+}
+async function chDailyClaim(){
+  const now=new Date()
+  localStorage.setItem('pokeDailyDate',now.toISOString().split('T')[0])
+  const isShiny=Math.random()<0.15
+  const id=isShiny?SHINY_IDS[Math.floor(Math.random()*SHINY_IDS.length)]:randomPkmnId()
+  const d=await fetchPkmn(id)
+  const lvl=Math.max(10,Math.floor(rand(15,30)))
+  const pkmn=makePkmn(d,lvl)
+  if(isShiny)pkmn.shiny=true
+  const el=document.getElementById('chDailyContent')
+  el.innerHTML='<div style="padding:16px;background:var(--surface);border-radius:16px;border:2px solid '+(isShiny?'#f7c948':'#4caf50')+';animation:dwReveal 0.5s ease">'+
+    (isShiny?'<div style="font-size:11px;color:#f7c948;font-weight:700;letter-spacing:2px">✨ SHINY ✨</div>':'<div style="font-size:11px;color:#4caf50;font-weight:700">RARE ENCOUNTER</div>')+
+    '<img src="'+si(id)+'" width="120" height="120" style="image-rendering:pixelated;filter:drop-shadow(0 0 '+(isShiny?'20px rgba(247,201,72,0.6)':'10px rgba(76,175,80,0.3)')+')">'+
+    '<div style="font-size:18px;font-weight:700;text-transform:capitalize;margin:8px 0">'+cap(pkmn.name)+'</div>'+
+    '<div style="font-size:12px;color:var(--text-dim)">Lv.'+lvl+' · CP '+calcCp(pkmn)+'</div>'+
+    '<div style="display:flex;gap:4px;justify-content:center;margin:6px 0">'+pkmn.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'+
+    '<div style="margin-top:12px"><button class="b-btn b-btn-primary" onclick="chDailyBattle('+id+','+lvl+','+isShiny+')">⚔️ Battle & Catch!</button></div>'+
+  '</div>'
+}
+function chDailyBattle(id,lvl,isShiny){
+  if(ch.team.length===0||ch.team.every(p=>p.currentHp<=0)){alert('No Pokémon to battle!');return}
+  const d=allPokemon.find(p=>p.id===id)||{id,name:'unknown',types:['normal']}
+  const pkmn=makePkmn(d,lvl)
+  if(isShiny)pkmn.shiny=true
+  ch.battle={opponent:{title:'Daily',name:cap(pkmn.name),class:'DAILY',icon:'🌟',rewards:{xp:lvl*20+50,sd:50+lvl*5}},oppTeam:[pkmn],oppIdx:0,playerIdx:0,logs:[]}
+  ch.battle.playerMoves=ch.team.map(p=>p.moves.map(m=>({...m,pp:m.pp})))
+  ch.wildMode=true;ch.wildBehavior='normal'
+  chStartBattle()
 }
 
 async function chCreateTrainerTeam(t){
   const ids=[],chosen=new Set,attempted=new Set
+  const range=ERAS[ch.era]?ERAS[ch.era].wildRange:[1,1010]
   let tries=0
   while(ids.length<3&&tries<300){
     tries++
-    const id=randomPkmnId()
+    const id=range[0]+Math.floor(Math.random()*(range[1]-range[0]+1))
     if(chosen.has(id)||attempted.has(id))continue
     attempted.add(id)
     try{
@@ -1123,12 +1757,16 @@ async function chCreateTrainerTeam(t){
 }
 async function chStartTrainerBattle(){
   if(ch.team.every(p=>p.currentHp<=0)){document.getElementById('chHubContent').querySelector('.hub-header').innerHTML+='<div style="color:#f44336;margin-top:8px">All fainted! Heal first.</div>';return}
-  const t=TRAINERS[Math.min(ch.trainerIdx,TRAINERS.length-1)]
+  const trainers=ERAS[ch.era].trainers
+  const t=trainers[Math.min(ch.trainerIdx,trainers.length-1)]
   document.getElementById('chHubContent').innerHTML+='<div style="text-align:center;margin-top:12px"><div class="spinner" style="width:24px;height:24px;margin:0 auto"></div></div>'
   const team=await chCreateTrainerTeam(t)
   ch.battle={opponent:t,oppTeam:team,oppIdx:0,playerIdx:0,logs:[]}
   ch.battle.playerMoves=ch.team.map(p=>p.moves.map(m=>({...m,pp:m.pp})))
   ch.wildMode=false
+  // Random weather on battle start
+  const wkeys=Object.keys(WEATHER_TYPES)
+  if(Math.random()<0.4){ch.weather=wkeys[Math.floor(Math.random()*wkeys.length)];ch.weatherTurns=Math.floor(rand(3,6))}
   chStartBattle()
 }
 const MAX_POKEMON=1010
@@ -1141,13 +1779,24 @@ function randomPkmnId(){
 async function chWildEncounter(){
   if(ch.team.length>=1000){document.getElementById('chHubContent').querySelector('.hub-header').innerHTML+='<div style="color:#f7c948;margin-top:8px">Team full! Can\'t catch more.</div>';return}
   if(ch.team.every(p=>p.currentHp<=0)){document.getElementById('chHubContent').querySelector('.hub-header').innerHTML+='<div style="color:#f44336;margin-top:8px">All fainted! Heal first.</div>';return}
-  const id=randomPkmnId()
+  // Era-specific wild range
+  const [min,max]=ERAS[ch.era].wildRange
+  const id=min+Math.floor(Math.random()*(max-min+1))
   const d=await fetchPkmn(id)
   const lvl=Math.max(1,Math.min(20,Math.floor(rand(1,6)+ch.team[0].level-2)))
   const pkmn=makePkmn(d,lvl)
-  ch.battle={opponent:{title:'Wild',name:cap(pkmn.name),class:'WILD',icon:'🌿',rewards:{xp:lvl*15+20,sd:30+lvl*3}},oppTeam:[pkmn],oppIdx:0,playerIdx:0,logs:[]}
+  // Wild behavior
+  const behaviors=['normal','aggressive','timid','stalking']
+  const bWeights=[0.4,0.25,0.2,0.15]
+  let r=Math.random(),cum=0,wildB='normal'
+  for(let i=0;i<behaviors.length;i++){cum+=bWeights[i];if(r<cum){wildB=behaviors[i];break}}
+  const bLabels={normal:'A wild',aggressive:'An aggressive',timid:'A timid',stalking:'A stalking'}
+  const bIcons={normal:'🌿',aggressive:'💢',timid:'😰',stalking:'👁️'}
+  ch.battle={opponent:{title:'Wild',name:cap(pkmn.name),class:'WILD '+wildB.toUpperCase(),icon:bIcons[wildB],rewards:{xp:lvl*15+20,sd:30+lvl*3}},oppTeam:[pkmn],oppIdx:0,playerIdx:0,logs:[]}
   ch.battle.playerMoves=ch.team.map(p=>p.moves.map(m=>({...m,pp:m.pp})))
-  ch.wildMode=true
+  ch.wildMode=true;ch.wildBehavior=wildB
+  // Stalking: enemy gets first strike
+  if(wildB==='stalking')ch.battle.enemyFirst=true
   chStartBattle()
 }
 function chStartBattle(){
@@ -1155,9 +1804,14 @@ function chStartBattle(){
   ch.battle.oppIdx=0;ch.battle.playerIdx=0;ch.phase='select';ch.selectedMove=-1;ch.turnActive=false
   chRenderBattle()
   const t=ch.battle.opponent
+  const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+  const bLabels={normal:'',aggressive:' (Aggressive)',timid:' (Timid)',stalking:' (Stalking - strikes first!)'}
+  const bDesc={normal:'',aggressive:'It\'s hostile!',timid:'It might flee...',stalking:'It\'s watching you carefully...'}
   const splash=document.getElementById('chSplash')
   splash.className='ch-splash ch-trainer-splash active'
-  splash.innerHTML='<div class="trainer-avatar">'+t.icon+'</div><div class="trainer-class">'+t.class+'</div><div class="splash-title">'+(ch.wildMode?'Wild '+t.name:t.title+' '+t.name)+'</div><div class="splash-sub">'+(ch.wildMode?'A wild Pokémon appeared!':t.class+' wants to battle!')+'</div>'+
+  splash.innerHTML='<div class="trainer-avatar">'+t.icon+'</div><div class="trainer-class">'+t.class+'</div><div class="splash-title">'+(ch.wildMode?'Wild '+t.name:t.title+' '+t.name)+'</div><div class="splash-sub">'+(ch.wildMode?bLabels[ch.wildBehavior]+(t.name?' '+t.name:'')+' appeared!':t.class+' wants to battle!')+'</div>'+
+    (ch.wildMode&&bDesc[ch.wildBehavior]?'<div style="color:#f7c948;font-size:12px;margin-top:4px">'+bDesc[ch.wildBehavior]+'</div>':'')+
+    '<div style="font-size:11px;margin-top:4px">'+w.icon+' Weather: '+w.name+(ch.weatherTurns>0?' ('+ch.weatherTurns+' turns)':'')+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:4px">'+ch.battle.oppTeam.map(p=>imgTag(p.id,'48px')).join('')+'</div>'+
     '<div style="margin-top:12px"><span class="b-btn b-btn-primary" onclick="chCloseSplash()">Battle!</span></div>'
 }
@@ -1165,12 +1819,15 @@ function chCloseSplash(){
   const splash=document.getElementById('chSplash')
   splash.classList.remove('active')
   splash.innerHTML=''
-  chLog('Go, '+cap(ch.team[0].name)+'!')
+  const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+  if(ch.weather!=='clear')chLog(w.icon+' '+w.name+' is active!')
+  else chLog('Go, '+cap(ch.team[0].name)+'!')
 }
 function chRenderBattle(){
   const t=ch.battle.opponent,p=chGetPlayer(),e=chGetEnemy()
+  const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
   document.getElementById('chOppName').textContent=ch.wildMode?'Wild '+cap(e.name):t.title+' '+t.name
-  document.getElementById('chOppTitle').textContent=ch.wildMode?'Lv.'+e.level:t.class+' (Lv.'+e.level+')'
+  document.getElementById('chOppTitle').textContent=ch.wildMode?'Lv.'+e.level+' · '+w.icon+' '+w.name:t.class+' (Lv.'+e.level+') · '+w.icon+' '+w.name
   document.getElementById('chPlayerName').textContent='You'
   document.getElementById('chPlayerRank').textContent='Streak: '+ch.winStreak
   chRenderTeamMinis('chOppTeamMini',ch.battle.oppTeam,ch.battle.oppIdx)
@@ -1178,29 +1835,54 @@ function chRenderBattle(){
   chRenderPokemon('chOppSlot',e,true)
   chRenderPokemon('chPlayerSlot',p,false)
   chRenderMoves(p)
+  // Apply era class to battle bg
+  const bg=document.getElementById('chBattleBg')
+  if(bg){bg.className='ch-bg era-'+ch.era
+    // Add weather overlay
+    const oldOverlay=bg.querySelector('.ch-weather-overlay')
+    if(oldOverlay)oldOverlay.remove()
+    if(ch.weather!=='clear'){
+      const ov=document.createElement('div')
+      ov.className='ch-weather-overlay ch-weather-'+ch.weather
+      bg.appendChild(ov)
+    }
+  }
 }
 function chRenderTeamMinis(id,team,activeIdx){
   document.getElementById(id).innerHTML=team.map((p,i)=>{
     const f=p.currentHp<=0?'<div class="faint-x">✕</div>':''
     const a=i===activeIdx?'active':''
-    return '<div class="mini-slot '+a+'">'+imgTag(p.id,'28px')+f+'</div>'
+    const sid=(p.id>=1000&&ch.fusion)?ch.fusion.baseA:p.id
+    return '<div class="mini-slot '+a+'">'+imgTag(sid,'28px')+f+'</div>'
   }).join('')
 }
 function chRenderPokemon(slotId,pkmn,isEnemy){
   const hpPct=Math.max(0,pkmn.currentHp/pkmn.maxHp*100)
   const slot=document.getElementById(slotId)
-  slot.querySelector('.sprite').src=si(pkmn.id)
-  slot.querySelector('.sprite').onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+pkmn.id+'.png'}
-  slot.querySelector('.cp-badge').textContent='CP '+calcCp(pkmn)+' · Lv.'+pkmn.level
+  // Fusion sprites: use base A sprite
+  const spriteId=(pkmn.id>=1000&&ch.fusion)?ch.fusion.baseA:pkmn.id
+  const sprite=slot.querySelector('.sprite')
+  sprite.src=si(spriteId)
+  sprite.onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+spriteId+'.png'}
+  slot.querySelector('.cp-badge').textContent=(pkmn.id>=1000&&ch.fusion?'🔮 '+ch.fusion.name+' · ':'')+calcCp(pkmn)+' · Lv.'+pkmn.level
   slot.querySelector('.ch-hp-fill').style.width=hpPct+'%'
   const hpFill=slot.querySelector('.ch-hp-fill')
   hpFill.className='ch-hp-fill'+(hpPct<25?' low':hpPct<50?' mid':'')
   slot.querySelector('#ch'+(isEnemy?'Opp':'Player')+'HpText').textContent='HP '+pkmn.currentHp+'/'+pkmn.maxHp
   const statusEl=slot.querySelector('#ch'+(isEnemy?'Opp':'Player')+'Status')
+  // Status badge + sprite glow
   if(pkmn.status){
     const labels={brn:'BRN',par:'PAR',psn:'PSN',slp:'SLP'}
     statusEl.innerHTML='<span class="ch-status-badge '+pkmn.status+'">'+labels[pkmn.status]+'</span>'
-  }else statusEl.innerHTML=''
+    slot.className='ch-pkmn-slot sprite-'+pkmn.status+(isEnemy?' opponent':' player')
+  }else{
+    statusEl.innerHTML=''
+    slot.className='ch-pkmn-slot'+(isEnemy?' opponent':' player')
+  }
+  // Wild behavior reveal class
+  if(isEnemy&&ch.wildMode&&ch.wildBehavior!=='normal'){
+    slot.classList.add('ch-wild-reveal',ch.wildBehavior)
+  }
 }
 function chRenderMoves(pkmn){
   const moves=pkmn.moves
@@ -1208,10 +1890,10 @@ function chRenderMoves(pkmn){
   grid.innerHTML=moves.map((m,i)=>{
     const eff=getEff(m.t,(chGetEnemy()?.types||[]))
     const sel=i===ch.selectedMove?'selected':''
-    const cls='ch-move-btn '+sel+(m.pp<=0?' disabled':'')
+    const cls='ch-move-btn type-'+m.t+' '+sel+(m.pp<=0?' disabled':'')
     return '<div class="'+cls+'" onclick="chSelectMove('+i+')">'+
       '<div class="mn">'+m.n.split(' ')[0]+'</div>'+
-      '<div class="mm"><span class="type-tag type-'+m.t+'">'+m.t.substring(0,3)+'</span> '+(eff>1?'⚡':'')+' '+m.p+'pwr</div>'+
+      '<div class="mm"><span class="type-tag type-'+m.t+'">'+m.t.substring(0,3)+'</span> '+(eff>1?'⚡⚡':eff<1?'🔻':'')+' '+m.p+'pwr</div>'+
       '<div class="pp">PP '+m.pp+'</div>'+
     '</div>'
   }).join('')
@@ -1235,22 +1917,37 @@ function chCommitTurn(){
   const p=chGetPlayer(),e=chGetEnemy()
   const pm=p.moves[ch.selectedMove]
   pm.pp--
-  // Player action
-  const pd=chCalcDmg(p,e,pm)
-  if(pd.dmg>0)e.currentHp=Math.max(0,e.currentHp-pd.dmg)
-  // Apply status from player move
-  chTryStatus(p,e,pm.t)
-  // AI action
-  const am=chAIMove()
-  const ad=chCalcDmg(e,p,am)
-  if(ad.dmg>0)p.currentHp=Math.max(0,p.currentHp-ad.dmg)
-  chTryStatus(e,p,am.t)
+  let pd,ad,am
+  // Stalking: enemy attacks first
+  if(ch.wildBehavior==='stalking'&&ch.battle.enemyFirst){
+    am=chAIMove()
+    ad=chCalcDmg(e,p,am)
+    if(ad.dmg>0)p.currentHp=Math.max(0,p.currentHp-ad.dmg)
+    chTryStatus(e,p,am.t)
+    pd=chCalcDmg(p,e,pm)
+    if(pd.dmg>0)e.currentHp=Math.max(0,e.currentHp-pd.dmg)
+    chTryStatus(p,e,pm.t)
+    ch.battle.enemyFirst=false
+  }else{
+    pd=chCalcDmg(p,e,pm)
+    if(pd.dmg>0)e.currentHp=Math.max(0,e.currentHp-pd.dmg)
+    chTryStatus(p,e,pm.t)
+    am=chAIMove()
+    ad=chCalcDmg(e,p,am)
+    if(ad.dmg>0)p.currentHp=Math.max(0,p.currentHp-ad.dmg)
+    chTryStatus(e,p,am.t)
+  }
+  // Track super-effective hit for research
+  if(pd.eff>1)ch.battle.lastSuperEff=true
+  // Weather tick
+  if(ch.weatherTurns>0){ch.weatherTurns--;if(ch.weatherTurns<=0){ch.weather='clear';ch.weatherTurns=0}}
   // Show results
   let log='<span class="highlight">'+cap(p.name)+'</span> used <span class="dmg">'+pm.n+'</span>!'
   if(pd.eff>1)log+=' <span style="color:#4caf50">⚡Super effective!</span>'
   if(pd.crit)log+=' <span style="color:#f7c948">💥Crit!</span>'
   if(ad.dmg>0)log+='<br><span class="highlight">'+cap(e.name)+'</span> used <span class="dmg">'+am.n+'</span>!'
   else if(ad.dmg===0)log+='<br><span class="highlight">'+cap(e.name)+"'s</span> attack missed!"
+  if(ch.weatherTurns>0)log+='<br><span style="color:rgba(255,255,255,0.3);font-size:11px">'+WEATHER_TYPES[ch.weather].icon+' '+WEATHER_TYPES[ch.weather].name+' ('+ch.weatherTurns+' turns left)</span>'
   if(!ch.wildMode&&p.currentHp>0&&e.currentHp>0)log+='<br><span style="color:rgba(255,255,255,0.3);font-size:11px">Select your next move</span>'
   chLog(log)
   // Effects
@@ -1268,9 +1965,12 @@ function chCalcDmg(attacker,defender,move){
   const eff=getEff(move.t,defender.types)
   if(eff===0)return{dmg:0,eff:0,crit:false}
   const stab=attacker.types.includes(move.t)?1.5:1
+  const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+  const wBoost=(w.boost||{})[move.t]||1
+  const wWeaken=(w.weaken||{})[move.t]||1
   const atk=attacker.stats.attack,defS=defender.stats.defense
   const level=attacker.level
-  const base=Math.floor(((2*level/5+2)*move.p*atk/defS/20+2)*stab*eff)
+  const base=Math.floor(((2*level/5+2)*move.p*atk/defS/20+2)*stab*eff*wBoost*wWeaken)
   const crit=Math.random()<0.0625
   const dmg=Math.max(1,Math.floor(base*(crit?1.5:1)*rand(0.85,1)))
   return{dmg,eff,crit}
@@ -1353,11 +2053,20 @@ function chHitEffect(img,result){
     void img.offsetWidth
     img.classList.add(result.eff>1?'ch-shake':'ch-hit-anim')
   }
-  if(result.crit){const c=document.getElementById('chBattleBg');if(c){c.classList.remove('ch-shake');void c.offsetWidth;c.classList.add('ch-shake')}}
+  if(result.crit){
+    const c=document.getElementById('chBattleBg')
+    if(c){c.classList.remove('ch-shake');void c.offsetWidth;c.classList.add('ch-shake')}
+    // Critical hit flash overlay
+    const flash=document.createElement('div')
+    flash.className='ch-crit-flash'
+    const arena=document.querySelector('.ch-arena')
+    if(arena){arena.appendChild(flash);setTimeout(()=>flash.remove(),400)}
+  }
 }
 async function chEndBattle(win){
   ch.turnActive=true
   const t=ch.battle.opponent
+  const trainers=ERAS[ch.era].trainers
   if(win){
     ch.totalWins++;ch.winStreak++
     if(ch.winStreak>ch.maxStreak)ch.maxStreak=ch.winStreak
@@ -1365,10 +2074,23 @@ async function chEndBattle(win){
     const xpGain=t.rewards.xp+(ch.winStreak>1?Math.floor(ch.winStreak*20):0)
     const sdGain=t.rewards.sd+Math.floor(ch.winStreak*10)
     ch.stardust+=sdGain
+    // Check field research — only check the NEXT incomplete task
+    let resBonus=''
+    const rs=ch.researchStats
+    rs.wins=ch.totalWins;rs.maxStreak=ch.maxStreak
+    if(ch.weather!=='clear')rs.weatherWins++
+    if(ch.battle.lastSuperEff)rs.superEffWins++
+    ch.battle.lastSuperEff=false
+    const nextTask=FIELD_TASKS.find(t=>!ch.researchComplete.includes(t.id))
+    if(nextTask&&nextTask.check(rs)){
+      ch.researchComplete.push(nextTask.id)
+      ch.stardust+=nextTask.reward.sd
+      resBonus='<br><span style="color:#4caf50">📋 Research Complete: '+nextTask.name+'! +'+nextTask.reward.xp+'XP +'+nextTask.reward.sd+'SD</span>'
+    }
     document.getElementById('chResTitle').textContent='🏆 Victory!'
     document.getElementById('chResSub').textContent='Defeated '+t.title+' '+t.name+'!'
     document.getElementById('chResReward').innerHTML='+'+xpGain+' XP · +'+sdGain+' Stardust'
-    document.getElementById('chResExtra').innerHTML='🔥 Streak: '+ch.winStreak+' | 🏅 Total: '+ch.totalWins+' wins'
+    document.getElementById('chResExtra').innerHTML='🔥 Streak: '+ch.winStreak+' | 🏅 Total: '+ch.totalWins+' wins'+resBonus
     document.getElementById('chResBtn').textContent='Continue'
     // Apply XP & check evolution
     for(const p of ch.team){
@@ -1383,7 +2105,7 @@ async function chEndBattle(win){
       }
     }
     // Move to next trainer occasionally
-    if(ch.winStreak>=3&&ch.trainerIdx<TRAINERS.length-1){ch.trainerIdx++;ch.winStreak=0;document.getElementById('chResExtra').innerHTML+='<br><span style="color:#f7c948">⭐ Rank up! Next: '+TRAINERS[Math.min(ch.trainerIdx,TRAINERS.length-1)].class+'</span>'}
+    if(ch.winStreak>=3&&ch.trainerIdx<trainers.length-1){ch.trainerIdx++;ch.winStreak=0;document.getElementById('chResExtra').innerHTML+='<br><span style="color:#f7c948">⭐ Rank up! Next: '+trainers[Math.min(ch.trainerIdx,trainers.length-1)].class+'</span>'}
   }else{
     document.getElementById('chResTitle').textContent='💔 Defeated'
     document.getElementById('chResSub').textContent='Lost to '+t.title+' '+t.name+'!'
@@ -1412,13 +2134,17 @@ function chAfterBattle(){
     const e=ch.battle.oppTeam[0]
     document.getElementById('chResBtn').disabled=true
     const w=e
+    // Aggressive: harder to catch, timid: easier
+    const catchBonus=ch.wildBehavior==='timid'?15:ch.wildBehavior==='aggressive'?-15:ch.wildBehavior==='stalking'?-10:0
     if(ch.team.length<1000&&ch.pokeballs>0){
       showCh('chWildCatch')
       document.getElementById('chWildImg').src=si(w.id);document.getElementById('chWildImg').onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+w.id+'.png'}
       document.getElementById('chWildName').textContent='Wild '+cap(w.name)
-      document.getElementById('chWildInfo').textContent='Lv.'+w.level+' · CP '+calcCp(w)
+      document.getElementById('chWildInfo').textContent='Lv.'+w.level+' · CP '+calcCp(w)+' · '+{normal:'Normal',aggressive:'Aggressive (harder to catch!)',timid:'Timid (easier!)',stalking:'Stalking (careful!)'}[ch.wildBehavior]
       document.getElementById('chCatchLabel').textContent='Catch it?'
-      ch.catchActive=true;ch.crPct=80;ch.crDir=-1
+      ch.catchActive=true;ch.crPct=80+catchBonus;ch.crDir=-1
+      const ringWrap=document.querySelector('.b-catch-ring-wrap')
+      if(ringWrap)ringWrap.className='b-catch-ring-wrap'
       if(ch.crInt)clearInterval(ch.crInt)
       ch.crInt=setInterval(()=>{
         if(!ch.catchActive){clearInterval(ch.crInt);return}
@@ -1443,18 +2169,42 @@ function chThrowBall(){
   const qMult=q==='Excellent'?2:q==='Great'?1.5:1.2
   ch.pokeballs--
   const rate=Math.min(90,Math.floor(30*qMult))
-  if(Math.random()*100<rate){
-    document.getElementById('chCatchLabel').innerHTML='Gotcha! '+cap(w.name)+' was caught! <span style="color:#f7c948">'+q+'!</span>'
-    w.currentHp=w.maxHp;w.status=null
-    if(ch.team.length<1000){ch.team.push(w)
-      const c=ch.candy[w.name]||0;ch.candy[w.name]=c+3+Math.floor(Math.random()*3)
-    }
-    chSave()
-    setTimeout(()=>{ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()},1500)
-  }else{
-    document.getElementById('chCatchLabel').innerHTML='Oh no! Broke free! <span style="color:#4caf50">'+q+' throw</span>'
-    setTimeout(()=>{ch.catchActive=true;if(ch.pokeballs>0){document.getElementById('chCatchLabel').textContent='Try again! Balls: '+ch.pokeballs;ch.crPct=80;ch.crDir=-1;if(ch.crInt){clearInterval(ch.crInt)}ch.crInt=setInterval(()=>{if(!ch.catchActive){clearInterval(ch.crInt);return}ch.crPct+=ch.crDir*1.5;if(ch.crPct<=15)ch.crDir=1;if(ch.crPct>=85)ch.crDir=-1;const i=document.getElementById('chCatchRingInner');i.style.width=ch.crPct+'%';i.style.height=ch.crPct+'%';i.style.borderColor=ch.crPct<30?'#4caf50':ch.crPct<55?'#f7c948':'#f44336'},20)}else{document.getElementById('chCatchLabel').textContent='No balls left!';setTimeout(()=>{ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()},1000)}},1000)
-  }
+  // Throwing animation
+  const ringWrap=document.querySelector('.b-catch-ring-wrap')
+  if(ringWrap){ringWrap.className='b-catch-ring-wrap throwing'}
+  setTimeout(()=>{
+    if(ringWrap){ringWrap.className='b-catch-ring-wrap shake'}
+    setTimeout(()=>{
+      if(Math.random()*100<rate){
+        // Caught! Sparkle effect
+        if(ringWrap){ringWrap.className='b-catch-ring-wrap sparkle'}
+        const img=document.getElementById('chWildImg')
+        if(img)img.classList.add('caught')
+        document.getElementById('chCatchLabel').innerHTML='Gotcha! '+cap(w.name)+' was caught! <span style="color:#f7c948">'+q+'!</span>'
+        w.currentHp=w.maxHp;w.status=null
+        if(ch.team.length<1000){ch.team.push(w)
+          const c=ch.candy[w.name]||0;ch.candy[w.name]=c+3+Math.floor(Math.random()*3)
+          // Track catch research stats
+          ch.researchStats.catches++
+          w.types.forEach(t=>{if(!ch.researchStats.caughtTypeSet.includes(t))ch.researchStats.caughtTypeSet.push(t)})
+          ch.researchStats.uniqueTypes=ch.researchStats.caughtTypeSet.length
+          const totalBs=Object.values(w.baseStats||{}).reduce((a,b)=>a+b,0)
+          if(totalBs>500)ch.researchStats.caughtRare++
+          if(w.id>143)ch.researchStats.caughtLegendary++
+        }
+        chSave()
+        setTimeout(()=>{ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()},1500)
+      }else{
+        // Broke free
+        if(ringWrap){ringWrap.className='b-catch-ring-wrap'}
+        const img=document.getElementById('chWildImg')
+        if(img)img.classList.add('flee')
+        setTimeout(()=>{if(img)img.classList.remove('flee')},600)
+        document.getElementById('chCatchLabel').innerHTML='Oh no! Broke free! <span style="color:#4caf50">'+q+' throw</span>'
+        setTimeout(()=>{ch.catchActive=true;if(ch.pokeballs>0){document.getElementById('chCatchLabel').textContent='Try again! Balls: '+ch.pokeballs;ch.crPct=80;ch.crDir=-1;if(ch.crInt){clearInterval(ch.crInt)}ch.crInt=setInterval(()=>{if(!ch.catchActive){clearInterval(ch.crInt);return}ch.crPct+=ch.crDir*1.5;if(ch.crPct<=15)ch.crDir=1;if(ch.crPct>=85)ch.crDir=-1;const i=document.getElementById('chCatchRingInner');i.style.width=ch.crPct+'%';i.style.height=ch.crPct+'%';i.style.borderColor=ch.crPct<30?'#4caf50':ch.crPct<55?'#f7c948':'#f44336'},20)}else{document.getElementById('chCatchLabel').textContent='No balls left!';setTimeout(()=>{ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()},1000)}},1000)
+      }
+    },500)
+  },300)
 }
 function chRunFromCatch(){ch.catchActive=false;if(ch.crInt){clearInterval(ch.crInt);ch.crInt=null}ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()}
 
@@ -1463,11 +2213,29 @@ async function chTryEvolve(p){
   if(!evo||p.level<evo.level||EVO_BRANCH[p.id])return false
   try{
     const d=await fetchPkmn(evo.to)
+    // Evolution flash overlay
+    const overlay=document.getElementById('chEvoOverlay')
+    const evoPkmn=document.getElementById('chEvoPkmn')
+    const evoName=document.getElementById('chEvoName')
+    const evoMsg=document.getElementById('chEvoMsg')
+    if(overlay&&evoPkmn){
+      evoPkmn.innerHTML=imgTag(p.id,'160px')
+      evoName.textContent=cap(p.name)+' is evolving...'
+      evoMsg.textContent=''
+      overlay.classList.add('active')
+      await new Promise(r=>setTimeout(r,2000))
+      evoPkmn.innerHTML=imgTag(d.id,'160px')
+      evoName.textContent=cap(p.name)+' evolved into '+cap(d.name)+'!'
+      evoMsg.textContent='✨ What a transformation!'
+      await new Promise(r=>setTimeout(r,2000))
+      overlay.classList.remove('active')
+    }
     p.id=d.id;p.name=d.name;p.types=d.types;p.baseStats=d.stats
     Object.keys(p.stats).forEach(k=>p.stats[k]=calcS(d.stats[k],p.level,p.iv[k]))
     p.maxHp=calcH(d.stats.hp,p.level,p.iv.hp)
     p.currentHp=Math.min(p.currentHp,p.maxHp)
     p.moves=getChMoves(d.types)
+    ch.researchStats.evolutions++
     return true
   }catch(e){return false}
 }
@@ -1475,10 +2243,22 @@ function chRun(){if(ch.wildMode){chEndBattle(false)}else{chLog('Can\'t run from 
 function chSwitchMode(){if(ch.phase==='select'&&!ch.turnActive){chShowSwitch()}else{chLog('Wait your turn!')}}
 function chShowParty(){
   showCh('chParty')
-  document.getElementById('chPartyList').innerHTML=ch.team.map((p,i)=>{
+  let fusionHtml=''
+  if(ch.fusion){
+    const f=ch.fusion
+    const hpPct=Math.max(0,f.currentHp/f.maxHp*100)
+    fusionHtml='<div class="party-card" style="border-color:#f7c948">'+imgTag(f.baseA,'52px')+
+      '<div class="pi"><div class="pn" style="color:#f7c948">'+f.icon+' '+cap(f.name)+' [FUSED]</div>'+
+      '<div class="pm">CP '+calcCp(f)+' · Lv.'+f.level+'</div>'+
+      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#f7c948,#ff9800)"></div></div><span style="font-size:10px">'+f.currentHp+'/'+f.maxHp+'</span></div>'+
+      '<div style="display:flex;gap:3px;margin-top:4px">'+f.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'+
+    '</div></div>'
+  }
+  document.getElementById('chPartyList').innerHTML=fusionHtml+ch.team.map((p,i)=>{
     const hpPct=Math.max(0,p.currentHp/p.maxHp*100),xpPct=Math.min(100,p.xp/p.xpNext*100),f=p.currentHp<=0?'fainted':''
     const candyAmt=ch.candy[p.name]||0
-    return '<div class="party-card '+f+'">'+imgTag(p.id,'52px')+
+    const sid=(p.id>=1000&&ch.fusion)?ch.fusion.baseA:p.id
+    return '<div class="party-card '+f+'">'+imgTag(sid,'52px')+
       '<div class="pi"><div class="pn">'+cap(p.name)+(i===ch.battle.playerIdx&&ch.phase!=='idle'?' <span class="active-tag">[OUT]</span>':'')+'</div>'+
       '<div class="pm">CP '+calcCp(p)+' · Lv.'+p.level+(p.status?' · <span class="ch-status-badge '+p.status+'">'+p.status.toUpperCase()+'</span>':'')+'</div>'+
       '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#4caf50,#8bc34a)"></div></div><span style="font-size:10px">'+p.currentHp+'/'+p.maxHp+'</span></div>'+
@@ -1515,7 +2295,7 @@ const SAVE_KEY='pokeChampSave'
 function chSave(){
   if(!chCanSave)return
   try{
-    const data={team:ch.team,trainerIdx:ch.trainerIdx,winStreak:ch.winStreak,maxStreak:ch.maxStreak,totalWins:ch.totalWins,stardust:ch.stardust,candy:ch.candy,pokeballs:ch.pokeballs}
+    const data={team:ch.team,trainerIdx:ch.trainerIdx,winStreak:ch.winStreak,maxStreak:ch.maxStreak,totalWins:ch.totalWins,stardust:ch.stardust,candy:ch.candy,pokeballs:ch.pokeballs,era:ch.era,weather:ch.weather,weatherTurns:ch.weatherTurns,fusion:ch.fusion,researchComplete:ch.researchComplete,researchStats:ch.researchStats}
     localStorage.setItem(SAVE_KEY,JSON.stringify(data))
   }catch(e){}
 }
@@ -1532,6 +2312,12 @@ function chLoad(){
     ch.stardust=data.stardust||500
     ch.candy=data.candy||{}
     ch.pokeballs=data.pokeballs||5
+    ch.era=data.era||'medieval'
+    ch.weather=data.weather||'clear'
+    ch.weatherTurns=data.weatherTurns||0
+    ch.fusion=data.fusion||null
+    ch.researchComplete=data.researchComplete||[]
+    ch.researchStats=data.researchStats||{wins:0,catches:0,superEffWins:0,maxStreak:0,evolutions:0,weatherWins:0,uniqueTypes:0,caughtRare:0,caughtLegendary:0,caughtTypeSet:[]}
     return ch.team.length>0
   }catch(e){return false}
 }
@@ -2975,6 +3761,408 @@ function toggleTheme(){
 }
 const savedTheme=localStorage.getItem('pokeTheme')
 if(savedTheme==='light'){document.body.classList.add('light');document.getElementById('themeToggle').textContent='☀️'}
+
+// ===== CANVAS TEAM CARD GENERATOR =====
+let tcTeam=[]
+function initTeamCard(){
+  tcTeam=[]
+  tcRenderSlots()
+  document.getElementById('tcCanvas').style.display='none'
+  document.getElementById('tcDownload').style.display='none'
+}
+function tcPickSearchPokemon(q){
+  if(!q||q.length<2)return
+  const matches=allPokemon.filter(p=>p.name.includes(q.toLowerCase())).slice(0,8)
+  const dd=document.getElementById('tcPickDD')
+  if(!dd)return
+  if(!matches.length){dd.style.display='none';return}
+  dd.style.display='block'
+  dd.innerHTML=matches.map(p=>'<div style="padding:6px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px" onmousedown="tcAddPokemon('+p.id+');document.getElementById(\'tcPickDD\').style.display=\'none\';document.getElementById(\'tcPickSearch\').value=\'\'">'+imgTag(p.id,'28px')+' <span>'+cap(p.name)+'</span></div>').join('')
+}
+function tcAddPokemon(id){
+  if(tcTeam.length>=6)return
+  const p=allPokemon.find(x=>x.id===id)
+  if(!p||tcTeam.some(x=>x.id===id))return
+  tcTeam.push({id:p.id,name:cap(p.name),types:p.types})
+  tcRenderSlots()
+  const dd=document.getElementById('tcPickDD');if(dd)dd.innerHTML=''
+}
+function tcRemoveFromTeam(idx){tcTeam.splice(idx,1);tcRenderSlots()}
+function tcRenderSlots(){
+  const el=document.getElementById('tcPickGrid')
+  const slots=tcTeam.map((p,i)=>'<div style="width:80px;text-align:center;cursor:pointer;position:relative" onclick="tcRemoveFromTeam('+i+')">'+imgTag(p.id,'60px')+'<div style="font-size:10px;text-transform:capitalize">'+cap(p.name)+'</div><div style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:#f44336;border-radius:50%;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer">&times;</div></div>').join('')
+  const empty=Array(Math.max(0,6-tcTeam.length)).fill('<div style="width:80px;height:80px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:20px">+</div>').join('')
+  el.innerHTML=slots+empty+
+    '<div style="width:100%;position:relative;margin-top:8px">'+
+    '<input type="text" id="tcPickSearch" placeholder="Search to add..." autocomplete="off" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px" oninput="tcPickSearchPokemon(this.value)">'+
+    '<div id="tcPickDD" style="display:none;position:absolute;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:150px;overflow-y:auto;z-index:10"></div>'+
+    '</div>'
+}
+function tcGenerate(){
+  if(tcTeam.length<1){alert('Add at least 1 Pokémon!');return}
+  const canvas=document.getElementById('tcCanvas')
+  canvas.style.display='block'
+  document.getElementById('tcDownload').style.display='block'
+  const ctx=canvas.getContext('2d')
+  const W=600,H=380
+  const bg=document.getElementById('tcBgSelect').value
+  const bgColors={fire:['#3d1a0a','#5c2a0a'],water:['#0a1a3d','#0a2a5c'],grass:['#0a3d1a','#0a5c2a'],electric:['#3d3a0a','#5c5a0a'],psychic:['#3d0a3d','#5c0a5c'],dragon:['#1a0a3d','#2a0a5c']}
+  const [c1,c2]=bgColors[bg]||bgColors.fire
+  const grad=ctx.createLinearGradient(0,0,W,H)
+  grad.addColorStop(0,c1);grad.addColorStop(1,c2)
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H)
+  ctx.fillStyle='rgba(255,255,255,0.03)'
+  for(let i=0;i<50;i++){ctx.beginPath();ctx.arc(Math.random()*W,Math.random()*H,Math.random()*30+5,0,Math.PI*2);ctx.fill()}
+  ctx.strokeStyle='rgba(247,201,72,0.3)';ctx.lineWidth=2;ctx.strokeRect(10,10,W-20,H-20)
+  ctx.strokeStyle='rgba(247,201,72,0.1)';ctx.lineWidth=1;ctx.strokeRect(16,16,W-32,H-32)
+  const name=document.getElementById('tcNameInput').value||'Trainer'
+  ctx.fillStyle='#f7c948';ctx.font='bold 24px system-ui,sans-serif';ctx.textAlign='center'
+  ctx.fillText('\u2726 '+name+"'s Team \u2726",W/2,46)
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='11px system-ui,sans-serif'
+  ctx.fillText('POK\u00c9MON CHAMPIONS',W/2,64)
+  const count=tcTeam.length
+  const slotW=Math.min(120,Math.floor((W-60)/count)-10)
+  const slotH=160
+  const totalW=count*slotW+(count-1)*10
+  const startX=(W-totalW)/2
+  const slotY=80
+  const typeColors={fire:'#f44336',water:'#2196f3',grass:'#4caf50',electric:'#ffeb3b',ice:'#03a9f4',fighting:'#e91e63',poison:'#9c27b0',ground:'#795548',flying:'#03a9f4',psychic:'#e91e63',bug:'#8bc34a',rock:'#795548',ghost:'#673ab7',dragon:'#3f51b5',dark:'#424242',steel:'#607d8b',fairy:'#e91e63',normal:'#9e9e9e'}
+  const loaded=new Array(count).fill(false)
+  tcTeam.forEach((p,i)=>{
+    const x=startX+i*(slotW+10)
+    ctx.fillStyle='rgba(255,255,255,0.05)';ctx.strokeStyle='rgba(247,201,72,0.25)';ctx.lineWidth=1
+    ctx.beginPath();ctx.roundRect(x,slotY,slotW,slotH,10);ctx.fill();ctx.stroke()
+    const imgSize=Math.min(80,slotW-20)
+    const img=new Image();img.crossOrigin='anonymous'
+    const idx=i
+    img.onload=()=>{ctx.imageSmoothingEnabled=false;ctx.drawImage(img,x+(slotW-imgSize)/2,slotY+10,imgSize,imgSize);loaded[idx]=true}
+    img.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png'
+    const displayName=cap(p.name)
+    ctx.fillStyle='#fff';ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center'
+    ctx.fillText(displayName,x+slotW/2,slotY+imgSize+28)
+    p.types.forEach((t,ti)=>{
+      const badgeW=36,badgeH=16
+      const totalBadgeW=p.types.length*badgeW+(p.types.length-1)*4
+      const bx=x+(slotW-totalBadgeW)/2+ti*(badgeW+4)
+      const by=slotY+slotH-28
+      ctx.fillStyle=typeColors[t]||'#999'
+      ctx.beginPath();ctx.roundRect(bx,by,badgeW,badgeH,4);ctx.fill()
+      ctx.fillStyle='#fff';ctx.font='bold 9px system-ui,sans-serif'
+      ctx.fillText(t.substring(0,3).toUpperCase(),bx+badgeW/2,by+11)
+    })
+  })
+  const footerY=H-30
+  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='10px system-ui,sans-serif';ctx.textAlign='center'
+  ctx.fillText('Generated with Pok\u00e9dex App \u00b7 '+new Date().toLocaleDateString(),W/2,footerY)
+}
+function tcDownload(){
+  const canvas=document.getElementById('tcCanvas')
+  const link=document.createElement('a')
+  link.download='pokemon-team-card.png'
+  link.href=canvas.toDataURL('image/png')
+  link.click()
+}
+
+// ===== TRAINER CUSTOMISATION SHOP =====
+const SHOP_AVATARS=[
+  {id:'av_red',name:'Red Classic',cost:200,icon:'🧑',desc:'The original champion'},
+  {id:'av_blue',name:'Blue Rival',cost:200,icon:'👦',desc:'Your fierce rival'},
+  {id:'av_leaf',name:'Leaf Green',cost:200,icon:'👧',desc:'Kanto heroine'},
+  {id:'av_lance',name:'Dragon Master',cost:400,icon:'🧙',desc:'Elite Four champion'},
+  {id:'av_cynthia',name:'Sinnoh Queen',cost:500,icon:'👸',desc:'Unbeatable elegance'},
+  {id:'av_n',name:'Nature Prince',cost:400,icon:'🤴',desc:'King of Unova'},
+  {id:'av_prof',name:'Professor',cost:600,icon:'🧑‍🔬',desc:'Pokémon researcher'},
+  {id:'av_villain',name:'Team Leader',cost:800,icon:'🦹',desc:'Mysterious villain'}
+]
+const SHOP_BADGES=[
+  {id:'bd_fire',name:'Fire Badge',cost:150,icon:'🔥',desc:'Earned through flame'},
+  {id:'bd_water',name:'Water Badge',cost:150,icon:'💧',desc:'Master of tides'},
+  {id:'bd_thunder',name:'Thunder Badge',cost:150,icon:'⚡',desc:'Electric victory'},
+  {id:'bd_dragon',name:'Dragon Badge',cost:300,icon:'🐉',desc:'Dragon tamer'},
+  {id:'bd_legend',name:'Legendary Badge',cost:500,icon:'👑',desc:'Conquered legends'},
+  {id:'bd_streak',name:'Streak Badge',cost:250,icon:'🔥',desc:'10+ win streak'}
+]
+const SHOP_BACKGROUNDS=[
+  {id:'bg_volcano',name:'Volcano',cost:300,icon:'🌋',desc:'Fiery battle arena',colors:['#3d0a0a','#5c1a0a']},
+  {id:'bg_ocean',name:'Deep Ocean',cost:300,icon:'🌊',desc:'Underwater depths',colors:['#0a0a3d','#0a1a5c']},
+  {id:'bg_space',name:'Cosmic',cost:400,icon:'🌌',desc:'Star-filled cosmos',colors:['#0a0020','#1a0040']},
+  {id:'bg_forest',name:'Ancient Forest',cost:300,icon:'🌲',desc:'Mystical woodland',colors:['#0a3d0a','#1a5c0a']},
+  {id:'bg_neon',name:'Neon City',cost:500,icon:'🌃',desc:'Cyberpunk skyline',colors:['#1a0030','#300050']}
+]
+let chCustom=null
+function loadCustom(){
+  try{chCustom=JSON.parse(localStorage.getItem('pokeCustom'))}catch(e){}
+  if(!chCustom)chCustom={avatar:'av_red',badge:null,bg:null,unlocked:[]}
+}
+function saveCustom(){localStorage.setItem('pokeCustom',JSON.stringify(chCustom))}
+loadCustom()
+function initTrainerShop(){
+  const el=document.getElementById('tsContent')
+  el.innerHTML='<h2 style="text-align:center;margin-bottom:4px">🛍️ Trainer Shop</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:4px">Customize your trainer with stardust from battles!</p>'+
+    '<div style="text-align:center;margin-bottom:12px;color:#f7c948;font-weight:700">💰 Stardust: '+ch.stardust+'</div>'+
+    '<div style="display:grid;gap:12px">'+tsRenderSection('Avatars',SHOP_AVATARS,'avatar')+tsRenderSection('Badges',SHOP_BADGES,'badge')+tsRenderSection('Backgrounds',SHOP_BACKGROUNDS,'bg')+'</div>'
+}
+function tsRenderSection(title,items,type){
+  return '<div><h3 style="font-size:14px;margin-bottom:6px;color:var(--text)">'+title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px">'+
+    items.map(item=>{
+      const owned=chCustom.unlocked.includes(item.id)
+      const active=(type==='avatar'&&chCustom.avatar===item.id)||(type==='badge'&&chCustom.badge===item.id)||(type==='bg'&&chCustom.bg===item.id)
+      return '<div style="background:var(--surface);border:1px solid '+(active?'#f7c948':owned?'#4caf50':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer;opacity:'+(owned||ch.stardust>=item.cost?1:0.5)+'" onclick="tsBuyOrEquip(\''+item.id+'\',\''+type+'\','+item.cost+')">'+
+        '<div style="font-size:24px">'+item.icon+'</div>'+
+        '<div style="font-size:11px;font-weight:600;margin:4px 0">'+item.name+'</div>'+
+        '<div style="font-size:9px;color:var(--text-dim)">'+item.desc+'</div>'+
+        '<div style="font-size:10px;margin-top:4px;color:'+(owned?'#4caf50':'#f7c948')+'">'+(owned?(active?'✅ ACTIVE':'OWNED'):item.cost+' SD')+'</div>'+
+      '</div>'
+    }).join('')+'</div></div>'
+}
+function tsBuyOrEquip(id,type,cost){
+  if(chCustom.unlocked.includes(id)){
+    if(type==='avatar')chCustom.avatar=id
+    else if(type==='badge')chCustom.badge=chCustom.badge===id?null:id
+    else if(type==='bg')chCustom.bg=chCustom.bg===id?null:id
+    saveCustom();initTrainerShop();return
+  }
+  if(ch.stardust<cost){return}
+  ch.stardust-=cost;chCustom.unlocked.push(id)
+  if(type==='avatar')chCustom.avatar=id
+  else if(type==='badge')chCustom.badge=id
+  else if(type==='bg')chCustom.bg=id
+  chSave();saveCustom();initTrainerShop()
+}
+
+// ===== TCG BOOSTER PACK OPENER =====
+const BOOSTER_COST=300
+const PACK_TYPES=[
+  {id:'random',name:'🎁 Random Pack',desc:'Pick any set below',cost:BOOSTER_COST,icon:'🎁'},
+  {id:'classic',name:'📦 Classic Series',desc:'Base Set through Team Rocket',cost:BOOSTER_COST,icon:'📦',sets:['base1','base2','base3','base4','base5','dp1','dp2','gym1','gym2']},
+  {id:'modern',name:'⚡ Modern Era',desc:'Sword & Shield & Scarlet & Violet',cost:BOOSTER_COST,icon:'⚡',sets:['sv1','sv2','sv3','sv4','sv5','sv6','swsh1','swsh2','swsh3','swsh4','swsh5','swsh6','swsh7','swsh8','swsh9']},
+  {id:'legendary',name:'👑 Legendary Collection',desc:'Promos, Gold Stars & Secret Rares',cost:500,icon:'👑',sets:['pop1','pop2','pop3','pop4','pop5','pop6','pop7','pop8','pop9','pop10']},
+  {id:'japanese',name:'🇯🇵 Japanese Sets',desc:'Original Japanese printings',cost:BOOSTER_COST,icon:'🇯🇵',sets:['jp','jpex','jpm']}
+]
+let bpSelectedPack='random'
+let bpSelectedSet=null
+let bpCardsCache={}
+let bpOpenedCards=[]
+
+async function initBoosterPack(){
+  bpOpenedCards=[]
+  const el=document.getElementById('bpContent')
+  el.innerHTML='<h2 style="text-align:center;margin-bottom:4px">📦 TCG Booster Packs</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:4px">Open real TCG booster packs with actual card images!</p>'+
+    '<div style="text-align:center;margin-bottom:12px;color:#f7c948;font-weight:700">💰 Stardust: '+ch.stardust+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:12px">'+
+    PACK_TYPES.map(p=>'<div style="background:var(--surface);border:1px solid '+(bpSelectedPack===p.id?'#f7c948':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer" onclick="bpSelectPack(\''+p.id+'\')">'+
+      '<div style="font-size:22px">'+p.icon+'</div>'+
+      '<div style="font-size:11px;font-weight:600;margin:4px 0">'+p.name+'</div>'+
+      '<div style="font-size:9px;color:var(--text-dim)">'+p.desc+'</div>'+
+      '<div style="font-size:10px;color:#f7c948;margin-top:4px">'+p.cost+' SD</div>'+
+    '</div>').join('')+'</div>'+
+    '<div id="bpSetPicker" style="margin-bottom:12px"></div>'+
+    '<div style="text-align:center;margin-bottom:12px"><button class="b-btn b-btn-primary" style="font-size:14px;padding:12px 32px" onclick="bpOpenPack()" '+(ch.stardust<BOOSTER_COST?'disabled style="opacity:0.5"':'')+'>🎁 Open Pack ('+BOOSTER_COST+' SD)</button></div>'+
+    '<div id="bpResult" style="margin-bottom:12px"></div>'+
+    '<div id="bpOpened" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>'
+  bpRenderSetPicker()
+}
+function bpSelectPack(id){
+  bpSelectedPack=id
+  const pack=PACK_TYPES.find(p=>p.id===id)
+  if(pack&&pack.sets){
+    bpSelectedSet=pack.sets[Math.floor(Math.random()*pack.sets.length)]
+  }else{
+    bpSelectedSet=null
+  }
+  initBoosterPack()
+}
+function bpRenderSetPicker(){
+  const el=document.getElementById('bpSetPicker')
+  if(!el)return
+  if(bpSelectedPack!=='random'){
+    el.innerHTML='<div style="text-align:center;color:var(--text-dim);font-size:11px">Pack type: <b>'+PACK_TYPES.find(p=>p.id===bpSelectedPack)?.name+'</b></div>'
+    return
+  }
+  if(!allSets.length){
+    el.innerHTML='<div style="text-align:center;color:var(--text-dim);font-size:11px">Loading sets...</div>'
+    loadSetsForBooster()
+    return
+  }
+  const recentSets=allSets.filter(s=>s.total&&s.total>10).slice(-20).reverse()
+  el.innerHTML='<div style="font-size:12px;font-weight:600;margin-bottom:6px">Choose a Set:</div>'+
+    '<div style="display:flex;gap:4px;flex-wrap:wrap">'+recentSets.map(s=>'<button style="padding:4px 8px;border-radius:6px;border:1px solid '+(bpSelectedSet===s.id?'#f7c948':'var(--border)')+';background:'+(bpSelectedSet===s.id?'rgba(247,201,72,0.15)':'var(--surface)')+';color:var(--text);font-size:10px;cursor:pointer" onclick="bpSelectedSet=\''+s.id+'\';bpRenderSetPicker()">'+s.name+'</button>').join('')+'</div>'
+}
+async function loadSetsForBooster(){
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+    allSets=await res.json()
+    bpRenderSetPicker()
+  }catch(e){
+    const el=document.getElementById('chBpSetPicker')||document.getElementById('bpSetPicker')
+    if(el)el.innerHTML='<div style="text-align:center;color:#f44336;font-size:11px">Failed to load sets</div>'
+  }
+}
+async function bpOpenPack(){
+  if(ch.stardust<BOOSTER_COST)return
+  const pack=PACK_TYPES.find(p=>p.id===bpSelectedPack)
+  const cost=pack?pack.cost:BOOSTER_COST
+  if(ch.stardust<cost)return
+  ch.stardust-=cost;chSave()
+  const el=document.getElementById('bpResult')
+  const openedEl=document.getElementById('bpOpened')
+  openedEl.innerHTML=''
+  el.innerHTML='<div style="text-align:center;padding:20px"><div class="spinner" style="width:24px;height:24px;margin:0 auto"></div><div style="font-size:12px;color:var(--text-dim);margin-top:8px">Fetching cards from TCG API...</div></div>'
+  let cards=[]
+  const setId=bpSelectedSet||(pack?.sets?pack.sets[Math.floor(Math.random()*pack.sets.length)]:null)
+  if(setId){
+    cards=await bpFetchSetCards(setId)
+  }else{
+    cards=await bpFetchRandomCards(20)
+  }
+  if(!cards.length){
+    el.innerHTML='<div style="text-align:center;color:#f44336;padding:12px">Failed to fetch cards. Try again!</div>'
+    ch.stardust+=cost;chSave()
+    return
+  }
+  const packCards=bpDistributeRarity(cards)
+  el.innerHTML='<div style="text-align:center;padding:8px"><div style="font-size:14px;font-weight:700;color:#f7c948">🎁 Pack Opened!</div><div style="font-size:11px;color:var(--text-dim)">'+packCards.length+' cards · '+packCards.filter(c=>c.rarity?.includes('Secret')||c.rarity?.includes('Ultra')).length+' special rare'+(packCards.filter(c=>c.rarity?.includes('Secret')||c.rarity?.includes('Ultra')).length!==1?'s':'')+'</div></div>'
+  bpOpenedCards=packCards
+  bpRenderOpenedCards()
+  const st=document.getElementById('chHubContent')
+  if(st){
+    const sdEl=st.querySelector('.hub-stats')
+    if(sdEl)sdEl.innerHTML=sdEl.innerHTML.replace(/💰\s*\d+/, '💰 '+ch.stardust)
+  }
+}
+async function bpFetchSetCards(setId){
+  try{
+    if(!allSets.length){
+      const sRes=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+      allSets=await sRes.json()
+    }
+    const setInfo=allSets.find(s=>s.id===setId)
+    const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/'+setId+'.json')
+    if(!res.ok)throw new Error()
+    const cards=await res.json()
+    return cards.filter(c=>c.images&&c.rarity).map(c=>({...c,set:setInfo?{id:setId,name:setInfo.name}:{id:setId,name:setId}}))
+  }catch(e){return[]}
+}
+async function bpFetchRandomCards(count){
+  try{
+    if(!allSets.length){
+      const sRes=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+      allSets=await sRes.json()
+    }
+    const playable=allSets.filter(s=>s.total&&s.total>20)
+    const picks=[]
+    const used=new Set()
+    for(let i=0;i<5;i++){
+      let s
+      do{s=playable[Math.floor(Math.random()*playable.length)]}while(used.has(s?.id)&&used.size<playable.length)
+      if(!s)continue
+      used.add(s.id)
+      const cards=await bpFetchSetCards(s.id)
+      if(cards.length)picks.push(...cards)
+    }
+    return picks.slice(0,Math.max(count,picks.length))
+  }catch(e){return[]}
+}
+function bpDistributeRarity(allCards){
+  const rarityBuckets={common:[],uncommon:[],rare:[],ultra:[]}
+  allCards.forEach(c=>{
+    const r=(c.rarity||'').toLowerCase()
+    if(r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold'))rarityBuckets.ultra.push(c)
+    else if(r.includes('rare')||r.includes('holo'))rarityBuckets.rare.push(c)
+    else if(r.includes('uncommon'))rarityBuckets.uncommon.push(c)
+    else rarityBuckets.common.push(c)
+  })
+  const pick=(arr,n)=>{const shuffled=[...arr].sort(()=>Math.random()-0.5);return shuffled.slice(0,Math.min(n,arr.length))}
+  const pack=[]
+  pack.push(...pick(rarityBuckets.common,6))
+  pack.push(...pick(rarityBuckets.uncommon,3))
+  if(rarityBuckets.rare.length)pack.push(...pick(rarityBuckets.rare,1))
+  else if(rarityBuckets.ultra.length)pack.push(...pick(rarityBuckets.ultra,1))
+  while(pack.length<10&&allCards.length){
+    const remaining=allCards.filter(c=>!pack.includes(c))
+    if(!remaining.length)break
+    pack.push(remaining[Math.floor(Math.random()*remaining.length)])
+  }
+  return pack.slice(0,10)
+}
+function bpRenderOpenedCards(){
+  const el=document.getElementById('bpOpened')
+  if(!el||!bpOpenedCards.length)return
+  el.innerHTML=bpOpenedCards.map((c,i)=>{
+    const r=(c.rarity||'Common').toLowerCase()
+    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')
+    const isRare=r.includes('rare')||r.includes('holo')
+    const borderCol=isUltra?'#f7c948':isRare?'#6390f0':r.includes('uncommon')?'#4caf50':'var(--border)'
+    const glow=isUltra?'box-shadow:0 0 20px rgba(247,201,72,0.4)':isRare?'box-shadow:0 0 12px rgba(99,144,240,0.3)':''
+    const img=c.images?.small||c.images?.large||''
+    return '<div style="background:var(--surface);border:2px solid '+borderCol+';border-radius:10px;overflow:hidden;animation:bpCardReveal 0.4s ease '+(i*0.08)+'s both;'+glow+'">'+
+      (img?'<img src="'+img+'" alt="'+c.name+'" style="width:100%;display:block;image-rendering:auto" loading="lazy">':
+        '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:11px">No Image</div>')+
+      '<div style="padding:6px;text-align:center;border-top:1px solid '+borderCol+'">'+
+        '<div style="font-size:10px;font-weight:600;text-transform:capitalize">'+c.name+'</div>'+
+        '<div style="font-size:8px;color:'+(isUltra?'#f7c948':isRare?'#6390f0':'var(--text-muted)')+'">'+(c.rarity||'Common')+'</div>'+
+        '<div style="font-size:7px;color:var(--text-muted)">'+(c.set?.name||'')+' #'+(c.number||'?')+'</div>'+
+      '</div>'+
+    '</div>'
+  }).join('')
+}
+function bpAddAllToCollection(){
+  bpOpenedCards.forEach(c=>{
+    const cid=c.id||c.name+'_'+Date.now()+'_'+Math.random()
+    pcAddCard(cid,c.name,c.set?.name||'',0,c.images?.small||'')
+  })
+  const el=document.getElementById('bpOpened')
+  if(el)el.innerHTML+='<div style="grid-column:1/-1;text-align:center;padding:8px;color:#4caf50;font-weight:700">✅ All '+bpOpenedCards.length+' cards added to My Cards!</div>'
+}
+
+// ===== DAILY WILD ENCOUNTER =====
+const SHINY_IDS=[25,6,150,131,143,448,384,491,643,644,718,800,888,892,1007,1008]
+function initDailyEncounter(){
+  const el=document.getElementById('dwContent')
+  const last=localStorage.getItem('pokeDailyDate')
+  const now=new Date()
+  const today=now.toISOString().split('T')[0]
+  const claimed=last===today
+  const hoursLeft=claimed?Math.ceil((24-((now-new Date(last))/3600000%24))) :0
+  el.innerHTML='<h2 style="text-align:center;margin-bottom:4px">🌟 Daily Wild Encounter</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:8px">A rare Pokémon appears once every 24 hours!</p>'+
+    '<div id="dwContent2" style="text-align:center">'+(claimed?
+      '<div style="padding:20px"><div style="font-size:40px;margin-bottom:8px">✅</div><div style="font-weight:700">Already claimed today!</div><div style="color:var(--text-dim);font-size:12px;margin-top:4px">Come back in ~'+hoursLeft+'h</div></div>':
+      '<div><button class="b-btn b-btn-primary" style="font-size:16px;padding:14px 40px" onclick="dwClaim()">🌟 Claim Encounter</button></div>')+'</div>'
+}
+async function dwClaim(){
+  const now=new Date()
+  localStorage.setItem('pokeDailyDate',now.toISOString().split('T')[0])
+  const isShiny=Math.random()<0.15
+  const shinyPool=SHINY_IDS
+  const id=isShiny?shinyPool[Math.floor(Math.random()*shinyPool.length)]:randomPkmnId()
+  const d=await fetchPkmn(id)
+  const lvl=Math.max(10,Math.floor(rand(15,30)))
+  const pkmn=makePkmn(d,lvl)
+  if(isShiny)pkmn.shiny=true
+  const el=document.getElementById('dwContent2')
+  el.innerHTML='<div style="padding:16px;background:var(--surface);border-radius:16px;border:2px solid '+(isShiny?'#f7c948':'#4caf50')+';text-align:center;animation:dwReveal 0.5s ease">'+
+    (isShiny?'<div style="font-size:11px;color:#f7c948;font-weight:700;letter-spacing:2px">✨ SHINY ✨</div>':'<div style="font-size:11px;color:#4caf50;font-weight:700">RARE ENCOUNTER</div>')+
+    '<img src="'+si(id)+'" width="120" height="120" style="image-rendering:pixelated;filter:drop-shadow(0 0 '+(isShiny?'20px rgba(247,201,72,0.6)':'10px rgba(76,175,80,0.3)')+')">'+
+    '<div style="font-size:18px;font-weight:700;text-transform:capitalize;margin:8px 0">'+cap(pkmn.name)+'</div>'+
+    '<div style="font-size:12px;color:var(--text-dim)">Lv.'+lvl+' · CP '+calcCp(pkmn)+'</div>'+
+    '<div style="display:flex;gap:4px;justify-content:center;margin:6px 0">'+pkmn.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'+
+    '<div style="margin-top:12px"><button class="b-btn b-btn-primary" onclick="dwBattle('+id+','+lvl+','+isShiny+')">⚔️ Battle & Catch!</button></div>'+
+  '</div>'
+}
+function dwBattle(id,lvl,isShiny){
+  if(ch.team.length===0||ch.team.every(p=>p.currentHp<=0)){alert('No Pokémon to battle!');return}
+  const d=allPokemon.find(p=>p.id===id)||{id,name:'unknown',types:['normal']}
+  const pkmn=makePkmn(d,lvl)
+  if(isShiny)pkmn.shiny=true
+  ch.battle={opponent:{title:'Daily',name:cap(pkmn.name),class:'DAILY',icon:'🌟',rewards:{xp:lvl*20+50,sd:50+lvl*5}},oppTeam:[pkmn],oppIdx:0,playerIdx:0,logs:[]}
+  ch.battle.playerMoves=ch.team.map(p=>p.moves.map(m=>({...m,pp:m.pp})))
+  ch.wildMode=true;ch.wildBehavior='normal'
+  switchTab('battle')
+  setTimeout(()=>chStartBattle(),100)
+}
 
 // Init username on load
 loadUsername()

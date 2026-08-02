@@ -67,6 +67,7 @@
     <button class="tab" data-tab="games" onclick="switchTab('games')">Games</button>
     <button class="tab" data-tab="battle" onclick="switchTab('battle')">Battle</button>
     <button class="tab" data-tab="collection" onclick="switchTab('collection')">🃏 My Cards</button>
+    <button class="tab" data-tab="about" onclick="switchTab('about')">ℹ️ About</button>
     <button class="tab" data-tab="operator" onclick="switchTab('operator')" id="operatorTab" style="display:none">🔧 Operator</button>
   </div>
 </header>
@@ -147,6 +148,12 @@
       <p>3v3 trainer battles with 4-move combat, type strategy, status effects, badges, and rank progression!</p>
       <div class="arrow">→</div>
     </div>
+    <div class="home-card" style="background:linear-gradient(135deg,rgba(156,39,176,0.15),rgba(99,144,240,0.1));border-color:rgba(156,39,176,0.2)" onclick="switchTab('about')">
+      <div class="icon">ℹ️</div>
+      <h3>About Pokémon</h3>
+      <p>The history and origins of Pokémon — from Satoshi Tajiri's childhood to a global phenomenon</p>
+      <div class="arrow">→</div>
+    </div>
   </div>
 </div>
 <div id="pokePage">
@@ -199,7 +206,7 @@
 
 <div id="gamesPage" style="display:none">
   <div style="max-width:600px;margin:0 auto;padding:16px 20px">
-    <div style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;flex-wrap:nowrap;scrollbar-width:none" id="gameSelector">
+    <div style="display:flex;gap:6px;padding:4px 0 12px;flex-wrap:wrap;justify-content:center" id="gameSelector">
       <button class="gs-btn active" data-game="wordle" onclick="selectGame('wordle')">🎯 Wordle</button>
       <button class="gs-btn" data-game="whosthat" onclick="selectGame('whosthat')">🔍 Who's That</button>
       <button class="gs-btn" data-game="typespeed" onclick="selectGame('typespeed')">⚡ Type Speed</button>
@@ -207,6 +214,9 @@
       <button class="gs-btn" data-game="speedrun" onclick="selectGame('speedrun')">🏃 Speedrun</button>
       <button class="gs-btn" data-game="typequiz" onclick="selectGame('typequiz')">❓ Type Quiz</button>
       <button class="gs-btn" data-game="numberroll" onclick="selectGame('numberroll')">🎲 Number Roll</button>
+      <button class="gs-btn" data-game="teambuilder" onclick="selectGame('teambuilder')">🏗️ Team Builder</button>
+      <button class="gs-btn" data-game="typecalc" onclick="selectGame('typecalc')">📐 Type Calc</button>
+      <button class="gs-btn" data-game="teamcard" onclick="selectGame('teamcard')">🎴 Team Card</button>
     </div>
     <div id="gameContent">
       <div id="gameWordle">
@@ -240,6 +250,29 @@
       </div>
       <div id="gameNumberroll" style="display:none">
         <div class="nr-wrap" id="nrContent"></div>
+      </div>
+      <div id="gameTeambuilder" style="display:none">
+        <div class="mg-box" id="tbContent"></div>
+      </div>
+      <div id="gameTypecalc" style="display:none">
+        <div class="mg-box" id="tcContent"></div>
+      </div>
+      <div id="gameTeamcard" style="display:none">
+        <div class="mg-box">
+          <h2 style="text-align:center;margin-bottom:8px">🎴 Team Card Generator</h2>
+          <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:8px">Pick 6 Pokémon & your name to create a shareable team card!</p>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center">
+            <input type="text" id="tcNameInput" placeholder="Trainer Name" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;width:180px" value="Ash">
+            <select id="tcBgSelect" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+              <option value="fire">🔥 Fire Theme</option><option value="water">💧 Water Theme</option><option value="grass">🌿 Grass Theme</option>
+              <option value="electric">⚡ Electric Theme</option><option value="psychic">🔮 Psychic Theme</option><option value="dragon">🐉 Dragon Theme</option>
+            </select>
+          </div>
+          <div id="tcPickGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px"></div>
+          <div style="text-align:center;margin-bottom:8px"><button class="b-btn b-btn-primary" onclick="tcGenerate()">Generate Card</button></div>
+          <div style="text-align:center"><canvas id="tcCanvas" width="600" height="380" style="max-width:100%;border-radius:12px;border:1px solid var(--border);display:none"></canvas></div>
+          <div id="tcDownload" style="text-align:center;margin-top:8px;display:none"><button class="b-btn b-btn-secondary" onclick="tcDownload()">💾 Save Card</button></div>
+        </div>
       </div>
     </div>
   </div>
@@ -307,6 +340,13 @@
         </div>
         <div class="ch-splash" id="chSplash"></div>
       </div>
+    </div>
+
+    <div class="ch-evo-overlay" id="chEvoOverlay">
+      <div class="ch-evo-flash"></div>
+      <div class="ch-evo-pkmn" id="chEvoPkmn"></div>
+      <div class="ch-evo-name" id="chEvoName"></div>
+      <div class="ch-evo-msg" id="chEvoMsg"></div>
     </div>
 
     <div id="chSwitch" style="display:none">
@@ -393,6 +433,77 @@
     </div>
   </div>
   <div id="colContent"><div class="col-empty">Loading collection...</div></div>
+</div>
+<div id="aboutPage" style="display:none;max-width:800px;margin:0 auto;padding:40px 20px">
+  <h1 style="font-size:32px;font-weight:800;margin-bottom:24px;background:linear-gradient(135deg,#ff6b35,#f7c948,#35d0ba);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center">About Pokémon</h1>
+
+  <div class="about-section">
+    <h2>The Beginning</h2>
+    <p>Pokémon was created by <strong>Satoshi Tajiri</strong> in 1989. As a child, Tajiri loved collecting insects — a popular hobby in rural Japan. That passion for collecting, discovering, and cataloging creatures became the foundation of Pokémon.</p>
+    <p>The name "Pokémon" is a shortening of the Japanese title <em>Poketto Monsutā</em> (Pocket Monsters). Tajiri envisioned a world where children could catch, train, and trade creatures, mirroring the joy he felt exploring fields and streams as a kid.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>Game Freak & Nintendo</h2>
+    <p>Tajiri co-founded <strong>Game Freak</strong> in 1989 with fellow game enthusiasts. After several small projects, he pitched his creature-collecting idea to <strong>Nintendo</strong>. Initially skeptical, Nintendo eventually greenlit the project after seeing early prototypes.</p>
+    <p>Development of the first games took nearly <strong>six years</strong>. Tajiri's perfectionism and ambitious vision pushed the team to their limits. During development, many believed the project would fail. The breakthrough came when <strong>Shigeru Miyamoto</strong> (creator of Mario and Zelda) became a mentor figure, helping guide the project to completion.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>Pokémon Red & Green (1996)</h2>
+    <p>The first Pokémon games — <strong>Pokémon Red and Green</strong> — launched in Japan on February 27, 1996, for the Game Boy. Sales were initially slow, but word of mouth spread quickly. Within months, the games became a phenomenon.</p>
+    <p>The core formula was deceptively simple: <strong>catch 'em all</strong>. Players could find 151 unique creatures across the Kanto region, each with unique types, stats, and evolutions. The Game Boy's link cable allowed players to trade Pokémon and battle friends — creating a social experience unlike anything before.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>The Trading Card Game</h2>
+    <p>In October 1996, the <strong>Pokémon Trading Card Game (TCG)</strong> launched in Japan. Created by <strong>Creatures Inc.</strong> (led by Tajiri's friend <strong>Tsukasa Good-Nature</strong>), the cards featured original artwork and strategic gameplay.</p>
+    <p>The TCG arrived in North America in 1999 and became a worldwide collecting craze. Rare holographic cards like <strong>First Edition Charizard</strong> became legendary — some now sell for hundreds of thousands of dollars. The TCG remains one of the most popular card games in the world, with over 40 billion cards sold globally.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>The Anime</h2>
+    <p>The Pokémon anime debuted in Japan on April 1, 1997. <strong>Ash Ketchum</strong> (Satoshi in Japanese) and his loyal <strong>Pikachu</strong> set out to become Pokémon Masters. The show introduced millions of viewers to the world of Pokémon and became one of the longest-running anime series in history.</p>
+    <p>The anime's influence cannot be overstated — it turned Pikachu into a global icon and kept interest in the franchise burning bright between game releases.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>Generations & Evolution</h2>
+    <p>Each new generation of games introduces new Pokémon, regions, and mechanics:</p>
+    <ul class="about-list">
+      <li><strong>Gen I (1996)</strong> — Kanto: 151 Pokémon. Red, Blue, Green, Yellow.</li>
+      <li><strong>Gen II (1999)</strong> — Johto: 100 new. Gold, Silver, Crystal. Introduced breeding, day/night cycles.</li>
+      <li><strong>Gen III (2002)</strong> — Hoenn: 135 new. Ruby, Sapphire, Emerald. Abilities, natures, double battles.</li>
+      <li><strong>Gen IV (2006)</strong> — Sinnoh: 107 new. Diamond, Pearl, Platinum. Physical/special split.</li>
+      <li><strong>Gen V (2010)</strong> — Unova: 156 new. Black, White. Seasonal changes, seasons.</li>
+      <li><strong>Gen VI (2013)</strong> — Kalos: 72 new. X, Y. Mega Evolution, 3D graphics.</li>
+      <li><strong>Gen VII (2016)</strong> — Alola: 81 new. Sun, Moon. Z-Moves, regional forms.</li>
+      <li><strong>Gen VIII (2019)</strong> — Galar: 89 new. Sword, Shield. Dynamax, open-world Wild Area.</li>
+      <li><strong>Gen IX (2022)</strong> — Paldea: 120+ new. Scarlet, Violet. Open world, Terastallization.</li>
+    </ul>
+  </div>
+
+  <div class="about-section">
+    <h2>Cultural Impact</h2>
+    <p>Pokémon is the <strong>highest-grossing media franchise of all time</strong>, generating over $100 billion in revenue. It spans video games, movies, anime, cards, merchandise, theme parks, and mobile games like <em>Pokémon GO</em> (2016), which became a global cultural phenomenon.</p>
+    <p>The franchise has sold over <strong>480 million video games</strong> worldwide. Pikachu appears on everything from planes to postage stamps. In 2016, <em>Pokémon GO</em> got millions of people outside walking, exploring, and socializing — fulfilling Satoshi Tajiri's original dream of connecting people through the joy of discovery.</p>
+  </div>
+
+  <div class="about-section">
+    <h2>About This App</h2>
+    <p>This Pokédex is a fan-made reference tool built with data from the <strong>PokéAPI</strong>. It features:</p>
+    <ul class="about-list">
+      <li>Complete Pokédex with 1025+ Pokémon, stats, types, and evolutions</li>
+      <li>TCG card sets, individual cards, and marketplace pricing links</li>
+      <li>Browseable attacks and abilities database</li>
+      <li>Pokémon Wordle and mini-games</li>
+      <li>Pokémon Champions battle mode with evolution, leveling, and catching</li>
+      <li>Number Roll (RNGdle) badge collection game</li>
+      <li>Card collection tracker</li>
+      <li>Dark/light theme toggle</li>
+    </ul>
+    <p style="margin-top:12px;color:var(--text-dim);font-size:13px">Pokémon and all related names are trademarks of Nintendo, Game Freak, and The Pokémon Company. This is a fan project and is not affiliated with or endorsed by any of these companies.</p>
+  </div>
 </div>
 <script src="script.js"></script>
 </body>
