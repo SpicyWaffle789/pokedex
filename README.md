@@ -1,1 +1,1 @@
-ai generated stuff.
+information on pokemon :)
