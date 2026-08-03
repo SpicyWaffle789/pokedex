@@ -1,5 +1,5 @@
 const CACHE_NAME='pokedex-v1'
-const STATIC_ASSETS=['/','index.html','style.css','script.js']
+const STATIC_ASSETS=['/','index.html','style.css','script.js','offline-data.js','icons.svg']
 const POKE_API='pokeapi.co'
 const SPRITE_HOST='raw.githubusercontent.com'
 const TCG_IMG_HOST='images.pokemontcg.io'
