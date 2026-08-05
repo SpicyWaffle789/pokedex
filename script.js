@@ -3537,8 +3537,10 @@ function renderNr(){
     html+='<div class="nr-col-badge'+(owned?' unlocked '+b.rarity.toLowerCase():'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="'+b.desc+'">'+b.emoji+' '+b.name+(owned?' ✓':'')+'</div>'
   })
   html+='</div></div>'
+  html+='<div id="lbContainer"></div>'
   html+='</div>'
   document.getElementById('nrContent').innerHTML=html
+  lbFetch().then(()=>{const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()})
 }
 function toggleNrCollection(){
   const el=document.getElementById('nrCollection')
@@ -3724,6 +3726,7 @@ function rollNr(){
         updateStats('mg6',{ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount})
         renderLeaderboard()
         dailyCheckProgress('roll1',1)
+        lbSubmit(totalEp).then(()=>{const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()})
       }catch(e){console.error('Roll error',e);if(numEl)numEl.textContent=n.toLocaleString()}
       if(btn)btn.disabled=false
     }
@@ -3751,6 +3754,65 @@ function loadUsername(){
   updateOperatorTab()
   rvRender()
   renderCollection()
+}
+
+// ===== WORLD LEADERBOARD (ScoreDrop, zero auth) =====
+// Create your free leaderboard at https://leaderboard-game.vercel.app/
+// Then paste your API key below:
+const LB_KEY='YOUR_SCOREDROP_API_KEY'
+let lbCache=null
+function lbPlayerId(){
+  const u=getUsername();let h=0
+  for(let i=0;i<u.length;i++){h=((h<<5)-h)+u.charCodeAt(i);h|=0}
+  return 'pk_'+Math.abs(h).toString(36)
+}
+
+async function lbFetch(){
+  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
+  try{
+    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=all')
+    if(!r.ok)return lbCache||[]
+    const d=await r.json()
+    if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))
+    return lbCache||[]
+  }catch(e){return lbCache||[]}
+}
+
+async function lbSubmit(score){
+  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return false
+  const user=getUsername()
+  if(user==='Guest')return false
+  try{
+    const url='https://leaderboard-game.vercel.app/api/add?key='+LB_KEY+'&player_id='+encodeURIComponent(lbPlayerId())+'&player='+encodeURIComponent(user)+'&score='+score
+    const r=await fetch(url)
+    if(!r.ok)return false
+    await lbFetch()
+    return true
+  }catch(e){console.error('Leaderboard error:',e);return false}
+}
+
+function lbRender(){
+  const data=lbCache||[]
+  const configured=LB_KEY!=='YOUR_SCOREDROP_API_KEY'
+  let html='<div class="lb-panel"><div class="lb-title"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg> World Leaderboard</div>'
+  if(!configured){
+    html+='<div class="lb-footer" style="padding:12px">Set LB_KEY in script.js to enable</div></div>'
+    return html
+  }
+  if(!data.length){
+    html+='<div class="lb-footer">No scores yet. Roll to be first!</div></div>'
+    return html
+  }
+  html+='<div class="lb-list">'
+  data.slice(0,20).forEach((e,i)=>{
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)
+    const isMe=e.user===getUsername()?' me':''
+    html+='<div class="lb-row'+isMe+'"><span class="lb-rank">'+medal+'</span><span class="lb-user">'+e.user+'</span><span class="lb-score">'+e.score.toLocaleString()+'</span></div>'
+  })
+  html+='</div>'
+  html+='<div class="lb-footer">'+data.length+' players · Updated live</div>'
+  html+='</div>'
+  return html
 }
 
 // ===== STATS & LEADERBOARD =====
