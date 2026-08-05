@@ -3726,7 +3726,10 @@ function rollNr(){
         updateStats('mg6',{ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount})
         renderLeaderboard()
         dailyCheckProgress('roll1',1)
-        lbSubmit(totalEp).then(()=>{const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()})
+        lbSubmit(totalEp).then(s=>{
+          const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()
+          if(s==='full'){const el=document.querySelector('.nr-result-card');if(el){const m=document.createElement('div');m.style.cssText='margin-top:8px;font-size:12px;color:var(--text-muted)';m.textContent='Leaderboard full — top 20 all-time only';el.appendChild(m)}}
+        })
       }catch(e){console.error('Roll error',e);if(numEl)numEl.textContent=n.toLocaleString()}
       if(btn)btn.disabled=false
     }
@@ -3759,7 +3762,7 @@ function loadUsername(){
 // ===== WORLD LEADERBOARD (ScoreDrop, zero auth) =====
 // Create your free leaderboard at https://leaderboard-game.vercel.app/
 // Then paste your API key below:
-const LB_KEY='6x5vn8brrh'
+const LB_KEY='YOUR_SCOREDROP_API_KEY'
 let lbCache=null
 function lbPlayerId(){
   const u=getUsername();let h=0
@@ -3770,7 +3773,7 @@ function lbPlayerId(){
 async function lbFetch(){
   if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
   try{
-    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=all')
+    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=today')
     if(!r.ok)return lbCache||[]
     const d=await r.json()
     if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))
@@ -3779,16 +3782,17 @@ async function lbFetch(){
 }
 
 async function lbSubmit(score){
-  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return false
+  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return 'no_key'
   const user=getUsername()
-  if(user==='Guest')return false
+  if(user==='Guest')return 'no_user'
   try{
     const url='https://leaderboard-game.vercel.app/api/add?key='+LB_KEY+'&player_id='+encodeURIComponent(lbPlayerId())+'&player='+encodeURIComponent(user)+'&score='+score
     const r=await fetch(url)
-    if(!r.ok)return false
+    const d=await r.json()
+    if(!r.ok)return 'full'
     await lbFetch()
-    return true
-  }catch(e){console.error('Leaderboard error:',e);return false}
+    return 'ok'
+  }catch(e){return 'error'}
 }
 
 function lbRender(){
