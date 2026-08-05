@@ -763,9 +763,9 @@ header h1{font-size:18px}
 .mg5-options button{padding:12px 28px;border-radius:12px;border:2px solid transparent;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;min-width:140px}
 .mg5-options button:hover{transform:translateY(-3px)}
 .mg5-options button:disabled{opacity:.4;transform:none;cursor:default}
-.mg5-options .eff2{background:var(--ctp-green);color:var(--text);border-color:var(--ctp-green)}
-.mg5-options .eff05{background:var(--ctp-peach);color:var(--text);border-color:var(--ctp-peach)}
-.mg5-options .eff0{background:var(--ctp-red);color:var(--text);border-color:var(--ctp-red)}
+.mg5-options .eff2{background:var(--ctp-green);color:#1a1a1a;border-color:var(--ctp-green)}
+.mg5-options .eff05{background:var(--ctp-peach);color:#1a1a1a;border-color:var(--ctp-peach)}
+.mg5-options .eff0{background:var(--ctp-red);color:#fff;border-color:var(--ctp-red)}
 
 /* Leaderboard */
 .lb-wrap{max-width:800px;margin:0 auto;padding:20px}

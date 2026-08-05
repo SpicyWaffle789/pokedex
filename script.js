@@ -3487,12 +3487,18 @@ function renderNr(){
   const c=nrState.lastBadges||[]
   const rr=getRollRarity(nrState.lastEpGain)
   const rKey=rr.label.toLowerCase()
+  const today=new Date().toDateString()
+  const rolledToday=nrState.lastRollDate&&new Date(nrState.lastRollDate).toDateString()===today
   let html='<div class="nr-wrap rngdle">'
   // Big number display
   html+='<div class="nr-big-number" id="nrNumber">'+(n!==undefined?n.toLocaleString():'? ? ? ? ? ?')+'</div>'
   html+='<div class="nr-subtitle">One roll per day. One number. What will yours be?</div>'
   // Generate button
-  html+='<button class="nr-generate-btn'+(n!==undefined?' rolled':'')+'" id="nrRollBtn" onclick="rollNr()">GENERATE</button>'
+  if(rolledToday){
+    html+='<button class="nr-generate-btn rolled" id="nrRollBtn" disabled>COME BACK TOMORROW</button>'
+  }else{
+    html+='<button class="nr-generate-btn" id="nrRollBtn" onclick="rollNr()">GENERATE</button>'
+  }
   // Result card
   if(n!==undefined){
     html+='<div class="nr-result-card rarity-border-'+rKey+'">'
@@ -3526,7 +3532,7 @@ function renderNr(){
   html+='<button class="nr-action-btn" onclick="nrShowPastRolls()">History ('+nrState.pastRolls.length+')</button></div>'
   // Collection panel
   html+='<div class="nr-collection" id="nrCollection"><h3>Badge Collection</h3><div class="nr-col-grid">'
-  ;[...NR_DICE].sort((a,b)=>a.ep-b.ep).forEach(b=>{
+  ;[...NR_BADGES].sort((a,b)=>a.ep-b.ep).forEach(b=>{
     const owned=nrState.collection.has(b.id)
     html+='<div class="nr-col-badge'+(owned?' unlocked '+b.rarity.toLowerCase():'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="'+b.desc+'">'+b.emoji+' '+b.name+(owned?' ✓':'')+'</div>'
   })
@@ -3649,6 +3655,12 @@ function rngdleEp(baseEp,rarity){
   return Math.round(cap*Math.pow(baseEp/cap,0.4))
 }
 function rollNr(){
+  const today=new Date().toDateString()
+  if(nrState.lastRollDate&&new Date(nrState.lastRollDate).toDateString()===today){
+    const btn=document.getElementById('nrRollBtn')
+    if(btn){btn.disabled=true;btn.textContent='COME BACK TOMORROW'}
+    return
+  }
   const btn=document.getElementById('nrRollBtn')
   if(btn)btn.disabled=true
   const numEl=document.getElementById('nrNumber')
@@ -3674,7 +3686,7 @@ function rollNr(){
       try{
         const earned=[]
         nrState.newBadges=new Set()
-        const badges=typeof NR_DICE!=='undefined'?NR_DICE:(typeof NR_BADGES!=='undefined'?NR_BADGES:[])
+        const badges=typeof NR_BADGES!=='undefined'?NR_BADGES:[]
         for(let i=0;i<badges.length;i++){const b=badges[i];if(!b)continue;try{if(b.check(n))earned.push(b.id)}catch(e){console.warn('Badge check error',b.id,e)}}
         nrState.lastNumber=n
         nrState.lastBadges=earned
