@@ -3773,7 +3773,7 @@ function lbPlayerId(){
 async function lbFetch(){
   if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
   try{
-    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=today')
+    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=week')
     if(!r.ok)return lbCache||[]
     const d=await r.json()
     if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))
