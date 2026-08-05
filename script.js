@@ -188,6 +188,7 @@ async function batchLoadTypes(){
 
 async function openDetail(id){
   achCheck('view_pokemon')
+  dailyCheckProgress('view10',1)
   document.getElementById('detailContent').innerHTML='<div class="loading" style="padding:60px"><div class="spinner"></div></div>'
   document.getElementById('detailModal').classList.add('active')
   document.body.style.overflow='hidden'
@@ -353,7 +354,10 @@ document.addEventListener('keydown',e=>{
 let allSets=[],setCardsCache={}
 
 function switchTab(tab){
-  currentTab=tab
+  const gameNames=['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements']
+  if(gameNames.includes(tab)){currentTab='games';currentGame=tab}
+  else currentTab=tab
+  tab=currentTab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
   const tabEl=document.querySelector('.tab[data-tab="'+tab+'"]')
   if(tabEl)tabEl.classList.add('active')
@@ -369,6 +373,7 @@ function switchTab(tab){
   document.getElementById('collectionPage').style.display=tab==='collection'?'block':'none'
   document.getElementById('aboutPage').style.display=tab==='about'?'block':'none'
   document.getElementById('wallpaperPage').style.display=tab==='wallpaper'?'block':'none'
+  document.getElementById('toolsPage').style.display=tab==='tools'?'block':'none'
   document.querySelector('.search-container').style.display=tab==='home'||tab==='sets'||tab==='games'||tab==='leaderboard'||tab==='battle'||tab==='operator'||tab==='collection'||tab==='about'||tab==='wallpaper'?'none':'block'
   document.getElementById('pokeFilters').style.display=tab==='pokemon'?'flex':'none'
   document.getElementById('attackFilters').style.display=tab==='attacks'?'flex':'none'
@@ -402,6 +407,7 @@ function switchTab(tab){
   if(tab==='games')selectGame(currentGame||'wordle')
   if(tab==='leaderboard')renderLeaderboard()
   if(tab==='battle')initBattle()
+  if(tab==='tools')selectTool(currentTool||'teambuilder')
   if(tab==='collection')renderCollection()
 }
 
@@ -893,6 +899,7 @@ function submitWg(){
     wgOver=true;updateStats('wg',{win:true,guesses:wgGuesses.length})
     document.getElementById('wgStatus').innerHTML='<div style="color:var(--ctp-green);font-size:20px;font-weight:800">✓ '+(wgTarget.charAt(0).toUpperCase()+wgTarget.slice(1))+'! '+wgGuesses.length+'/6</div><button class="wg-btn" onclick="newWg()" style="margin-top:12px">New Game</button>'
     inp.disabled=true
+    dailyCheckProgress('wordle3',1)
   }else if(wgGuesses.length>=6){
     wgOver=true;updateStats('wg',{win:false,guesses:6})
     document.getElementById('wgStatus').innerHTML='<div style="color:var(--text-dim);font-size:18px;font-weight:700">'+wgTarget.charAt(0).toUpperCase()+wgTarget.slice(1)+'</div><button class="wg-btn" onclick="newWg()" style="margin-top:12px">New Game</button>'
@@ -930,10 +937,29 @@ function renderWg(){
 }
 
 let currentGame='wordle'
+let currentTool='teambuilder'
+function selectTool(name){
+  currentTool=name
+  document.querySelectorAll('#toolSelector .gs-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===name))
+  ;['teambuilder','typecalc','compare','simulator','movetutor','dmgcalc','coverage','teamcard','evotree'].forEach(t=>{
+    const id='tool'+t.charAt(0).toUpperCase()+t.slice(1)
+    const el=document.getElementById(id)
+    if(el)el.style.display=t===name?'block':'none'
+  })
+  if(name==='teambuilder')initTeamBuilder()
+  if(name==='typecalc')initTypeCalc()
+  if(name==='compare')initCompare()
+  if(name==='simulator')initSimulator()
+  if(name==='movetutor')initMoveTutor()
+  if(name==='dmgcalc')initDmgCalc()
+  if(name==='coverage')initCoverage()
+  if(name==='teamcard'){initTeamCard();tcInjectArtToggle()}
+  if(name==='evotree')initEvoTree()
+}
 function selectGame(name){
   currentGame=name
   document.querySelectorAll('.gs-btn').forEach(b=>b.classList.toggle('active',b.dataset.game===name))
-  ;['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','teambuilder','typecalc','teamcard','compare','simulator','movetutor','dmgcalc','achievements'].forEach(g=>{
+  ;['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements'].forEach(g=>{
     const id='game'+g.charAt(0).toUpperCase()+g.slice(1)
     const el=document.getElementById(id)
     if(el)el.style.display=g===name?'block':'none'
@@ -945,13 +971,6 @@ function selectGame(name){
   if(name==='speedrun'){mg4={time:30,score:0,names:[],active:false,interval:null};initMg4()}
   if(name==='typequiz'){mg5={score:0,total:0,used:[],answer:1};initMg5()}
   if(name==='numberroll'){nrStarted=false;initNr()}
-  if(name==='teambuilder')initTeamBuilder()
-  if(name==='typecalc')initTypeCalc()
-  if(name==='teamcard')initTeamCard()
-  if(name==='compare')initCompare()
-  if(name==='simulator')initSimulator()
-  if(name==='movetutor')initMoveTutor()
-  if(name==='dmgcalc')initDmgCalc()
   if(name==='achievements')initAchievements()
 }
 
@@ -999,6 +1018,7 @@ function tbAddPokemon(id){
   tbTeam[slot]={id:p.id,name:p.name,types:p.types}
   tbRenderSlots()
   tbAnalyze()
+  dailyCheckProgress('team',1)
 }
 
 function tbRemovePokemon(slot){
@@ -1347,6 +1367,7 @@ function mg5Answer(a){
   if(correct)mg5.score++
   updateStats('mg5',{correct:correct})
   document.getElementById('mg5Sc').textContent=mg5.score
+  if(mg5.score>=3)dailyCheckProgress('typequiz3',1)
   const effLabels={2:'Super Effective (×2)',0.5:'Not Very Effective (×0.5)',0:'No Effect (×0)',1:'Normal (×1)'}
   document.getElementById('mg5Res').innerHTML=(correct?'<div class="mg-correct">✓ Correct!</div>':'<div class="mg-wrong">✗ Wrong — '+effLabels[mg5.answer]+'</div>')+'<button onclick="mg5New()" class="b-btn b-btn-primary">Next</button>'
 }
@@ -1371,24 +1392,24 @@ const CEFF={
   fairy:{fire:.5,fighting:2,poison:.5,dragon:2,dark:2,steel:.5}
 }
 const CMOVE_POOL={
-  normal:[{n:'Tackle',p:40,t:'normal',pp:35},{n:'Quick Attack',p:40,t:'normal',pp:30},{n:'Body Slam',p:85,t:'normal',pp:15},{n:'Hyper Beam',p:150,t:'normal',pp:5},{n:'Slash',p:70,t:'normal',pp:20},{n:'Headbutt',p:70,t:'normal',pp:15}],
-  fire:[{n:'Ember',p:40,t:'fire',pp:25},{n:'Fire Punch',p:75,t:'fire',pp:15},{n:'Flamethrower',p:90,t:'fire',pp:15},{n:'Fire Blast',p:110,t:'fire',pp:5},{n:'Flame Wheel',p:60,t:'fire',pp:25}],
-  water:[{n:'Water Gun',p:40,t:'water',pp:25},{n:'Waterfall',p:80,t:'water',pp:15},{n:'Hydro Pump',p:110,t:'water',pp:5},{n:'Bubble Beam',p:65,t:'water',pp:20},{n:'Surf',p:90,t:'water',pp:15}],
-  electric:[{n:'Thunder Shock',p:40,t:'electric',pp:30},{n:'Spark',p:65,t:'electric',pp:20},{n:'Thunderbolt',p:90,t:'electric',pp:15},{n:'Thunder',p:110,t:'electric',pp:10},{n:'Zap Cannon',p:120,t:'electric',pp:5}],
-  grass:[{n:'Vine Whip',p:45,t:'grass',pp:25},{n:'Razor Leaf',p:55,t:'grass',pp:25},{n:'Solar Beam',p:120,t:'grass',pp:10},{n:'Seed Bomb',p:80,t:'grass',pp:15},{n:'Leaf Blade',p:90,t:'grass',pp:15}],
-  ice:[{n:'Ice Shard',p:40,t:'ice',pp:30},{n:'Ice Beam',p:90,t:'ice',pp:10},{n:'Blizzard',p:110,t:'ice',pp:5},{n:'Icy Wind',p:55,t:'ice',pp:15},{n:'Aurora Beam',p:65,t:'ice',pp:20}],
-  fighting:[{n:'Rock Smash',p:40,t:'fighting',pp:15},{n:'Brick Break',p:75,t:'fighting',pp:15},{n:'Close Combat',p:120,t:'fighting',pp:5},{n:'Low Kick',p:50,t:'fighting',pp:20},{n:'Cross Chop',p:100,t:'fighting',pp:5}],
-  poison:[{n:'Poison Sting',p:15,t:'poison',pp:35},{n:'Sludge',p:65,t:'poison',pp:20},{n:'Sludge Bomb',p:90,t:'poison',pp:10},{n:'Poison Jab',p:80,t:'poison',pp:20},{n:'Gunk Shot',p:120,t:'poison',pp:5}],
-  ground:[{n:'Mud-Slap',p:20,t:'ground',pp:10},{n:'Dig',p:80,t:'ground',pp:10},{n:'Earthquake',p:100,t:'ground',pp:10},{n:'Bone Club',p:65,t:'ground',pp:20},{n:'Sand Tomb',p:35,t:'ground',pp:15}],
-  flying:[{n:'Peck',p:35,t:'flying',pp:35},{n:'Wing Attack',p:60,t:'flying',pp:35},{n:'Fly',p:90,t:'flying',pp:15},{n:'Drill Peck',p:80,t:'flying',pp:20},{n:'Aerial Ace',p:60,t:'flying',pp:20}],
-  psychic:[{n:'Confusion',p:50,t:'psychic',pp:25},{n:'Psybeam',p:65,t:'psychic',pp:20},{n:'Psychic',p:90,t:'psychic',pp:10},{n:'Psyshock',p:80,t:'psychic',pp:10},{n:'Future Sight',p:120,t:'psychic',pp:5}],
-  bug:[{n:'Fury Cutter',p:40,t:'bug',pp:20},{n:'Bug Bite',p:60,t:'bug',pp:20},{n:'X-Scissor',p:80,t:'bug',pp:15},{n:'Megahorn',p:120,t:'bug',pp:10},{n:'Signal Beam',p:75,t:'bug',pp:15}],
-  rock:[{n:'Rock Throw',p:50,t:'rock',pp:15},{n:'Rock Tomb',p:60,t:'rock',pp:15},{n:'Stone Edge',p:100,t:'rock',pp:5},{n:'Rock Slide',p:75,t:'rock',pp:10},{n:'Power Gem',p:80,t:'rock',pp:20}],
-  ghost:[{n:'Lick',p:30,t:'ghost',pp:30},{n:'Shadow Claw',p:70,t:'ghost',pp:15},{n:'Shadow Ball',p:80,t:'ghost',pp:15},{n:'Night Shade',p:60,t:'ghost',pp:15},{n:'Phantom Force',p:90,t:'ghost',pp:10}],
-  dragon:[{n:'Dragon Breath',p:60,t:'dragon',pp:20},{n:'Dragon Claw',p:80,t:'dragon',pp:15},{n:'Dragon Pulse',p:85,t:'dragon',pp:10},{n:'Dragon Rush',p:100,t:'dragon',pp:10},{n:'Outrage',p:120,t:'dragon',pp:5}],
-  dark:[{n:'Bite',p:60,t:'dark',pp:25},{n:'Faint Attack',p:60,t:'dark',pp:20},{n:'Crunch',p:80,t:'dark',pp:15},{n:'Dark Pulse',p:80,t:'dark',pp:15},{n:'Night Slash',p:70,t:'dark',pp:15}],
-  steel:[{n:'Metal Claw',p:50,t:'steel',pp:35},{n:'Iron Head',p:80,t:'steel',pp:15},{n:'Flash Cannon',p:80,t:'steel',pp:10},{n:'Iron Tail',p:100,t:'steel',pp:15},{n:'Bullet Punch',p:40,t:'steel',pp:30}],
-  fairy:[{n:'Fairy Wind',p:40,t:'fairy',pp:30},{n:'Draining Kiss',p:50,t:'fairy',pp:10},{n:'Moonblast',p:95,t:'fairy',pp:15},{n:'Play Rough',p:90,t:'fairy',pp:10},{n:'Dazzling Gleam',p:80,t:'fairy',pp:10}]
+  normal:[{n:'Tackle',p:40,t:'normal',pp:35,e:1},{n:'Quick Attack',p:40,t:'normal',pp:30,e:1},{n:'Body Slam',p:85,t:'normal',pp:15,e:3},{n:'Hyper Beam',p:150,t:'normal',pp:5,e:4},{n:'Slash',p:70,t:'normal',pp:20,e:2},{n:'Headbutt',p:70,t:'normal',pp:15,e:2}],
+  fire:[{n:'Ember',p:40,t:'fire',pp:25,e:1},{n:'Fire Punch',p:75,t:'fire',pp:15,e:2},{n:'Flamethrower',p:90,t:'fire',pp:15,e:3},{n:'Fire Blast',p:110,t:'fire',pp:5,e:4},{n:'Flame Wheel',p:60,t:'fire',pp:25,e:2}],
+  water:[{n:'Water Gun',p:40,t:'water',pp:25,e:1},{n:'Waterfall',p:80,t:'water',pp:15,e:3},{n:'Hydro Pump',p:110,t:'water',pp:5,e:4},{n:'Bubble Beam',p:65,t:'water',pp:20,e:2},{n:'Surf',p:90,t:'water',pp:15,e:3}],
+  electric:[{n:'Thunder Shock',p:40,t:'electric',pp:30,e:1},{n:'Spark',p:65,t:'electric',pp:20,e:2},{n:'Thunderbolt',p:90,t:'electric',pp:15,e:3},{n:'Thunder',p:110,t:'electric',pp:10,e:4},{n:'Zap Cannon',p:120,t:'electric',pp:5,e:4}],
+  grass:[{n:'Vine Whip',p:45,t:'grass',pp:25,e:1},{n:'Razor Leaf',p:55,t:'grass',pp:25,e:2},{n:'Solar Beam',p:120,t:'grass',pp:10,e:4},{n:'Seed Bomb',p:80,t:'grass',pp:15,e:3},{n:'Leaf Blade',p:90,t:'grass',pp:15,e:3}],
+  ice:[{n:'Ice Shard',p:40,t:'ice',pp:30,e:1},{n:'Ice Beam',p:90,t:'ice',pp:10,e:3},{n:'Blizzard',p:110,t:'ice',pp:5,e:4},{n:'Icy Wind',p:55,t:'ice',pp:15,e:2},{n:'Aurora Beam',p:65,t:'ice',pp:20,e:2}],
+  fighting:[{n:'Rock Smash',p:40,t:'fighting',pp:15,e:1},{n:'Brick Break',p:75,t:'fighting',pp:15,e:2},{n:'Close Combat',p:120,t:'fighting',pp:5,e:4},{n:'Low Kick',p:50,t:'fighting',pp:20,e:1},{n:'Cross Chop',p:100,t:'fighting',pp:5,e:4}],
+  poison:[{n:'Poison Sting',p:15,t:'poison',pp:35,e:1},{n:'Sludge',p:65,t:'poison',pp:20,e:2},{n:'Sludge Bomb',p:90,t:'poison',pp:10,e:3},{n:'Poison Jab',p:80,t:'poison',pp:20,e:3},{n:'Gunk Shot',p:120,t:'poison',pp:5,e:4}],
+  ground:[{n:'Mud-Slap',p:20,t:'ground',pp:10,e:1},{n:'Dig',p:80,t:'ground',pp:10,e:3},{n:'Earthquake',p:100,t:'ground',pp:10,e:4},{n:'Bone Club',p:65,t:'ground',pp:20,e:2},{n:'Sand Tomb',p:35,t:'ground',pp:15,e:1}],
+  flying:[{n:'Peck',p:35,t:'flying',pp:35,e:1},{n:'Wing Attack',p:60,t:'flying',pp:35,e:2},{n:'Fly',p:90,t:'flying',pp:15,e:3},{n:'Drill Peck',p:80,t:'flying',pp:20,e:3},{n:'Aerial Ace',p:60,t:'flying',pp:20,e:2}],
+  psychic:[{n:'Confusion',p:50,t:'psychic',pp:25,e:1},{n:'Psybeam',p:65,t:'psychic',pp:20,e:2},{n:'Psychic',p:90,t:'psychic',pp:10,e:3},{n:'Psyshock',p:80,t:'psychic',pp:10,e:3},{n:'Future Sight',p:120,t:'psychic',pp:5,e:4}],
+  bug:[{n:'Fury Cutter',p:40,t:'bug',pp:20,e:1},{n:'Bug Bite',p:60,t:'bug',pp:20,e:2},{n:'X-Scissor',p:80,t:'bug',pp:15,e:3},{n:'Megahorn',p:120,t:'bug',pp:10,e:4},{n:'Signal Beam',p:75,t:'bug',pp:15,e:2}],
+  rock:[{n:'Rock Throw',p:50,t:'rock',pp:15,e:1},{n:'Rock Tomb',p:60,t:'rock',pp:15,e:2},{n:'Stone Edge',p:100,t:'rock',pp:5,e:4},{n:'Rock Slide',p:75,t:'rock',pp:10,e:2},{n:'Power Gem',p:80,t:'rock',pp:20,e:3}],
+  ghost:[{n:'Lick',p:30,t:'ghost',pp:30,e:1},{n:'Shadow Claw',p:70,t:'ghost',pp:15,e:2},{n:'Shadow Ball',p:80,t:'ghost',pp:15,e:3},{n:'Night Shade',p:60,t:'ghost',pp:15,e:2},{n:'Phantom Force',p:90,t:'ghost',pp:10,e:3}],
+  dragon:[{n:'Dragon Breath',p:60,t:'dragon',pp:20,e:2},{n:'Dragon Claw',p:80,t:'dragon',pp:15,e:3},{n:'Dragon Pulse',p:85,t:'dragon',pp:10,e:3},{n:'Dragon Rush',p:100,t:'dragon',pp:10,e:4},{n:'Outrage',p:120,t:'dragon',pp:5,e:4}],
+  dark:[{n:'Bite',p:60,t:'dark',pp:25,e:2},{n:'Faint Attack',p:60,t:'dark',pp:20,e:2},{n:'Crunch',p:80,t:'dark',pp:15,e:3},{n:'Dark Pulse',p:80,t:'dark',pp:15,e:3},{n:'Night Slash',p:70,t:'dark',pp:15,e:2}],
+  steel:[{n:'Metal Claw',p:50,t:'steel',pp:35,e:1},{n:'Iron Head',p:80,t:'steel',pp:15,e:3},{n:'Flash Cannon',p:80,t:'steel',pp:10,e:3},{n:'Iron Tail',p:100,t:'steel',pp:15,e:4},{n:'Bullet Punch',p:40,t:'steel',pp:30,e:1}],
+  fairy:[{n:'Fairy Wind',p:40,t:'fairy',pp:30,e:1},{n:'Draining Kiss',p:50,t:'fairy',pp:10,e:1},{n:'Moonblast',p:95,t:'fairy',pp:15,e:3},{n:'Play Rough',p:90,t:'fairy',pp:10,e:3},{n:'Dazzling Gleam',p:80,t:'fairy',pp:10,e:3}]
 }
 const TRAINERS=[
   {title:'Youngster',name:'Joey',class:'BUG CATCHER',icon:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tag"/></svg>',lvl:6,types:['bug','normal'],rewards:{xp:80,sd:40}},
@@ -1628,7 +1649,7 @@ function makePkmn(d,lvl){
   const iv=Object.fromEntries(Object.keys(d.stats).map(k=>[k,Math.floor(Math.random()*32)]))
   const mh=calcH(d.stats.hp,lvl,iv.hp)
   const moves=getChMoves(d.types)
-  return{id:d.id,name:d.name,types:d.types,level:lvl,xp:0,xpNext:lvl*80,baseStats:d.stats,iv,moves,status:null,
+  return{id:d.id,name:d.name,types:d.types,level:lvl,xp:0,xpNext:lvl*80,baseStats:d.stats,iv,moves,status:null,energy:{},
     stats:Object.fromEntries(Object.keys(d.stats).map(k=>[k,calcS(d.stats[k],lvl,iv[k])])),maxHp:mh,currentHp:mh}
 }
 function getChMoves(types){
@@ -2060,6 +2081,9 @@ async function chWildEncounter(){
 function chStartBattle(){
   showCh('chBattle')
   ch.battle.oppIdx=0;ch.battle.playerIdx=0;ch.phase='select';ch.selectedMove=-1;ch.turnActive=false
+  ch.team.forEach(p=>{p.energy={}})
+  ch.battle.oppTeam.forEach(p=>{p.energy={};p.currentHp=p.maxHp})
+  chGainEnergy(ch.team[0]);chGainEnergy(ch.battle.oppTeam[0])
   chRenderBattle()
   const t=ch.battle.opponent
   const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
@@ -2085,7 +2109,7 @@ function chRenderBattle(){
   const t=ch.battle.opponent,p=chGetPlayer(),e=chGetEnemy()
   const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
   document.getElementById('chOppName').textContent=ch.wildMode?'Wild '+cap(e.name):t.title+' '+t.name
-  document.getElementById('chOppTitle').textContent=ch.wildMode?'Lv.'+e.level+' · '+w.icon+' '+w.name:t.class+' (Lv.'+e.level+') · '+w.icon+' '+w.name
+  document.getElementById('chOppTitle').innerHTML=ch.wildMode?'Lv.'+e.level+' · '+w.icon+' '+w.name:t.class+' (Lv.'+e.level+') · '+w.icon+' '+w.name
   document.getElementById('chPlayerName').textContent='You'
   document.getElementById('chPlayerRank').textContent='Streak: '+ch.winStreak
   chRenderTeamMinis('chOppTeamMini',ch.battle.oppTeam,ch.battle.oppIdx)
@@ -2120,8 +2144,8 @@ function chRenderPokemon(slotId,pkmn,isEnemy){
   // Fusion sprites: use base A sprite
   const spriteId=(pkmn.id>=1000&&ch.fusion)?ch.fusion.baseA:pkmn.id
   const sprite=slot.querySelector('.sprite')
-  sprite.src=si(spriteId)
-  sprite.onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+spriteId+'.png'}
+  if(hasAnimated(spriteId)){sprite.src=animatedSprite(spriteId);sprite.onerror=function(){this.src=si(spriteId)}}
+  else{sprite.src=si(spriteId);sprite.onerror=function(){this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+spriteId+'.png'}}
   slot.querySelector('.cp-badge').textContent=(pkmn.id>=1000&&ch.fusion?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg> '+ch.fusion.name+' · ':'')+calcCp(pkmn)+' · Lv.'+pkmn.level
   slot.querySelector('.ch-hp-fill').style.width=hpPct+'%'
   const hpFill=slot.querySelector('.ch-hp-fill')
@@ -2141,6 +2165,43 @@ function chRenderPokemon(slotId,pkmn,isEnemy){
   if(isEnemy&&ch.wildMode&&ch.wildBehavior!=='normal'){
     slot.classList.add('ch-wild-reveal',ch.wildBehavior)
   }
+  // Energy display
+  const energyEl=slot.querySelector('#ch'+(isEnemy?'Opp':'Player')+'Energy')
+  if(energyEl){
+    const total=chTotalEnergy(pkmn)
+    const entries=Object.entries(pkmn.energy).filter(([,v])=>v>0)
+    energyEl.innerHTML=entries.map(([t,v])=>Array.from({length:v},()=>'<span class="e-dot filled" style="border-color:var(--ctp-yellow);background:var(--ctp-yellow);color:var(--ctp-base);font-size:7px;width:12px;height:12px">'+t.substring(0,1).toUpperCase()+'</span>').join('')).join('')+(total<ENERGY_MAX?'<span class="e-dot" style="opacity:0.3"></span>'.repeat(ENERGY_MAX-total):'')
+  }
+}
+const ENERGY_MAX=5
+function chGainEnergy(pkmn){
+  const totalEnergy=Object.values(pkmn.energy).reduce((a,b)=>a+b,0)
+  if(totalEnergy>=ENERGY_MAX)return false
+  const t=pkmn.types[0]||'normal'
+  pkmn.energy[t]=(pkmn.energy[t]||0)+1
+  return true
+}
+function chTotalEnergy(pkmn){return Object.values(pkmn.energy).reduce((a,b)=>a+b,0)}
+function chCanUseMove(pkmn,move){
+  const needed=move.e||0
+  let have=0
+  if(pkmn.energy[move.t]>=needed)return true
+  have=pkmn.energy[move.t]||0
+  const needMore=needed-have
+  const otherEnergy=Object.entries(pkmn.energy).filter(([k])=>k!==move.t).reduce((a,[,v])=>a+v,0)
+  return otherEnergy>=needMore
+}
+function chSpendEnergy(pkmn,move){
+  const needed=move.e||0
+  let remaining=needed
+  if(pkmn.energy[move.t]>=remaining){pkmn.energy[move.t]-=remaining;return}
+  remaining-=pkmn.energy[move.t]||0;pkmn.energy[move.t]=0
+  for(const k of Object.keys(pkmn.energy)){
+    if(k===move.t)continue
+    if(pkmn.energy[k]>=remaining){pkmn.energy[k]-=remaining;remaining=0;break}
+    remaining-=pkmn.energy[k];pkmn.energy[k]=0
+    if(remaining<=0)break
+  }
 }
 function chRenderMoves(pkmn){
   const moves=pkmn.moves
@@ -2148,11 +2209,15 @@ function chRenderMoves(pkmn){
   grid.innerHTML=moves.map((m,i)=>{
     const eff=getEff(m.t,(chGetEnemy()?.types||[]))
     const sel=i===ch.selectedMove?'selected':''
-    const cls='ch-move-btn type-'+m.t+' '+sel+(m.pp<=0?' disabled':'')
+    const noEnergy=!chCanUseMove(pkmn,m)
+    const disabled=m.pp<=0||noEnergy
+    const cls='ch-move-btn type-'+m.t+' '+sel+(disabled?' disabled':'')
+    const have=pkmn.energy[m.t]||0
+    const dots=Array.from({length:m.e||0},(_,j)=>j<have?'<span class="e-dot filled">'+m.t.substring(0,1).toUpperCase()+'</span>':'<span class="e-dot"></span>').join('')
     return '<div class="'+cls+'" onclick="chSelectMove('+i+')">'+
       '<div class="mn">'+m.n.split(' ')[0]+'</div>'+
-      '<div class="mm"><span class="type-tag type-'+m.t+'">'+m.t.substring(0,3)+'</span> '+(eff>1?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>':eff<1?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg>':'')+' '+m.p+'pwr</div>'+
-      '<div class="pp">PP '+m.pp+'</div>'+
+      '<div class="mm"><span class="type-tag type-'+m.t+'">'+m.t.substring(0,3)+'</span> '+(eff>1?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>':eff<1?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg>':'')+' '+m.p+'pwr</div>'+
+      '<div class="energy-cost">'+dots+'</div>'+
     '</div>'
   }).join('')
 }
@@ -2165,6 +2230,7 @@ function chSelectMove(idx){
   if(ch.phase!=='select'||ch.turnActive)return
   const p=chGetPlayer()
   if(!p||p.currentHp<=0||p.moves[idx].pp<=0)return
+  if(!chCanUseMove(p,p.moves[idx]))return
   ch.selectedMove=idx
   chRenderMoves(p)
   chCommitTurn()
@@ -2175,10 +2241,13 @@ function chCommitTurn(){
   const p=chGetPlayer(),e=chGetEnemy()
   const pm=p.moves[ch.selectedMove]
   pm.pp--
+  chGainEnergy(p);chGainEnergy(e)
+  chSpendEnergy(p,pm)
   let pd,ad,am
   // Stalking: enemy attacks first
   if(ch.wildBehavior==='stalking'&&ch.battle.enemyFirst){
     am=chAIMove()
+    chSpendEnergy(e,am)
     ad=chCalcDmg(e,p,am)
     if(ad.dmg>0)p.currentHp=Math.max(0,p.currentHp-ad.dmg)
     chTryStatus(e,p,am.t)
@@ -2191,6 +2260,7 @@ function chCommitTurn(){
     if(pd.dmg>0)e.currentHp=Math.max(0,e.currentHp-pd.dmg)
     chTryStatus(p,e,pm.t)
     am=chAIMove()
+    chSpendEnergy(e,am)
     ad=chCalcDmg(e,p,am)
     if(ad.dmg>0)p.currentHp=Math.max(0,p.currentHp-ad.dmg)
     chTryStatus(e,p,am.t)
@@ -2206,6 +2276,8 @@ function chCommitTurn(){
   if(ad.dmg>0)log+='<br><span class="highlight">'+cap(e.name)+'</span> used <span class="dmg">'+am.n+'</span>!'
   else if(ad.dmg===0)log+='<br><span class="highlight">'+cap(e.name)+"'s</span> attack missed!"
   if(ch.weatherTurns>0)log+='<br><span style="color:var(--text-muted);font-size:11px">'+WEATHER_TYPES[ch.weather].icon+' '+WEATHER_TYPES[ch.weather].name+' ('+ch.weatherTurns+' turns left)</span>'
+  const pTotal=chTotalEnergy(p)
+  log+='<br><span style="color:var(--ctp-yellow);font-size:10px">Energy: '+pTotal+'/'+ENERGY_MAX+'</span>'
   if(!ch.wildMode&&p.currentHp>0&&e.currentHp>0)log+='<br><span style="color:var(--text-muted);font-size:11px">Select your next move</span>'
   chLog(log)
   // Effects
@@ -2226,18 +2298,20 @@ function chCalcDmg(attacker,defender,move){
   const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
   const wBoost=(w.boost||{})[move.t]||1
   const wWeaken=(w.weaken||{})[move.t]||1
-  const atk=attacker.stats.attack,defS=defender.stats.defense
+  const isSpecial=['fire','water','grass','electric','ice','psychic','dragon','dark','fairy','ghost','poison'].includes(move.t)
+  const atk=isSpecial?attacker.stats.spAttack:attacker.stats.attack
+  const def=isSpecial?defender.stats.spDefense:defender.stats.defense
   const level=attacker.level
-  const base=Math.floor(((2*level/5+2)*move.p*atk/defS/20+2)*stab*eff*wBoost*wWeaken)
+  const base=Math.floor(((2*level/5+2)*move.p*atk/def/50+2)*stab*eff*wBoost*wWeaken)
   const crit=Math.random()<0.0625
   const dmg=Math.max(1,Math.floor(base*(crit?1.5:1)*rand(0.85,1)))
   return{dmg,eff,crit}
 }
 function chAIMove(){
   const e=chGetEnemy(),p=chGetPlayer()
-  if(!e||e.currentHp<=0)return{...CMOVE_POOL.normal[0],pp:1}
-  const valid=e.moves.filter(m=>m.pp>0)
-  if(!valid.length)return{...CMOVE_POOL.normal[0],pp:1}
+  if(!e||e.currentHp<=0)return{...CMOVE_POOL.normal[0],pp:1,e:1}
+  const valid=e.moves.filter(m=>m.pp>0&&chCanUseMove(e,m))
+  if(!valid.length)return{...CMOVE_POOL.normal[0],pp:1,e:1}
   const superEff=valid.filter(m=>getEff(m.t,p.types)>1)
   if(superEff.length)return superEff[Math.floor(Math.random()*superEff.length)]
   return valid[Math.floor(Math.random()*valid.length)]
@@ -2259,7 +2333,8 @@ function chFaint(side){
     if(ch.battle.oppIdx<ch.battle.oppTeam.length){
       setTimeout(()=>{
         const n=chGetEnemy()
-        n.currentHp=n.maxHp;n.status=null
+        n.currentHp=n.maxHp;n.status=null;n.energy={}
+        chGainEnergy(n)
         chLog('Go! '+cap(n.name)+' was sent out!')
         chRenderBattle()
         chRenderMoves(chGetPlayer())
@@ -2290,6 +2365,7 @@ function chDoSwitch(i){
   if(i===ch.battle.playerIdx){ch.phase='select';showCh('chBattle');chRenderBattle();ch.turnActive=false;return}
   ch.battle.playerIdx=i
   ch.phase='select';ch.selectedMove=-1
+  chGainEnergy(ch.team[i])
   chLog('Go, '+cap(ch.team[i].name)+'!')
   showCh('chBattle')
   chRenderBattle()
@@ -2299,6 +2375,7 @@ function chCancelSwitch(){
   const next=ch.team.findIndex((p,i)=>i<3&&i!==ch.battle.playerIdx&&p.currentHp>0)
   if(next<0){chEndBattle(false);return}
   ch.battle.playerIdx=next;ch.phase='select';ch.selectedMove=-1
+  chGainEnergy(ch.team[next])
   showCh('chBattle')
   chRenderBattle()
   ch.turnActive=false
@@ -2324,35 +2401,18 @@ function chHitEffect(img,result){
 async function chEndBattle(win){
   ch.turnActive=true
   const t=ch.battle.opponent
-  const trainers=ERAS[ch.era].trainers
+  try{
   if(win){
     ch.totalWins++;ch.winStreak++
     if(ch.winStreak>ch.maxStreak)ch.maxStreak=ch.winStreak
-    achCheck('battle_win')
-    achCheck('streak_'+ch.winStreak)
-    const p=chGetPlayer()
     const xpGain=t.rewards.xp+(ch.winStreak>1?Math.floor(ch.winStreak*20):0)
     const sdGain=t.rewards.sd+Math.floor(ch.winStreak*10)
     ch.stardust+=sdGain
-    // Check field research — only check the NEXT incomplete task
-    let resBonus=''
-    const rs=ch.researchStats
-    rs.wins=ch.totalWins;rs.maxStreak=ch.maxStreak
-    if(ch.weather!=='clear')rs.weatherWins++
-    if(ch.battle.lastSuperEff)rs.superEffWins++
-    ch.battle.lastSuperEff=false
-    const nextTask=FIELD_TASKS.find(t=>!ch.researchComplete.includes(t.id))
-    if(nextTask&&nextTask.check(rs)){
-      ch.researchComplete.push(nextTask.id)
-      ch.stardust+=nextTask.reward.sd
-      resBonus='<br><span style="color:var(--ctp-green)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-list"/></svg> Research Complete: '+nextTask.name+'! +'+nextTask.reward.xp+'XP +'+nextTask.reward.sd+'SD</span>'
-    }
-    document.getElementById('chResTitle').textContent='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg> Victory!'
+    document.getElementById('chResTitle').innerHTML='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg> Victory!'
     document.getElementById('chResSub').textContent='Defeated '+t.title+' '+t.name+'!'
     document.getElementById('chResReward').innerHTML='+'+xpGain+' XP · +'+sdGain+' Stardust'
-    document.getElementById('chResExtra').innerHTML='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg> Streak: '+ch.winStreak+' | <svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg> Total: '+ch.totalWins+' wins'+resBonus
+    document.getElementById('chResExtra').innerHTML='Streak: '+ch.winStreak+' | Total: '+ch.totalWins+' wins'
     document.getElementById('chResBtn').textContent='Continue'
-    // Apply XP & check evolution
     for(const p of ch.team){
       p.xp+=xpGain
       while(p.xp>=p.xpNext){
@@ -2360,14 +2420,29 @@ async function chEndBattle(win){
         Object.keys(p.stats).forEach(k=>p.stats[k]=calcS(p.baseStats[k],p.level,p.iv[k]))
         p.maxHp=calcH(p.baseStats.hp,p.level,p.iv.hp)
         p.currentHp=Math.min(p.currentHp,p.maxHp)
-        const evolved=await chTryEvolve(p)
-        if(evolved)document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-green)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg> '+cap(p.name)+' evolved!</span>'
       }
     }
-    // Move to next trainer occasionally
-    if(ch.winStreak>=3&&ch.trainerIdx<trainers.length-1){ch.trainerIdx++;ch.winStreak=0;document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-yellow)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg> Rank up! Next: '+trainers[Math.min(ch.trainerIdx,trainers.length-1)].class+'</span>'}
+    try{achCheck('battle_win');achCheck('streak_'+ch.winStreak)}catch(e){}
+    try{dailyCheckProgress('beat3',1);if(ch.winStreak>=2)dailyCheckProgress('streak2',1)}catch(e){}
+    try{
+      const rs=ch.researchStats
+      rs.wins=ch.totalWins;rs.maxStreak=ch.maxStreak
+      if(ch.weather!=='clear')rs.weatherWins++
+      if(ch.battle.lastSuperEff)rs.superEffWins++
+      ch.battle.lastSuperEff=false
+      const nextTask=FIELD_TASKS.find(f=>!ch.researchComplete.includes(f.id))
+      if(nextTask&&nextTask.check(rs)){
+        ch.researchComplete.push(nextTask.id)
+        ch.stardust+=nextTask.reward.sd
+        document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-green)">Research Complete: '+nextTask.name+'! +'+nextTask.reward.sd+'SD</span>'
+      }
+    }catch(e){}
+    try{for(const p of ch.team){if(p.xp>=p.xpNext){const evolved=await chTryEvolve(p)
+      if(evolved)document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-green)">'+cap(p.name)+' evolved!</span>'}}}catch(e){}
+    const trainers=ERAS[ch.era].trainers
+    if(ch.winStreak>=3&&ch.trainerIdx<trainers.length-1){ch.trainerIdx++;ch.winStreak=0;document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-yellow)">Rank up! Next: '+trainers[Math.min(ch.trainerIdx,trainers.length-1)].class+'</span>'}
   }else{
-    document.getElementById('chResTitle').textContent='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg> Defeated'
+    document.getElementById('chResTitle').innerHTML='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg> Defeated'
     document.getElementById('chResSub').textContent='Lost to '+t.title+' '+t.name+'!'
     document.getElementById('chResReward').innerHTML='+'+Math.floor(t.rewards.xp/2)+' XP (participation)'
     document.getElementById('chResExtra').innerHTML='Streak reset. Keep training!'
@@ -2379,14 +2454,14 @@ async function chEndBattle(win){
         Object.keys(p.stats).forEach(k=>p.stats[k]=calcS(p.baseStats[k],p.level,p.iv[k]))
         p.maxHp=calcH(p.baseStats.hp,p.level,p.iv.hp)
         p.currentHp=Math.min(p.currentHp,p.maxHp)
-        const evolved=await chTryEvolve(p)
-        if(evolved)document.getElementById('chResExtra').innerHTML+='<br><span style="color:var(--ctp-green)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg> '+cap(p.name)+' evolved!</span>'
       }
     }
     ch.winStreak=0
   }
+  }catch(e){console.error('chEndBattle error:',e)}
   chSave();chSaveStats()
   showCh('chResults')
+  ch.turnActive=false
 }
 
 function chAfterBattle(){
@@ -2453,6 +2528,7 @@ function chThrowBall(){
           if(w.id>143)ch.researchStats.caughtLegendary++
         }
         chSave()
+        dailyCheckProgress('catch1',1)
         setTimeout(()=>{ch.battle={};document.getElementById('chResBtn').disabled=false;showCh('chHub');chShowHub()},1500)
       }else{
         // Broke free
@@ -2565,6 +2641,7 @@ function chLoad(){
     if(!raw)return false
     const data=JSON.parse(raw)
     ch.team=data.team||[]
+    ch.team.forEach(p=>{if(!p.energy)p.energy={}})
     ch.trainerIdx=data.trainerIdx||0
     ch.winStreak=data.winStreak||0
     ch.maxStreak=data.maxStreak||0
@@ -3410,67 +3487,52 @@ function renderNr(){
   const c=nrState.lastBadges||[]
   const rr=getRollRarity(nrState.lastEpGain)
   const rKey=rr.label.toLowerCase()
-  const milestones=[{ep:1000,name:'1K',icon:'⭐'},{ep:10000,name:'10K',icon:'🌟'},{ep:50000,name:'50K',icon:'💫'},{ep:100000,name:'100K',icon:'🔥'},{ep:500000,name:'500K',icon:'👑'},{ep:1000000,name:'1M',icon:'💎'}]
-  let html='<div class="nr-header"><h2>🎲 Number Roll</h2><p style="font-size:13px;color:var(--text-dim);font-style:italic;margin-top:-4px">because why not</p></div>'
-  html+='<div class="nr-roll-area"><button class="nr-roll-btn" id="nrRollBtn" onclick="rollNr()">🎲 Roll!</button>'
-  html+='<div class="nr-number'+(n!==undefined?' rarity-'+rKey:'')+'" id="nrNumber">'+(n!==undefined?n.toLocaleString():'—')+'</div>'
-  if(nrState.streak>1)html+='<div class="nr-streak-display"><span class="nr-streak-fire">🔥</span> '+nrState.streak+' day streak!</div>'
-  html+='<div class="nr-ep-display'+(n!==undefined?' nr-ep-countup':'')+'">'+(rr.emoji?rr.emoji+' ':'')+'<span id="nrEpGain">'+(nrState.lastEpGain||0)+'</span> EP'+(rr.label?' <span style="color:'+rr.color+';font-weight:700;font-size:12px">'+rr.label+'</span>':'')+'</div>'
-  html+='<div class="nr-roll-count">Rolls: <span id="nrRollCount">'+nrState.rolls+'</span> · Total EP: <span id="nrTotalEp">'+nrState.ep.toLocaleString()+'</span> · Badges: <span id="nrBadgeCount">'+nrState.badgeCount+'</span>/'+NR_BADGES.length+'</div>'
-  if(n!==undefined)html+='<div style="margin-top:8px"><button class="nr-share-btn" onclick="nrShareRoll()">📋 Share Roll</button></div>'
-  html+='</div>'
-  if(c.length){
-    const rarityRank={common:0,uncommon:1,rare:2,epic:3,anomaly:4,legendary:5,mythic:6}
-    const sorted=[...c].sort((a,b)=>{const ba=nrLookup.get(a),bb=nrLookup.get(b);if(!ba||!bb)return 0;const ra=rarityRank[ba.rarity.toLowerCase()]||0,rb=rarityRank[bb.rarity.toLowerCase()]||0;return rb-ra||bb.ep-ba.ep})
-    html+='<div class="nr-badges-title"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg> Badges Earned</div><div class="nr-badge-grid" id="nrBadgeGrid">'
-    sorted.forEach((b,i)=>{
-      const bg=nrLookup.get(b)
-      if(!bg)return
-      const isNew=nrState.newBadges&&nrState.newBadges.has(b)
-      html+='<div class="nr-badge '+bg.rarity.toLowerCase()+(isNew?' nr-new-badge':'')+'" style="animation-delay:'+(i*80)+'ms" onclick="nrBadgeDetail(\''+b+'\')" title="Click for details">'+(isNew?'<span class="nr-new-ribbon">'+bg.emoji+' '+bg.name+'</span>':bg.emoji+' '+bg.name)+' ['+rngdleEp(bg.ep,bg.rarity)+'EP]</div>'
-    })
+  let html='<div class="nr-wrap rngdle">'
+  // Big number display
+  html+='<div class="nr-big-number" id="nrNumber">'+(n!==undefined?n.toLocaleString():'? ? ? ? ? ?')+'</div>'
+  html+='<div class="nr-subtitle">One roll per day. One number. What will yours be?</div>'
+  // Generate button
+  html+='<button class="nr-generate-btn'+(n!==undefined?' rolled':'')+'" id="nrRollBtn" onclick="rollNr()">GENERATE</button>'
+  // Result card
+  if(n!==undefined){
+    html+='<div class="nr-result-card rarity-border-'+rKey+'">'
+    html+='<div class="nr-result-number rarity-'+rKey+'">'+n.toLocaleString()+'</div>'
+    // Badges as pills
+    if(c.length){
+      html+='<div class="nr-pill-row">'
+      const maxShow=6
+      const sorted=c.slice(0,maxShow)
+      sorted.forEach(id=>{
+        const bg=nrLookup.get(id)
+        if(!bg)return
+        const isNew=nrState.newBadges&&nrState.newBadges.has(id)
+        html+='<span class="nr-pill '+bg.rarity.toLowerCase()+(isNew?' new':'')+'" onclick="nrBadgeDetail(\''+id+'\')" title="'+bg.desc+'">'+bg.emoji+' '+bg.name+'</span>'
+      })
+      if(c.length>maxShow)html+='<span class="nr-pill more">+'+(c.length-maxShow)+' more</span>'
+      html+='</div>'
+    }
+    // EP display
+    html+='<div class="nr-ep-pill">'+rr.emoji+' <span id="nrEpGain">'+nrState.lastEpGain.toLocaleString()+'</span> EP</div>'
+    // Roll count
+    html+='<div class="nr-roll-meta">'+nrState.rolls.toLocaleString()+' rolls today</div>'
     html+='</div>'
   }
-  html+='<div class="nr-action-row"><button class="nr-collection-toggle" onclick="toggleNrCollection()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-layers"/></svg> Collection ('+nrState.badgeCount+'/'+NR_BADGES.length+')</button>'
-  html+='<button class="nr-past-btn" onclick="nrShowPastRolls()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clipboard"/></svg> History ('+nrState.pastRolls.length+')</button></div>'
+  // Streak
+  if(nrState.streak>1)html+='<div class="nr-streak-line">🔥 '+nrState.streak+' day streak!</div>'
+  // Stats row
+  html+='<div class="nr-stats-row"><span>Total EP: '+nrState.ep.toLocaleString()+'</span><span>Badges: '+nrState.badgeCount+'/'+NR_BADGES.length+'</span></div>'
+  // Action buttons
+  html+='<div class="nr-action-row"><button class="nr-action-btn" onclick="toggleNrCollection()">Collection ('+nrState.badgeCount+'/'+NR_BADGES.length+')</button>'
+  html+='<button class="nr-action-btn" onclick="nrShowPastRolls()">History ('+nrState.pastRolls.length+')</button></div>'
+  // Collection panel
   html+='<div class="nr-collection" id="nrCollection"><h3>Badge Collection</h3><div class="nr-col-grid">'
-  ;[...NR_BADGES].sort((a,b)=>a.ep-b.ep).forEach(b=>{
+  ;[...NR_DICE].sort((a,b)=>a.ep-b.ep).forEach(b=>{
     const owned=nrState.collection.has(b.id)
-    html+='<div class="nr-col-badge'+(owned?' unlocked '+b.rarity.toLowerCase():'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="Click for details">'+b.emoji+' '+b.name+(owned?' ✓':'')+'</div>'
+    html+='<div class="nr-col-badge'+(owned?' unlocked '+b.rarity.toLowerCase():'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="'+b.desc+'">'+b.emoji+' '+b.name+(owned?' ✓':'')+'</div>'
   })
   html+='</div></div>'
-  const nextMilestone=milestones.find(m=>nrState.ep<m.ep)||milestones[milestones.length-1]
-  const prevMilestone=[...milestones].reverse().find(m=>nrState.ep>=m.ep)
-  const prevEp=prevMilestone?prevMilestone.ep:0
-  const nextEp=nextMilestone.ep
-  const progress=Math.min(100,((nrState.ep-prevEp)/(nextEp-prevEp))*100)
-  html+='<div class="nr-journey"><h3>⭐ Journey — '+nrState.ep.toLocaleString()+' EP lifetime</h3><div class="nr-journey-bar"><div class="nr-journey-fill" style="width:'+progress+'%"></div></div><div class="nr-journey-milestones">'
-  milestones.forEach(m=>{
-    html+='<div class="nr-journey-milestone'+(nrState.ep>=m.ep?' achieved':'')+'"><span class="m-icon">'+m.icon+'</span><span>'+m.name+'</span></div>'
-  })
-  html+='</div></div>'
-  const rc=nrState.rarityCounts||{}
-  const totalRolls=Object.values(rc).reduce((a,b)=>a+b,0)||1
-  const rarityColors={trash:'var(--text-muted)',common:'var(--text-dim)',uncommon:'#4fc3f7',rare:'var(--ctp-mauve)',epic:'#ff6f00',anomaly:'#ffd700',mythic:'#ff1744'}
-  html+='<div class="nr-stats"><h3>📊 Stats</h3>'
-  html+='<div class="nr-stat-row"><span class="nr-stat-label">Total Rolls</span><span class="nr-stat-value">'+nrState.rolls+'</span></div>'
-  html+='<div class="nr-stat-row"><span class="nr-stat-label">Lifetime EP</span><span class="nr-stat-value">'+nrState.ep.toLocaleString()+'</span></div>'
-  html+='<div class="nr-stat-row"><span class="nr-stat-label">Badges Found</span><span class="nr-stat-value">'+nrState.badgeCount+'/'+NR_BADGES.length+'</span></div>'
-  html+='<div class="nr-stat-row"><span class="nr-stat-label">Current Streak</span><span class="nr-stat-value">'+nrState.streak+' 🔥</span></div>'
-  html+='<div class="nr-stat-row"><span class="nr-stat-label">Best Roll</span><span class="nr-stat-value" style="color:'+getRollRarity(nrState.bestEp).color+'">'+getRollRarity(nrState.bestEp).label+'</span></div>'
-  html+='<div class="nr-histogram">'
-  ;['trash','common','uncommon','rare','epic','anomaly','mythic'].forEach(r=>{
-    const count=rc[r]||0
-    const pct=totalRolls>0?(count/totalRolls)*100:0
-    html+='<div class="nr-hist-bar" style="height:'+Math.max(2,pct)+'%;background:'+rarityColors[r]+';opacity:0.7" title="'+r+': '+count+' ('+Math.round(pct)+'%)"></div>'
-  })
-  html+='</div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:2px"><span>Trash</span><span>Common</span><span>Uncommon</span><span>Rare</span><span>Epic</span><span>Anomaly</span><span>Mythic</span></div>'
   html+='</div>'
   document.getElementById('nrContent').innerHTML=html
-  if(n!==undefined){
-    const numDisplay=document.getElementById('nrNumber')
-    if(numDisplay)numDisplay.classList.add('rarity-'+rKey)
-  }
 }
 function toggleNrCollection(){
   const el=document.getElementById('nrCollection')
@@ -3589,32 +3651,31 @@ function rngdleEp(baseEp,rarity){
 function rollNr(){
   const btn=document.getElementById('nrRollBtn')
   if(btn)btn.disabled=true
-  const epEl=document.getElementById('nrEpGain')
   const numEl=document.getElementById('nrNumber')
   const n=Math.floor(Math.random()*1000000)
   let frame=0
   const perDigit=8
   const total=6*perDigit
   const s=n.toString().padStart(6,'0')
-  if(numEl){numEl.className='nr-number';numEl.textContent='······'}
+  if(numEl){numEl.className='nr-big-number';numEl.textContent='· · · · · ·'}
   const iv=setInterval(()=>{
     frame++
     const rolling=Math.min(Math.floor(frame/perDigit),6)
     let d=''
     for(let i=0;i<6;i++){
-      if(i<rolling)d+=s[i]
-      else if(i===rolling)d+=Math.floor(Math.random()*10)
-      else d+='·'
+      if(i<rolling)d+=s[i]+' '
+      else if(i===rolling)d+=Math.floor(Math.random()*10)+' '
+      else d+='? '
     }
-    if(numEl)numEl.textContent=d
+    if(numEl)numEl.textContent=d.trim()
     if(frame>=total){
       clearInterval(iv)
       if(numEl)numEl.textContent=n.toLocaleString()
       try{
         const earned=[]
         nrState.newBadges=new Set()
-        if(!NR_BADGES||!NR_BADGES.length){console.error('NR_BADGES not available',typeof NR_BADGES)}
-        else{for(let i=0;i<NR_BADGES.length;i++){const b=NR_BADGES[i];if(!b)continue;try{if(b.check(n))earned.push(b.id)}catch(e){console.warn('Badge check error',b.id,e)}}}
+        const badges=typeof NR_DICE!=='undefined'?NR_DICE:(typeof NR_BADGES!=='undefined'?NR_BADGES:[])
+        for(let i=0;i<badges.length;i++){const b=badges[i];if(!b)continue;try{if(b.check(n))earned.push(b.id)}catch(e){console.warn('Badge check error',b.id,e)}}
         nrState.lastNumber=n
         nrState.lastBadges=earned
         let epGain=0
@@ -3646,20 +3707,11 @@ function rollNr(){
         nrState.pastRolls.unshift({n:n,ep:totalEp,base:epGain,badges:earned,badgeNames:earned.map(id=>{const b=nrLookup.get(id);return b?{id:b.id,emoji:b.emoji,name:b.name,ep:rngdleEp(b.ep,b.rarity),rarity:b.rarity}:{id:id,emoji:'?',name:id,ep:0,rarity:''}}).filter(Boolean)})
         if(nrState.pastRolls.length>100)nrState.pastRolls.length=100
         saveNr()
-        if(numEl)numEl.classList.add('rarity-'+rKey)
         renderNr()
-        if(epEl){
-          let displayed=0
-          const step=Math.max(1,Math.ceil(totalEp/30))
-          const countUp=setInterval(()=>{
-            displayed=Math.min(displayed+step,totalEp)
-            epEl.textContent=displayed.toLocaleString()
-            if(displayed>=totalEp)clearInterval(countUp)
-          },30)
-        }
         nrUpdateButton()
         updateStats('mg6',{ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount})
         renderLeaderboard()
+        dailyCheckProgress('roll1',1)
       }catch(e){console.error('Roll error',e);if(numEl)numEl.textContent=n.toLocaleString()}
       if(btn)btn.disabled=false
     }
@@ -3917,6 +3969,7 @@ function pcUpdatePrice(id,price){
   pcSave(d)
 }
 function renderCollection(){
+  wlRender()
   const el=document.getElementById('colContent')
   if(!el)return
   const search=(document.getElementById('colSearch')?.value||'').toLowerCase()
@@ -3962,7 +4015,7 @@ function renderCollection(){
     return '<div class="col-card" onclick="pcShowCard(\''+key.replace(/'/g,"\\'")+'\')">'+
       (c.img?'<img src="'+c.img+'" alt="'+c.name+'" loading="lazy">':'<div style="width:50px;height:70px;border-radius:4px;background:var(--surface);flex-shrink:0"></div>')+
       '<div class="col-card-info">'+
-        '<div class="col-card-name">'+c.name+'</div>'+
+        '<div class="col-card-name">'+c.name+' '+wlBtn(key.replace(/'/g,"\\'"),c.name,c.setName,(c.price*c.qty).toFixed(2))+'</div>'+
         '<div class="col-card-set">'+(c.setName||'Unknown Set')+'</div>'+
         gv+priceStr+
         '<div class="col-card-qty" style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
@@ -4172,11 +4225,11 @@ function toggleTheme(){
   document.body.classList.toggle('light')
   const isLight=document.body.classList.contains('light')
   localStorage.setItem('pokeTheme',isLight?'light':'dark')
-  document.getElementById('themeToggle').innerHTML=isLight?'<svg class="ico" width="1em" height="1em"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>':'<svg class="ico" width="1em" height="1em"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+  document.getElementById('themeToggle').innerHTML=isLight?'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>':'<svg class="ico" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
   document.querySelector('meta[name="theme-color"]').setAttribute('content',isLight?'#eff1f5':'#1e1e2e')
 }
 const savedTheme=localStorage.getItem('pokeTheme')
-if(savedTheme==='light'){document.body.classList.add('light');document.getElementById('themeToggle').innerHTML='<svg class="ico" width="1em" height="1em"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';document.querySelector('meta[name="theme-color"]').setAttribute('content','#eff1f5')}
+if(savedTheme==='light'){document.body.classList.add('light');document.getElementById('themeToggle').innerHTML='<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';document.querySelector('meta[name="theme-color"]').setAttribute('content','#eff1f5')}
 
 // ===== CANVAS TEAM CARD GENERATOR =====
 let tcTeam=[]
@@ -4185,6 +4238,7 @@ function initTeamCard(){
   tcRenderSlots()
   document.getElementById('tcCanvas').style.display='none'
   document.getElementById('tcDownload').style.display='none'
+  tcInjectArtToggle()
 }
 function tcPickSearchPokemon(q){
   if(!q||q.length<2)return
@@ -4222,7 +4276,7 @@ function tcGenerate(){
   const ctx=canvas.getContext('2d')
   const W=600,H=380
   const bg=document.getElementById('tcBgSelect').value
-  const bgColors={fire:['#3d1a0a','#5c2a0a'],water:['#0a1a3d','#0a2a5c'],grass:['#0a3d1a','#0a5c2a'],electric:['#3d3a0a','#5c5a0a'],psychic:['#3d0a3d','#5c0a5c'],dragon:['#1a0a3d','#2a0a5c']}
+  const bgColors={fire:['#3d1a0a','#5c2a0a'],water:['#0a1a3d','#0a2a5c'],grass:['#0a3d1a','#0a5c2a'],electric:['#3d3a0a','#5c5a0a'],psychic:['#3d0a3d','#5c0a5c'],dragon:['#1a0a3d','#2a0a5c'],retro:['#0f380f','#306230'],cyberpunk:['#0a0014','#1a0033'],noir:['#0d0d0d','#1a1a1a']}
   const [c1,c2]=bgColors[bg]||bgColors.fire
   const grad=ctx.createLinearGradient(0,0,W,H)
   grad.addColorStop(0,c1);grad.addColorStop(1,c2)
@@ -4252,7 +4306,7 @@ function tcGenerate(){
     const img=new Image();img.crossOrigin='anonymous'
     const idx=i
     img.onload=()=>{ctx.imageSmoothingEnabled=false;ctx.drawImage(img,x+(slotW-imgSize)/2,slotY+10,imgSize,imgSize);loaded[idx]=true}
-    img.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png'
+    img.src=tcGetSprite(p.id)
     const displayName=cap(p.name)
     ctx.fillStyle='#fff';ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center'
     ctx.fillText(displayName,x+slotW/2,slotY+imgSize+28)
@@ -5014,7 +5068,7 @@ function initSimulator(){
       '<div style="flex:1;min-width:250px"><div style="font-size:13px;font-weight:700;color:var(--ctp-blue);margin-bottom:6px">Team B</div><div id="simSlotsB" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px"></div>'+
         '<input type="text" id="simSearchB" placeholder="Add Pokémon..." autocomplete="off" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px" oninput="simSearch(this.value,\'B\')"><div id="simDropB"></div></div>'+
     '</div>'+
-    '<div style="text-align:center;margin-bottom:12px"><button class="b-btn b-btn-primary" onclick="simBattle()">⚔️ Battle!</button> <button class="b-btn b-btn-secondary" onclick="simRandom()">🎲 Random Teams</button></div>'+
+    '<div style="text-align:center;margin-bottom:12px"><button class="b-btn b-btn-primary" onclick="simBattle()">⚔️ Battle!</button> <button class="b-btn b-btn-secondary" onclick="simRandom()">🎲 Random Teams</button> <button class="b-btn b-btn-secondary sim-sprite-mode" onclick="simSetAnimated(!simAnimated)" style="font-size:12px">'+(simAnimated?'🎬 Animated':'📸 Static')+'</button></div>'+
     '<div id="simLog" style="background:var(--surface);border:1px solid var(--border-light);border-radius:12px;padding:12px 16px;max-height:400px;overflow-y:auto;font-size:13px;line-height:1.8"></div>'
   simRenderSlots()
 }
@@ -5058,7 +5112,7 @@ async function simBattle(){
   const teamA=await loadTeam(simTeamA)
   const teamB=await loadTeam(simTeamB)
   if(!teamA.length||!teamB.length){log.innerHTML='<div style="color:var(--ctp-red)">Failed to load teams</div>';return}
-  let html='<div style="display:flex;gap:16px;justify-content:center;margin-bottom:12px;flex-wrap:wrap"><div style="font-size:12px;color:var(--ctp-blue)">Team A: '+teamA.map(p=>p.name+' ('+p.types.join('/')+')').join(', ')+'</div><div style="font-size:12px;color:var(--ctp-red)">Team B: '+teamB.map(p=>p.name+' ('+p.types.join('/')+')').join(', ')+'</div></div>'
+  let html='<div style="display:flex;gap:16px;justify-content:center;margin-bottom:12px;flex-wrap:wrap"><div style="font-size:12px;color:var(--ctp-blue)">Team A: '+teamA.map(p=>{const sp=simAnimated&&hasAnimated(p.id)?'<img src="'+animatedSprite(p.id)+'" width="20" height="20" class="sprite-animated" style="vertical-align:middle;margin-right:2px">':'';return sp+p.name+' ('+p.types.join('/')+')'}).join(', ')+'</div><div style="font-size:12px;color:var(--ctp-red)">Team B: '+teamB.map(p=>{const sp=simAnimated&&hasAnimated(p.id)?'<img src="'+animatedSprite(p.id)+'" width="20" height="20" class="sprite-animated" style="vertical-align:middle;margin-right:2px">':'';return sp+p.name+' ('+p.types.join('/')+')'}).join(', ')+'</div></div>'
   let aIdx=0,bIdx=0,turn=0
   const pickMove=p=>{const valid=p.moves.filter(m=>m.pp>0);if(!valid.length)return{n:'Struggle',t:'normal',p:50,c:'physical',pp:99};return valid[Math.floor(Math.random()*valid.length)]}
   const calcDmg=(attacker,defender,move)=>{
@@ -5085,7 +5139,9 @@ async function simBattle(){
       def.hp-=dmg
       const color=aTeam==='a'?'var(--ctp-blue)':'var(--ctp-red)'
       const effStr=eff>1?' <span style="color:var(--ctp-green)">SE</span>':eff<1?' <span style="color:var(--ctp-red)">NVE</span>':''
-      html+='<div style="color:'+color+';font-size:12px">'+atk.name+' used <span style="color:var(--type-'+move.t+')">'+move.n+'</span> → '+def.name+' for '+dmg+' dmg'+effStr+'</div>'
+      const atkSprite=simAnimated&&hasAnimated(atk.id)?'<img src="'+animatedSprite(atk.id)+'" width="16" height="16" class="sprite-animated" style="vertical-align:middle;margin-right:2px">':''
+      const defSprite=simAnimated&&hasAnimated(def.id)?'<img src="'+animatedSprite(def.id)+'" width="16" height="16" class="sprite-animated" style="vertical-align:middle;margin-right:2px">':''
+      html+='<div style="color:'+color+';font-size:12px">'+atkSprite+atk.name+' used <span style="color:var(--type-'+move.t+')">'+move.n+'</span> → '+defSprite+def.name+' for '+dmg+' dmg'+effStr+'</div>'
       if(def.hp<=0){
         def.hp=0
         if(dTeam==='b')bIdx++;else aIdx++
@@ -5107,6 +5163,7 @@ async function simBattle(){
   log.innerHTML=html
   log.scrollTop=log.scrollHeight
   achCheck('simulator')
+  dailyCheckProgress('sim5',1)
 }
 
 // ===== MOVE TUTOR =====
@@ -5169,7 +5226,8 @@ function initDmgCalc(){
       '<div style="text-align:center"><div style="font-size:12px;font-weight:700;color:var(--ctp-blue);margin-bottom:4px">Defender</div><input type="text" id="dmgDefSearch" placeholder="Defender" autocomplete="off" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;width:180px;text-align:center" oninput="dmgSearch(this.value,\'def\')"><div id="dmgDefDrop"></div><div id="dmgDefInfo"></div></div>'+
     '</div>'+
     '<div style="text-align:center;margin-bottom:12px"><select id="dmgType" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px">'+TYPES_LIST.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select> <select id="dmgCat" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px"><option value="physical">Physical</option><option value="special">Special</option></select> <button class="b-btn b-btn-primary" onclick="dmgCalc()" style="padding:8px 20px">Calculate</button></div>'+
-    '<div id="dmgResult" style="text-align:center"></div>'
+    '<div id="dmgResult" style="text-align:center"></div>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><div id="ivAtkSliders" style="flex:1;min-width:280px;max-width:400px"></div><div id="ivDefSliders" style="flex:1;min-width:280px;max-width:400px"></div></div>'
 }
 function dmgSearch(q,side){
   if(!q||q.length<1)return
@@ -5185,6 +5243,8 @@ async function dmgPick(id,side){
     if(side==='atk')dmgAtk=d;else dmgDef=d
     const info=document.getElementById('dmg'+(side==='atk'?'Atk':'Def')+'Info')
     info.innerHTML='<div style="margin-top:4px"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+d.id+'.png" width="48" height="48" style="image-rendering:pixelated"><div style="font-size:12px;font-weight:700">'+d.name+'</div><div style="font-size:11px;color:var(--text-dim)">'+d.types.join('/')+'</div></div>'
+    const sliderEl=document.getElementById(side==='atk'?'ivAtkSliders':'ivDefSliders')
+    if(sliderEl)sliderEl.innerHTML=ivRenderSliders(side)
   }catch(e){}
 }
 function dmgCalc(){
@@ -5304,15 +5364,15 @@ if(_homeCardCompare){
   const grid=document.querySelector('.home-grid')
   if(grid){
     const cards=[
-      {cls:'card-compare',tab:'games',game:'compare',img:'131',name:'Compare',desc:'Compare two Pokémon stats side by side'},
-      {cls:'card-simulator',tab:'games',game:'simulator',img:'94',name:'Simulator',desc:'Build teams and auto-battle!'},
-      {cls:'card-movetutor',tab:'games',game:'movetutor',img:'122',name:'Move Tutor',desc:'Find which Pokémon learn any move'},
-      {cls:'card-dmgcalc',tab:'games',game:'dmgcalc',img:'68',name:'Dmg Calculator',desc:'Calculate type-effective damage'},
+      {cls:'card-compare',tab:'tools',game:'compare',img:'131',name:'Compare',desc:'Compare two Pokémon stats side by side'},
+      {cls:'card-simulator',tab:'tools',game:'simulator',img:'94',name:'Simulator',desc:'Build teams and auto-battle!'},
+      {cls:'card-movetutor',tab:'tools',game:'movetutor',img:'122',name:'Move Tutor',desc:'Find which Pokémon learn any move'},
+      {cls:'card-dmgcalc',tab:'tools',game:'dmgcalc',img:'68',name:'Dmg Calculator',desc:'Calculate type-effective damage'},
     ]
     cards.forEach(c=>{
       const d=document.createElement('div')
       d.className='home-card '+c.cls
-      d.onclick=function(){switchTab(c.tab);setTimeout(()=>selectGame(c.game),50)}
+      d.onclick=function(){switchTab(c.tab);setTimeout(()=>{if(c.tab==='tools')selectTool(c.game);else selectGame(c.game)},50)}
       d.innerHTML='<div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+c.img+'.png" alt="'+c.name+'" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(247,201,72,0.3))"></div><h3>'+c.name+'</h3><p>'+c.desc+'</p><div class="arrow">→</div>'
       grid.appendChild(d)
     })
@@ -5323,3 +5383,445 @@ if(_homeCardCompare){
 loadUsername()
 updateOperatorTab()
 init()
+
+// ===== 1. INTERACTIVE TYPE COVERAGE MATRIX =====
+function initCoverage(){
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const el=document.getElementById('covContent')
+  el.innerHTML='<h2 style="text-align:center;margin-bottom:4px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-grid"/></svg> Type Coverage Matrix</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px">Add your team to see offensive coverage and defensive weaknesses at a glance</p>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:center;flex-wrap:wrap"><input type="text" id="covSearch" placeholder="Add Pokémon..." autocomplete="off" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;width:240px" oninput="covSearchPk(this.value)" onkeydown="if(event.key===\'Enter\')covAddFirst()"><datalist id="covDatalist"></datalist></div>'+
+    '<div id="covTeam" style="display:flex;gap:6px;justify-content:center;margin-bottom:16px;flex-wrap:wrap"></div>'+
+    '<div id="covGrid" style="overflow-x:auto"></div>'+
+    '<div id="covSummary" style="max-width:700px;margin:16px auto 0"></div>'
+  covRenderTeam()
+}
+let covTeam=[]
+function covSearchPk(q){
+  const dl=document.getElementById('covDatalist');if(!dl||q.length<2)return
+  dl.innerHTML=allPokemon.filter(p=>p.name.includes(q.toLowerCase())).slice(0,10).map(p=>'<option value="'+p.name+'">').join('')
+}
+function covAddFirst(){
+  const inp=document.getElementById('covSearch');if(!inp)return
+  const p=allPokemon.find(x=>x.name===inp.value.toLowerCase())
+  if(p)covAdd(p.id)
+}
+function covAdd(id){
+  if(covTeam.length>=6||covTeam.some(p=>p.id===id))return
+  const p=allPokemon.find(x=>x.id===id);if(!p)return
+  covTeam.push({id:p.id,name:p.name,types:p.types});covRenderTeam();covRenderMatrix()
+}
+function covRemove(i){covTeam.splice(i,1);covRenderTeam();covRenderMatrix()}
+function covRenderTeam(){
+  const el=document.getElementById('covTeam');if(!el)return
+  el.innerHTML=covTeam.length?covTeam.map((p,i)=>'<div style="display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px"><img src="'+si(p.id)+'" width="24" height="24" style="image-rendering:pixelated"><span style="text-transform:capitalize">'+p.name+'</span><span style="cursor:pointer;color:var(--text-muted);margin-left:4px" onclick="covRemove('+i+')">✕</span></div>').join(''):'<span style="color:var(--text-muted);font-size:12px">Add up to 6 Pokémon</span>'
+}
+function covRenderMatrix(){
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const el=document.getElementById('covGrid');if(!el||!covTeam.length){if(el)el.innerHTML='';covRenderSummary();return}
+  let html='<div style="display:inline-block;min-width:100%"><table style="border-collapse:collapse;font-size:10px;margin:0 auto"><tr><th style="padding:4px 6px;color:var(--text-dim)">ATK↓ DEF→</th>'
+  allTypes.forEach(t=>{html+='<th style="padding:3px 4px;font-size:9px;font-weight:700" class="type-badge type-'+t+'">'+t.slice(0,3)+'</th>'})
+  html+='<th style="padding:4px 6px;color:var(--ctp-yellow);font-weight:700">OFF</th></tr>'
+  const offCoverage={};allTypes.forEach(t=>offCoverage[t]=0)
+  covTeam.forEach(p=>{
+    p.types.forEach(atk=>{
+      allTypes.forEach(def=>{
+        const m=getEffectiveness(atk,[def])
+        if(m>1)offCoverage[def]+=m-1
+      })
+    })
+  })
+  allTypes.forEach(atk=>{
+    html+='<tr><td style="padding:3px 6px;font-weight:700" class="type-badge type-'+atk+'">'+atk.slice(0,3)+'</td>'
+    allTypes.forEach(def=>{
+      const m=getEffectiveness(atk,[def])
+      let bg='var(--surface)',fg='var(--text-dim)',txt='1'
+      if(m>1){bg='rgba(76,175,80,0.3)';fg='var(--ctp-green)';txt=m+'x'}
+      else if(m<1){bg='rgba(244,67,54,0.2)';fg='var(--ctp-red)';txt=m+'x'}
+      else if(m===0){bg='rgba(0,0,0,0.15)';fg='var(--text-muted)';txt='0'}
+      html+='<td style="padding:2px 4px;text-align:center;background:'+bg+';color:'+fg+';font-weight:600;font-size:9px;border:1px solid var(--border-light)">'+txt+'</td>'
+    })
+    const teamCov=covTeam.filter(p=>p.types.includes(atk)).length
+    html+='<td style="padding:2px 4px;text-align:center;font-weight:700;color:'+(teamCov>0?'var(--ctp-green)':'var(--text-muted)')+'">'+teamCov+'</td></tr>'
+  })
+  html+='<tr><td style="padding:3px 6px;font-weight:700;color:var(--ctp-yellow)">DEF</td>'
+  allTypes.forEach(def=>{
+    let totalMult=0
+    covTeam.forEach(p=>{
+      let m=1;p.types.forEach(t=>{m*=getEffectiveness(def,[t])})
+      if(m>1)totalMult+=m-1
+    })
+    let bg='var(--surface)',fg='var(--text-dim)',txt=''
+    if(totalMult>=2){bg='rgba(244,67,54,0.35)';fg='var(--ctp-red)';txt='⚠'}
+    else if(totalMult>=1){bg='rgba(255,152,0,0.2)';fg='var(--ctp-peach)';txt='△'}
+    else if(totalMult===0){bg='rgba(76,175,80,0.15)';fg='var(--ctp-green)';txt='✓'}
+    else{bg='rgba(76,175,80,0.25)';fg='var(--ctp-green)';txt='✓'}
+    html+='<td style="padding:2px 4px;text-align:center;background:'+bg+';color:'+fg+';font-weight:700;font-size:9px;border:1px solid var(--border-light)">'+txt+'</td>'
+  })
+  html+='<td style="padding:2px 4px"></td></tr></table></div>'
+  el.innerHTML=html
+  covRenderSummary()
+}
+function covRenderSummary(){
+  const allTypes=['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy']
+  const el=document.getElementById('covSummary');if(!el)return
+  if(!covTeam.length){el.innerHTML='';return}
+  const weak=[],resist=[],immune=[],offense=[]
+  allTypes.forEach(def=>{
+    let totalMult=0
+    covTeam.forEach(p=>{let m=1;p.types.forEach(t=>{m*=getEffectiveness(def,[t])});if(m>1)totalMult+=m-1})
+    if(totalMult>=2)weak.push({type:def,severity:'danger'})
+    else if(totalMult>=1)weak.push({type:def,severity:'warning'})
+  })
+  allTypes.forEach(atk=>{
+    let has=covTeam.some(p=>p.types.includes(atk))
+    let se=covTeam.some(p=>p.types.some(pt=>getEffectiveness(pt,[atk])>=2))
+    if(!has&&!se)offense.push(atk)
+  })
+  const typeColors={normal:'#A8A77A',fire:'#EE8130',water:'#6390F0',electric:'#F7D02C',grass:'#7AC74C',ice:'#96D9D6',fighting:'#C22E28',poison:'#A33EA1',ground:'#E2BF65',flying:'#A98FF3',psychic:'#F95587',bug:'#A6B91A',rock:'#B6A136',ghost:'#735797',dragon:'#6F35FC',dark:'#705746',steel:'#B7B7CE',fairy:'#D685AD'}
+  let html='<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">'
+  if(weak.length){html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:200px"><h4 style="font-size:12px;font-weight:700;color:var(--ctp-red);margin-bottom:8px">⚠ Weak To</h4><div style="display:flex;flex-wrap:wrap;gap:4px">'+weak.map(w=>'<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;color:#fff;background:'+(typeColors[w.type]||'gray')+'">'+w.type+'</span>').join('')+'</div></div>'}
+  if(offense.length){html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:200px"><h4 style="font-size:12px;font-weight:700;color:var(--ctp-peach);margin-bottom:8px">🔇 No Coverage</h4><div style="display:flex;flex-wrap:wrap;gap:4px">'+offense.map(t=>'<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;color:#fff;background:'+(typeColors[t]||'gray')+'">'+t+'</span>').join('')+'</div></div>'}
+  html+='</div>'
+  el.innerHTML=html
+}
+
+// ===== 2. IV/EV CALCULATOR (enhances Dmg Calc) =====
+let ivEvs={atk:{iv:31,ev:0},def:{iv:31,ev:0},spa:{iv:31,ev:0},spd:{iv:31,ev:0},spe:{iv:31,ev:0},hp:{iv:31,ev:0}}
+function ivCalcStat(base,iv,ev,level,isHp){
+  if(isHp)return Math.floor(((2*base+iv+Math.floor(ev/4))*level/100)+level+10)
+  return Math.floor(((2*base+iv+Math.floor(ev/4))*level/100)+5)
+}
+function ivRenderSliders(side){
+  const stats=[{k:'hp',l:'HP'},{k:'atk',l:'ATK'},{k:'def',l:'DEF'},{k:'spa',l:'SPA'},{k:'spd',l:'SPD'},{k:'spe',l:'SPE'}]
+  const pkmn=side==='atk'?dmgAtk:dmgDef
+  if(!pkmn)return ''
+  const key=side
+  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--ctp-mauve);margin-bottom:6px">IV/EV Tuning — '+pkmn.name+'</div>'+
+    stats.map(s=>{
+      const base=Object.values(pkmn.stats)[stats.indexOf(s)]||50
+      const evData=ivEvs[s.k]||{iv:31,ev:0}
+      const newStat=ivCalcStat(base,evData.iv,evData.ev,50,s.k==='hp')
+      const origStat=ivCalcStat(base,31,0,50,s.k==='hp')
+      const diff=newStat-origStat
+      const diffStr=diff>0?'<span style="color:var(--ctp-green)">+'+diff+'</span>':diff<0?'<span style="color:var(--ctp-red)">'+diff+'</span>':''
+      return '<div style="display:grid;grid-template-columns:40px 36px 1fr 36px 36px 50px;align-items:center;gap:4px;margin-bottom:3px;font-size:10px">'+
+        '<span style="font-weight:700;color:var(--text-dim)">'+s.l+'</span>'+
+        '<span style="font-family:monospace;color:var(--ctp-blue)">IV:'+evData.iv+'</span>'+
+        '<input type="range" min="0" max="31" value="'+evData.iv+'" style="height:4px;accent-color:var(--ctp-blue)" oninput="ivSet(\''+key+'\',\''+s.k+'\',\'iv\',this.value);ivRefresh('+side+')">'+
+        '<span style="font-family:monospace;color:var(--ctp-peach)">EV:'+evData.ev+'</span>'+
+        '<input type="range" min="0" max="252" step="4" value="'+evData.ev+'" style="height:4px;accent-color:var(--ctp-peach)" oninput="ivSet(\''+key+'\',\''+s.k+'\',\'ev\',this.value);ivRefresh('+side+')">'+
+        '<span style="font-weight:700">'+newStat+' '+diffStr+'</span></div>'
+    }).join('')+
+    '</div>'
+}
+function ivSet(side,stat,field,val){const k=side==='atk'?'atk':'def';if(!ivEvs[k])ivEvs[k]={};if(!ivEvs[k][stat])ivEvs[k][stat]={iv:31,ev:0};ivEvs[k][stat][field]=parseInt(val)}
+function ivRefresh(side){}
+function ivInjectIntoDmgCalc(){
+  setTimeout(()=>{
+    const atkInfo=document.getElementById('dmgAtkInfo');const defInfo=document.getElementById('dmgAtkInfo')
+    const ivAtkEl=document.getElementById('ivAtkSliders');const ivDefEl=document.getElementById('ivDefSliders')
+    if(ivAtkEl)ivAtkEl.innerHTML=dmgAtk?ivRenderSliders('atk'):''
+    if(ivDefEl)ivDefEl.innerHTML=dmgDef?ivRenderSliders('def'):''
+  },50)
+}
+
+// ===== 3. MOVE POOL FILTER BY TYPING =====
+let mpfMoveList=null
+let mpfCache={}
+async function mpfInit(){
+  if(!mpfMoveList){try{const d=await fetch('https://pokeapi.co/api/v2/move?limit=1000').then(r=>r.json());mpfMoveList=d.results||[]}catch(e){mpfMoveList=[]}}
+}
+async function mpfSearchPokemon(id){
+  const el=document.getElementById('mtResults');if(!el)return
+  el.innerHTML='<div class="spinner" style="width:24px;height:24px;margin:8px auto"></div>'
+  await mpfInit()
+  if(mpfCache['p'+id]){mpfRenderMoves(id,mpfCache['p'+id]);return}
+  try{
+    const d=await fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>r.json())
+    const moves=(d.moves||[]).map(m=>({name:m.move.name,url:m.move.url,method:m.version_group_details.map(v=>v.move_learn_method.name)}))
+    mpfCache['p'+id]=moves
+    mpfRenderMoves(id,moves)
+  }catch(e){el.innerHTML='<div style="color:var(--ctp-red)">Error loading moves</div>'}
+}
+function mpfRenderMoves(id,moves){
+  const el=document.getElementById('mtResults');if(!el)return
+  const methods=['level-up','machine','egg','tutor']
+  const methodLabels={'level-up':'Level Up','machine':'TM/HM','egg':'Egg','tutor':'Tutor'}
+  const methodColors={'level-up':'var(--ctp-blue)','machine':'var(--ctp-green)','egg':'var(--ctp-pink)','tutor':'var(--ctp-mauve)'}
+  let html='<div style="display:flex;gap:4px;margin-bottom:8px;justify-content:center;flex-wrap:wrap">'
+  methods.forEach(m=>{
+    const count=moves.filter(mv=>mv.method.includes(m)).length
+    html+='<button class="mpf-filter-btn" data-method="'+m+'" onclick="mpfFilter(\''+m+'\')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;cursor:pointer">'+methodLabels[m]+' ('+count+')</button>'
+  })
+  html+='</div><div id="mpfMoveList" style="max-height:300px;overflow-y:auto;text-align:left">'
+  html+=mpfBuildList(moves,'')
+  html+='</div>'
+  el.innerHTML=html
+}
+function mpfBuildList(moves,filter){
+  const filtered=filter?moves.filter(m=>m.method.includes(filter)):moves
+  const methodLabels={'level-up':'Lv','machine':'TM','egg':'Egg','tutor':'Tut'}
+  const methodColors={'level-up':'var(--ctp-blue)','machine':'var(--ctp-green)','egg':'var(--ctp-pink)','tutor':'var(--ctp-mauve)'}
+  return filtered.map(m=>{
+    const primary=m.method[0]||'level-up'
+    return '<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;font-size:12px;border-bottom:1px solid var(--border-light)">'+
+      '<span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+(methodColors[primary]||'gray')+'">'+methodLabels[primary]+'</span>'+
+      '<span style="text-transform:capitalize">'+m.name.replace(/-/g,' ')+'</span>'+
+      '<span style="font-size:9px;color:var(--text-muted);margin-left:auto">'+m.method.map(x=>methodLabels[x]||x).join(', ')+'</span></div>'
+  }).join('')
+}
+function mpfFilter(method){
+  document.querySelectorAll('.mpf-filter-btn').forEach(b=>b.style.borderColor=b.dataset.method===method?'var(--ctp-mauve)':'var(--border)')
+  const cached=Object.values(mpfCache).find(v=>Array.isArray(v))
+  if(cached){const el=document.getElementById('mpfMoveList');if(el)el.innerHTML=mpfBuildList(cached,method)}
+}
+
+// ===== 4. DYNAMIC CARD ART VARIANTS =====
+let tcArtStyle='official'
+function tcSetArt(style){
+  tcArtStyle=style
+  document.querySelectorAll('.tc-art-btn').forEach(b=>b.style.borderColor=b.dataset.style===style?'var(--ctp-yellow)':'var(--border)')
+  tcGenerate()
+}
+function tcGetSprite(id){
+  switch(tcArtStyle){
+    case 'shiny':return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/'+id+'.png'
+    case 'pixel':return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/'+id+'.gif'
+    case 'official':default:return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+id+'.png'
+  }
+}
+function tcInjectArtToggle(){
+  const container=document.getElementById('tcArtToggle')
+  if(!container)return
+  const styles=[{k:'official',l:'Official Art'},{k:'pixel',l:'Pixel'},{k:'shiny',l:'Shiny'}]
+  container.innerHTML='<div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">'+styles.map(s=>
+    '<button class="tc-art-btn" data-style="'+s.k+'" onclick="tcSetArt(\''+s.k+'\')" style="padding:4px 10px;border-radius:8px;border:1px solid '+(tcArtStyle===s.k?'var(--ctp-yellow)':'var(--border)')+';background:var(--surface);color:var(--text);font-size:11px;cursor:pointer">'+s.l+'</button>'
+  ).join('')+'</div>'
+}
+
+// ===== 5. CUSTOM TEAM THEMES =====
+const TC_THEMES={
+  fire:{name:'Fire',bg1:'#ff6b35',bg2:'#d63031',accent:'#ffd700'},
+  water:{name:'Water',bg1:'#0984e3',bg2:'#0652DD',accent:'#74b9ff'},
+  grass:{name:'Grass',bg1:'#00b894',bg2:'#00cec9',accent:'#55efc4'},
+  electric:{name:'Electric',bg1:'#fdcb6e',bg2:'#e17055',accent:'#ffeaa7'},
+  psychic:{name:'Psychic',bg1:'#a29bfe',bg2:'#6c5ce7',accent:'#dfe6e9'},
+  dragon:{name:'Dragon',bg1:'#6c5ce7',bg2:'#2d3436',accent:'#a29bfe'},
+  retro:{name:'Retro GB',bg1:'#0f380f',bg2:'#306230',accent:'#8bac0f',text:'#9bbc0f',font:'monospace'},
+  cyberpunk:{name:'Cyberpunk',bg1:'#0a0a0a',bg2:'#1a0033',accent:'#ff00ff',text:'#00ffff',glow:true},
+  noir:{name:'Noir',bg1:'#1a1a1a',bg2:'#2d2d2d',accent:'#808080',text:'#e0e0e0',vignette:true}
+}
+function tcSetTheme(theme){
+  tcTheme=theme;tcGenerate()
+}
+
+// ===== 6. ANIMATED SPRITE SUPPORT =====
+function animatedSprite(id){
+  return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/'+id+'.gif'
+}
+function hasAnimated(id){return id<=649}
+function simSetAnimated(on){
+  document.querySelectorAll('.sim-sprite-mode').forEach(b=>b.style.borderColor=on?'var(--ctp-green)':'var(--border)')
+  simAnimated=on
+}
+let simAnimated=false
+
+// ===== 7. EVOLUTION SIMULATOR/VIEWER =====
+const EVO_CHAINS_CACHE={}
+async function initEvoTree(){
+  const el=document.getElementById('evoContent')
+  el.innerHTML='<h2 style="text-align:center;margin-bottom:4px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-git-branch"/></svg> Evolution Viewer</h2>'+
+    '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:12px">See how any Pokémon evolves — method, level, item, and more</p>'+
+    '<div style="text-align:center;margin-bottom:12px"><input type="text" id="evoSearch" placeholder="Search Pokémon..." autocomplete="off" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;width:260px" oninput="evoSearchPk(this.value)" onkeydown="if(event.key===\'Enter\')evoPickFirst()"><datalist id="evoDatalist"></datalist></div>'+
+    '<div id="evoResult" style="text-align:center;color:var(--text-dim);font-size:13px">Select a Pokémon to view its evolution chain</div>'
+}
+function evoSearchPk(q){
+  const dl=document.getElementById('evoDatalist');if(!dl||q.length<2)return
+  dl.innerHTML=allPokemon.filter(p=>p.name.includes(q.toLowerCase())).slice(0,10).map(p=>'<option value="'+p.name+'">').join('')
+}
+function evoPickFirst(){
+  const inp=document.getElementById('evoSearch');if(!inp)return
+  const p=allPokemon.find(x=>x.name===inp.value.toLowerCase())
+  if(p)evoLoadChain(p.id)
+}
+async function evoLoadChain(id){
+  const el=document.getElementById('evoResult')
+  el.innerHTML='<div class="spinner" style="width:24px;height:24px;margin:8px auto"></div>'
+  try{
+    const d=await fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>r.json())
+    const species=await fetch(d.species.url).then(r=>r.json())
+    const chainUrl=species.evolution_chain?.url
+    if(!chainUrl){el.innerHTML='<div style="color:var(--text-dim)">This Pokémon does not evolve</div>';return}
+    const chain=await fetch(chainUrl).then(r=>r.json())
+    evoRenderChain(chain)
+    dailyCheckProgress('evo',1)
+  }catch(e){el.innerHTML='<div style="color:var(--ctp-red)">Error loading evolution data</div>'}
+}
+function evoRenderChain(chain){
+  const el=document.getElementById('evoResult')
+  function getPkmnId(url){return parseInt(url.split('/').filter(Number).pop())}
+  function renderNode(node,depth=0){
+    const id=getPkmnId(node.species.url)
+    const name=node.species.name
+    const methods=node.evolution_details||[]
+    let methodStr=''
+    if(methods.length){
+      const m=methods[methods.length-1]
+      const parts=[]
+      if(m.min_level)parts.push('Lv.'+m.min_level)
+      if(m.item)parts.push(m.item.name.replace(/-/g,' '))
+      if(m.trigger)parts.push(m.trigger.name.replace(/-/g,' '))
+      if(m.min_happiness)parts.push('Friendship ≥'+m.min_happiness)
+      if(m.held_item)parts.push('Hold: '+m.held_item.name.replace(/-/g,' '))
+      if(m.time_of_day)parts.push(m.time_of_day)
+      if(m.location)parts.push(m.location.name.replace(/-/g,' '))
+      if(m.needs_overworld_rain)parts.push('Rain')
+      if(m.party_species)parts.push('Party: '+m.party_species.name)
+      methodStr=parts.join(' · ')
+    }
+    let html='<div style="display:inline-flex;flex-direction:column;align-items:center;min-width:100px;margin:4px">'+
+      (methodStr?'<div style="font-size:9px;color:var(--ctp-peach);margin-bottom:4px;max-width:120px;text-align:center;line-height:1.3">'+methodStr+'</div>':'')+
+      '<div style="background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:8px 12px;text-align:center;cursor:pointer" onclick="openDetail('+id+')">'+
+      '<img src="'+si(id)+'" width="56" height="56" style="image-rendering:pixelated" onerror="this.style.display=\'none\'">'+
+      '<div style="font-size:11px;font-weight:700;text-transform:capitalize;margin-top:2px">'+name+'</div></div></div>'
+    if(node.evolves_to&&node.evolves_to.length){
+      html+='<div style="display:flex;align-items:center;gap:4px"><div style="font-size:18px;color:var(--text-muted)">→</div><div style="display:flex;gap:8px">'+node.evolves_to.map(e=>renderNode(e,depth+1)).join('')+'</div></div>'
+    }
+    return html
+  }
+  el.innerHTML='<div style="overflow-x:auto;padding:16px"><div style="display:inline-flex;align-items:center">'+renderNode(chain.chain)+'</div></div>'
+}
+
+// ===== 8. DAILY CHALLENGES =====
+const DAILY_KEY='pokeDaily'
+function getDailySeed(){
+  const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()
+}
+function getDailyState(){
+  try{return JSON.parse(localStorage.getItem(DAILY_KEY)||'{}')}catch(e){return {}}
+}
+function saveDailyState(s){try{localStorage.setItem(DAILY_KEY,JSON.stringify(s))}catch(e){}}
+const DAILY_CHALLENGES=[
+  {id:'beat3',name:'Triple Threat',desc:'Win 3 Champions battles',icon:'⚔️',reward:150,check:s=>(s.battleWins||0)>=3},
+  {id:'streak2',name:'Hot Streak',desc:'Get a 2-win streak in Champions',icon:'🔥',reward:100,check:s=>(s.maxStreak||0)>=2},
+  {id:'catch1',name:'Gotta Catch One',desc:'Catch a wild Pokémon',icon:'🎯',reward:75,check:s=>(s.caught||0)>=1},
+  {id:'view10',name:'Curious Researcher',desc:'View 10 Pokémon details',icon:'📖',reward:50,check:s=>(s.viewed||0)>=10},
+  {id:'sim5',name:'Sim Commander',desc:'Run 5 simulator battles',icon:'📊',reward:120,check:s=>(s.sims||0)>=5},
+  {id:'roll1',name:'Lucky Roll',desc:'Complete 1 Number Roll',icon:'🎲',reward:60,check:s=>(s.rolls||0)>=1},
+  {id:'team',name:'Team Builder',desc:'Build a team in Team Builder',icon:'🏗️',reward:40,check:s=>(s.teamBuilt||0)>=1},
+  {id:'evo',name:'Evolution Watcher',desc:'View an evolution chain',icon:'🧬',reward:30,check:s=>(s.evoViewed||0)>=1},
+  {id:'typequiz3',name:'Type Expert',desc:'Score 3+ in Type Quiz',icon:'🧪',reward:80,check:s=>(s.quizBest||0)>=3},
+  {id:'wordle3',name:'Word Master',desc:'Solve Wordle in 3 or fewer',icon:'📝',reward:200,check:s=>(s.wgBest<=3&&s.wgBest>0)}
+]
+function initDailyChallenges(){
+  const seed=getDailySeed()
+  const state=getDailyState()
+  const today=state.seed===seed?state:{seed,challenges:{},completed:[],earned:0}
+  const el=document.getElementById('battleDaily')
+  const todayChallenges=DAILY_CHALLENGES.slice(0,3)
+  let html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">'
+  html+='<h3 style="text-align:center;margin-bottom:4px;font-size:15px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calendar"/></svg> Daily Challenges</h3>'
+  html+='<p style="text-align:center;color:var(--text-dim);font-size:11px;margin-bottom:4px">Complete tasks for bonus Stardust! Resets at midnight</p>'
+  html+='<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-bottom:10px">'+today.completed.length+'/'+todayChallenges.length+' completed today</div>'
+  todayChallenges.forEach(ch=>{
+    const done=today.completed.includes(ch.id)
+    const progress=today.challenges[ch.id]||0
+    const target=parseInt(ch.desc.match(/\d+/)?.[0]||'1')
+    const pct=Math.min(100,Math.round(progress/target*100))
+    html+='<div style="background:var(--bg-mid,var(--surface-hover));border:1px solid '+(done?'var(--ctp-green)':'var(--border)')+';border-radius:10px;padding:10px 12px;margin-bottom:6px;'+(done?'opacity:0.65':'')+'">' +
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:20px">'+ch.icon+'</span>'+
+        '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:'+(done?'var(--ctp-green)':'var(--text)')+'">'+ch.name+(done?' ✓':'')+'</div>'+
+          '<div style="font-size:10px;color:var(--text-dim)">'+ch.desc+'</div>'+
+          '<div style="margin-top:3px;height:5px;background:var(--surface-hover);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(done?'var(--ctp-green)':'var(--ctp-yellow)')+';border-radius:3px"></div></div>'+
+        '</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--ctp-yellow);white-space:nowrap">+'+ch.reward+' SD</div>'+
+      '</div></div>'
+  })
+  html+='<div style="text-align:center;margin-top:8px;font-size:12px;font-weight:700;color:var(--ctp-yellow)">Today: +'+today.earned+' Stardust</div></div>'
+  el.innerHTML=html
+  saveDailyState(today)
+}
+function dailyCheckProgress(key,inc){
+  const seed=getDailySeed();const state=getDailyState()
+  if(state.seed!==seed)return
+  DAILY_CHALLENGES.forEach(ch=>{
+    if(state.completed.includes(ch.id))return
+    if(!state.challenges)state.challenges={}
+    if(key===ch.id){state.challenges[key]=(state.challenges[key]||0)+inc}
+  })
+  DAILY_CHALLENGES.forEach(ch=>{
+    if(state.completed.includes(ch.id))return
+    if(!state.challenges)state.challenges={}
+    const target=parseInt(ch.desc.match(/\d+/)?.[0]||'1')
+    if((state.challenges[ch.id]||0)>=target){
+      state.completed.push(ch.id);state.earned=(state.earned||0)+ch.reward
+      chRewardStardust(ch.reward)
+    }
+  })
+  saveDailyState(state)
+}
+
+// ===== 9. COLLECTION EXPORT/IMPORT =====
+function pcExport(){
+  const data={cards:{},wallpapers:{},stats:{},username:getUsername()}
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i)
+      if(k.startsWith('pc_'))data.cards[k]=localStorage.getItem(k)
+      if(k.startsWith('wp_'))data.wallpapers[k]=localStorage.getItem(k)
+      if(k==='pokeStats')data.stats[k]=localStorage.getItem(k)
+      if(k==='pokeChampSave')data.saves={...data.saves,[k]:localStorage.getItem(k)}
+      if(k==='nrState')data.saves={...data.saves,[k]:localStorage.getItem(k)}
+    }
+  }catch(e){}
+  const json=JSON.stringify(data)
+  const b64=btoa(unescape(encodeURIComponent(json)))
+  const el=document.getElementById('pcExportData')
+  const area=document.getElementById('pcImportArea')
+  if(el){el.value=b64;el.style.display='block';el.select()}
+  if(area){area.style.display='block'}
+  if(navigator.clipboard){navigator.clipboard.writeText(b64).catch(()=>{})}
+}
+function pcImport(){
+  const area=document.getElementById('pcImportArea')
+  const val=area?area.value.trim():''
+  if(!val){alert('Paste export data into the import box first!');return}
+  try{
+    const json=decodeURIComponent(escape(atob(val)))
+    const data=JSON.parse(json)
+    let count=0
+    if(data.cards)Object.entries(data.cards).forEach(([k,v])=>{localStorage.setItem(k,v);count++})
+    if(data.wallpapers)Object.entries(data.wallpapers).forEach(([k,v])=>{localStorage.setItem(k,v);count++})
+    if(data.stats)Object.entries(data.stats).forEach(([k,v])=>{localStorage.setItem(k,v);count++})
+    if(data.saves)Object.entries(data.saves).forEach(([k,v])=>{localStorage.setItem(k,v);count++})
+    renderCollection()
+    alert('Imported '+count+' items successfully!')
+  }catch(e){alert('Invalid import data — make sure you pasted the full export string')}
+}
+
+// ===== 10. WISHLIST & PRICING ALERTS =====
+const WL_KEY='pokeWishlist'
+function wlGet(){try{return JSON.parse(localStorage.getItem(WL_KEY)||'[]')}catch(e){return[]}}
+function wlSave(d){try{localStorage.setItem(WL_KEY,JSON.stringify(d))}catch(e){}}
+function wlToggle(cardId,name,set,price){
+  let list=wlGet()
+  const idx=list.findIndex(w=>w.cardId===cardId)
+  if(idx>=0){list.splice(idx,1)}else{list.push({cardId,name,set,price:price||'N/A',added:Date.now()})}
+  wlSave(list);wlRender()
+}
+function wlRender(){
+  const el=document.getElementById('wlList');if(!el)return
+  const list=wlGet()
+  if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:16px">Your wishlist is empty. Browse cards and tap the ♡ to add!</div>';return}
+  el.innerHTML=list.map(w=>'<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'+
+    '<div style="flex:1"><div style="font-size:12px;font-weight:700">'+w.name+'</div><div style="font-size:10px;color:var(--text-dim)">'+(w.set||'')+'</div></div>'+
+    '<div style="font-size:11px;color:var(--ctp-yellow)">'+(w.price||'—')+'</div>'+
+    '<span style="cursor:pointer;color:var(--ctp-red);font-size:14px" onclick="wlToggle(\''+w.cardId+'\')">✕</span></div>').join('')
+}
+function wlBtn(cardId,name,set,price){
+  const list=wlGet();const has=list.some(w=>w.cardId===cardId)
+  return '<span style="cursor:pointer;font-size:14px;color:'+(has?'var(--ctp-red)':'var(--text-muted)')+'" onclick="wlToggle(\''+cardId+'\',\''+name.replace(/'/g,"\\'")+'\',\''+(set||'').replace(/'/g,"\\'")+'\',\''+(price||'').replace(/'/g,"\\'")+'\')" title="'+(has?'Remove from wishlist':'Add to wishlist')+'">'+(has?'♥':'♡')+'</span>'
+}

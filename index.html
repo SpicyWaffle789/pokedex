@@ -61,7 +61,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0">
       <span id="offlineIndicator" style="display:none;font-size:11px;font-weight:700;color:var(--ctp-peach);padding:5px 10px;border-radius:8px;border:1px solid rgba(255,152,0,0.3);background:rgba(255,152,0,0.1);white-space:nowrap"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-wifi-off"/></svg> Offline</span>
-      <span id="themeToggle" style="font-size:15px;cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid var(--border);white-space:nowrap;user-select:none" onclick="toggleTheme()"><svg class="ico" width="1em" height="1em" viewBox="-1 -1 26 26"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+      <span id="themeToggle" onclick="toggleTheme()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
       <span id="nrHeaderDisplay" style="font-size:13px;font-weight:700;color:var(--ctp-yellow);padding:5px 10px;border-radius:8px;border:1px solid rgba(247,201,72,0.2);white-space:nowrap;font-family:monospace;cursor:pointer" onclick="switchTab('games');setTimeout(()=>selectGame('numberroll'),50)"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8" cy="8" r="1" style="fill:currentColor"/><circle cx="16" cy="8" r="1" style="fill:currentColor"/><circle cx="8" cy="16" r="1" style="fill:currentColor"/><circle cx="16" cy="16" r="1" style="fill:currentColor"/><circle cx="12" cy="12" r="1" style="fill:currentColor"/></svg> <span id="nrHeaderEp">0</span>EP</span>
       <span style="font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid var(--border);white-space:nowrap" onclick="switchTab('leaderboard')"><svg class="ico" width="1em" height="1em" viewBox="-1 -1 26 26"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
       <span id="userDisplay" style="font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid var(--border);white-space:nowrap" onclick="setUsername()"><svg class="ico" width="1em" height="1em" viewBox="-1 -1 26 26"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> princepiplup</span>
@@ -74,6 +74,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
     <button class="tab" data-tab="attacks" onclick="switchTab('attacks')">Attacks</button>
     <button class="tab" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
     <button class="tab" data-tab="games" onclick="switchTab('games')">Games</button>
+    <button class="tab" data-tab="tools" onclick="switchTab('tools')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tool"/></svg> Tools</button>
     <button class="tab" data-tab="battle" onclick="switchTab('battle')">Battle</button>
     <button class="tab" data-tab="collection" onclick="switchTab('collection')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> My Cards</button>
     <button class="tab" data-tab="about" onclick="switchTab('about')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-book-open"/></svg> About</button>
@@ -231,13 +232,6 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
       <button class="gs-btn" data-game="speedrun" onclick="selectGame('speedrun')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/291.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Speedrun</button>
       <button class="gs-btn" data-game="typequiz" onclick="selectGame('typequiz')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/59.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Type Quiz</button>
       <button class="gs-btn" data-game="numberroll" onclick="selectGame('numberroll')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/37.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Number Roll</button>
-      <button class="gs-btn" data-game="teambuilder" onclick="selectGame('teambuilder')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Team Builder</button>
-      <button class="gs-btn" data-game="typecalc" onclick="selectGame('typecalc')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Type Calc</button>
-      <button class="gs-btn" data-game="teamcard" onclick="selectGame('teamcard')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Team Card</button>
-      <button class="gs-btn" data-game="compare" onclick="selectGame('compare')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/131.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Compare</button>
-      <button class="gs-btn" data-game="simulator" onclick="selectGame('simulator')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Simulator</button>
-      <button class="gs-btn" data-game="movetutor" onclick="selectGame('movetutor')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/122.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Move Tutor</button>
-      <button class="gs-btn" data-game="dmgcalc" onclick="selectGame('dmgcalc')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/68.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Dmg Calc</button>
       <button class="gs-btn" data-game="achievements" onclick="selectGame('achievements')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Achievements</button>
     </div>
     <div id="gameContent">
@@ -274,32 +268,11 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
         <div class="nr-wrap" id="nrContent"></div>
       </div>
       <div id="gameTeambuilder" style="display:none">
-        <div class="mg-box" id="tbContent"></div>
+        <div class="mg-box"></div>
       </div>
       <div id="gameTypecalc" style="display:none">
-        <div class="mg-box" id="tcContent"></div>
+        <div class="mg-box"></div>
       </div>
-      <div id="gameTeamcard" style="display:none">
-        <div class="mg-box">
-          <h2 style="text-align:center;margin-bottom:8px"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png" alt="" width="24" height="24" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Team Card Generator</h2>
-          <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:8px">Pick 6 Pokémon & your name to create a shareable team card!</p>
-          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center">
-            <input type="text" id="tcNameInput" placeholder="Trainer Name" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;width:180px" value="Ash">
-            <select id="tcBgSelect" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
-              <option value="fire"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Fire Theme</option><option value="water"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Water Theme</option><option value="grass"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Grass Theme</option>
-              <option value="electric"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Electric Theme</option><option value="psychic"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Psychic Theme</option><option value="dragon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Dragon Theme</option>
-            </select>
-          </div>
-          <div id="tcPickGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px"></div>
-          <div style="text-align:center;margin-bottom:8px"><button class="b-btn b-btn-primary" onclick="tcGenerate()">Generate Card</button></div>
-          <div style="text-align:center"><canvas id="tcCanvas" width="600" height="380" style="max-width:100%;border-radius:12px;border:1px solid var(--border);display:none"></canvas></div>
-          <div id="tcDownload" style="text-align:center;margin-top:8px;display:none"><button class="b-btn b-btn-secondary" onclick="tcDownload()"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Save Card</button></div>
-        </div>
-      </div>
-      <div id="gameCompare" style="display:none"><div class="mg-box" id="cmpContent"></div></div>
-      <div id="gameSimulator" style="display:none"><div class="mg-box" id="simContent"></div></div>
-      <div id="gameMovetutor" style="display:none"><div class="mg-box" id="mtContent"></div></div>
-      <div id="gameDmgcalc" style="display:none"><div class="mg-box" id="dmgContent"></div></div>
       <div id="gameAchievements" style="display:none"><div class="mg-box" id="achContent"></div></div>
     </div>
   </div>
@@ -333,7 +306,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
             </div>
             <div style="text-align:right">
               <div class="name" id="chPlayerName">You</div>
-              <div style="font-size:11px;color:var(--text-muted)" id="chPlayerRank">Streak: 0</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.7)" id="chPlayerRank">Streak: 0</div>
               <div class="ch-team-mini" id="chPlayerTeamMini" style="justify-content:flex-end"></div>
             </div>
           </div>
@@ -346,6 +319,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
                   <div class="hp-label"><span id="chOppHpText">HP 50/50</span><span id="chOppStatus"></span></div>
                   <div class="ch-hp-track"><div class="ch-hp-fill" id="chOppHp" style="width:100%"></div></div>
                 </div>
+                <div class="ch-energy-bar" id="chOppEnergy"></div>
               </div>
               <div class="ch-vs">VS</div>
               <div class="ch-pkmn-slot player" id="chPlayerSlot">
@@ -355,6 +329,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
                   <div class="hp-label"><span id="chPlayerHpText">HP 50/50</span><span id="chPlayerStatus"></span></div>
                   <div class="ch-hp-track"><div class="ch-hp-fill" id="chPlayerHp" style="width:100%"></div></div>
                 </div>
+                <div class="ch-energy-bar" id="chPlayerEnergy"></div>
               </div>
             </div>
           </div>
@@ -437,6 +412,48 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
   </div>
 </div>
 
+<div id="toolsPage" style="display:none">
+  <div style="max-width:600px;margin:0 auto;padding:16px 20px">
+    <div style="display:flex;gap:6px;padding:4px 0 12px;flex-wrap:wrap;justify-content:center" id="toolSelector">
+      <button class="gs-btn active" data-tool="teambuilder" onclick="selectTool('teambuilder')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tool"/></svg> Team Builder</button>
+      <button class="gs-btn" data-tool="typecalc" onclick="selectTool('typecalc')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg> Type Calc</button>
+      <button class="gs-btn" data-tool="compare" onclick="selectTool('compare')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg> Compare</button>
+      <button class="gs-btn" data-tool="simulator" onclick="selectTool('simulator')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg> Simulator</button>
+      <button class="gs-btn" data-tool="movetutor" onclick="selectTool('movetutor')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-search"/></svg> Move Tutor</button>
+      <button class="gs-btn" data-tool="dmgcalc" onclick="selectTool('dmgcalc')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg> Dmg Calc</button>
+      <button class="gs-btn" data-tool="coverage" onclick="selectTool('coverage')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-grid"/></svg> Type Matrix</button>
+      <button class="gs-btn" data-tool="teamcard" onclick="selectTool('teamcard')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> Team Card</button>
+      <button class="gs-btn" data-tool="evotree" onclick="selectTool('evotree')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-git-branch"/></svg> Evo Tree</button>
+    </div>
+    <div id="toolContent">
+      <div id="toolTeambuilder"><div class="mg-box" id="tbContent"></div></div>
+      <div id="toolTypecalc" style="display:none"><div class="mg-box" id="tcContent"></div></div>
+      <div id="toolCompare" style="display:none"><div class="mg-box" id="cmpContent"></div></div>
+      <div id="toolSimulator" style="display:none"><div class="mg-box" id="simContent"></div></div>
+      <div id="toolMovetutor" style="display:none"><div class="mg-box" id="mtContent"></div></div>
+      <div id="toolDmgcalc" style="display:none"><div class="mg-box" id="dmgContent"></div></div>
+      <div id="toolCoverage" style="display:none"><div class="mg-box" id="covContent"></div></div>
+      <div id="toolTeamcard" style="display:none"><div class="mg-box">
+        <p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:8px">Pick 6 Pokémon & your name to create a shareable team card!</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center">
+          <input type="text" id="tcNameInput" placeholder="Trainer Name" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;width:180px" value="Ash">
+          <select id="tcBgSelect" onchange="tcSetTheme(this.value)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
+            <option value="fire">🔥 Fire</option><option value="water">💧 Water</option><option value="grass">🌿 Grass</option>
+            <option value="electric">⚡ Electric</option><option value="psychic">🔮 Psychic</option><option value="dragon">🐉 Dragon</option>
+            <option value="retro">🎮 Retro GB</option><option value="cyberpunk">🌆 Cyberpunk</option><option value="noir">🖤 Noir</option>
+          </select>
+        </div>
+        <div id="tcPickGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px"></div>
+        <div id="tcArtToggle"></div>
+        <div style="text-align:center;margin-bottom:8px"><button class="b-btn b-btn-primary" onclick="tcGenerate()">Generate Card</button></div>
+        <div style="text-align:center"><canvas id="tcCanvas" width="600" height="380" style="max-width:100%;border-radius:12px;border:1px solid var(--border);display:none"></canvas></div>
+        <div id="tcDownload" style="text-align:center;margin-top:8px;display:none"><button class="b-btn b-btn-secondary" onclick="tcDownload()">Save Card</button></div>
+      </div></div>
+      <div id="toolEvotree" style="display:none"><div class="mg-box" id="evoContent"></div></div>
+    </div>
+  </div>
+</div>
+
 <div id="operatorPage" style="padding:40px 20px;max-width:600px;margin:0 auto;text-align:center">
   <h2 style="font-size:24px;font-weight:800;margin-bottom:4px"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" width="24" height="24" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Settings</h2>
   <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px">Cache management and data tools</p>
@@ -477,6 +494,25 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
     </div>
   </div>
   <div id="colContent"><div class="col-empty">Search for a card above to start your collection!</div></div>
+  <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:280px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">♡ Wishlist</h3>
+      <div id="wlList"></div>
+    </div>
+    <div style="flex:1;min-width:280px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">📦 Export / Import</h3>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Backup or restore cards, wallpapers, and saves</p>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="b-btn b-btn-primary" onclick="pcExport()" style="font-size:12px">Export (copies to clipboard)</button>
+      </div>
+      <textarea id="pcExportData" placeholder="Export data appears here..." style="width:100%;height:50px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:10px;padding:8px;box-sizing:border-box;display:none;resize:none;font-family:monospace"></textarea>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+        <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">Paste export data below to import:</label>
+        <textarea id="pcImportArea" placeholder="Paste import data here..." style="width:100%;height:50px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:10px;padding:8px;box-sizing:border-box;resize:none;font-family:monospace"></textarea>
+        <button class="b-btn b-btn-secondary" onclick="pcImport()" style="font-size:12px;margin-top:6px">Import</button>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="wallpaperPage" style="display:none;max-width:900px;margin:0 auto;padding:20px">
   <h1 style="font-size:24px;font-weight:800;margin-bottom:16px;text-align:center"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/384.png" alt="" width="28" height="28" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Wallpaper Generator</h1>
