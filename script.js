@@ -3759,7 +3759,7 @@ function loadUsername(){
 // ===== WORLD LEADERBOARD (ScoreDrop, zero auth) =====
 // Create your free leaderboard at https://leaderboard-game.vercel.app/
 // Then paste your API key below:
-const LB_KEY='YOUR_SCOREDROP_API_KEY'
+const LB_KEY='6x5vn8brrh'
 let lbCache=null
 function lbPlayerId(){
   const u=getUsername();let h=0
