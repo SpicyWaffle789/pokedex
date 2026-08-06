@@ -3762,7 +3762,7 @@ function loadUsername(){
 // ===== WORLD LEADERBOARD (ScoreDrop, zero auth) =====
 // Create your free leaderboard at https://leaderboard-game.vercel.app/
 // Then paste your API key below:
-const LB_KEY='YOUR_SCOREDROP_API_KEY'
+const LB_KEY='zshcbttjk8'
 let lbCache=null
 function lbPlayerId(){
   const u=getUsername();let h=0
@@ -3771,7 +3771,7 @@ function lbPlayerId(){
 }
 
 async function lbFetch(){
-  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
+  if(LB_KEY==='zshcbttjk8')return lbCache||[]
   try{
     const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=week')
     if(!r.ok)return lbCache||[]
@@ -3782,7 +3782,7 @@ async function lbFetch(){
 }
 
 async function lbSubmit(score){
-  if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return 'no_key'
+  if(LB_KEY==='zshcbttjk8')return 'no_key'
   const user=getUsername()
   if(user==='Guest')return 'no_user'
   try{
@@ -3797,7 +3797,7 @@ async function lbSubmit(score){
 
 function lbRender(){
   const data=lbCache||[]
-  const configured=LB_KEY!=='YOUR_SCOREDROP_API_KEY'
+  const configured=LB_KEY!=='zshcbttjk8'
   let html='<div class="lb-panel"><div class="lb-title"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg> World Leaderboard</div>'
   if(!configured){
     html+='<div class="lb-footer" style="padding:12px">Set LB_KEY in script.js to enable</div></div>'
