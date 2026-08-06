@@ -187,8 +187,7 @@ async function batchLoadTypes(){
 }
 
 async function openDetail(id){
-  achCheck('view_pokemon')
-  dailyCheckProgress('view10',1)
+  // achCheck removed: only game activities trigger achievements
   document.getElementById('detailContent').innerHTML='<div class="loading" style="padding:60px"><div class="spinner"></div></div>'
   document.getElementById('detailModal').classList.add('active')
   document.body.style.overflow='hidden'
@@ -596,6 +595,12 @@ async function loadMoves(){
   if(cached){
     try{
       allMoves=JSON.parse(cached)
+      allMoves.forEach(m=>{
+        try{
+          const d=JSON.parse(localStorage.getItem('pokeMoveDetail_'+m.id)||'null')
+          if(d){m.type=d.type;m.damageClass=d.damageClass;m.pp=d.pp;m.power=d.power;m.accuracy=d.accuracy;m.generation=d.generation;m.effectEntry=d.effectEntry}
+        }catch(e){}
+      })
       filterMoves()
       document.getElementById('movesLoading').style.display='none'
       document.getElementById('movesGrid').style.display='grid'
@@ -856,8 +861,9 @@ function renderAbilityDetail(a){
       (gen?'<div style="font-size:12px;color:var(--text-muted);margin-top:4px">'+gen+'</div>':'')+
     '</div>'+
     '<div class="modal-body">'+
-      (eff?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Effect</h3><p style="font-size:14px;line-height:1.6;color:var(--text)">'+eff+'</p></div>':'')+
-      (flavor?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Description</h3><p style="font-size:13px;line-height:1.5;color:var(--text-dim)">'+flavor+'</p></div>':'')+
+      (eff?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Effect</h3><p style="font-size:14px;line-height:1.6;color:var(--text)">'+eff+'</p></div>':
+        flavor?'<div style="margin-bottom:16px"><h3 style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Description</h3><p style="font-size:13px;line-height:1.5;color:var(--text-dim)">'+flavor+'</p></div>':
+        '<div style="margin-bottom:16px;padding:16px;background:var(--surface);border-radius:10px;border:1px solid var(--border);text-align:center"><p style="font-size:13px;color:var(--text-dim)">No description available for this ability.</p></div>')+
       (pkmn.length?'<div><h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Pokemon with this ability</h3><div class="abilities-list">'+pkmn.map(p=>'<span class="ability-tag">'+p+'</span>').join('')+'</div></div>':'')+
     '</div>'
 }
@@ -1018,7 +1024,6 @@ function tbAddPokemon(id){
   tbTeam[slot]={id:p.id,name:p.name,types:p.types}
   tbRenderSlots()
   tbAnalyze()
-  dailyCheckProgress('team',1)
 }
 
 function tbRemovePokemon(slot){
@@ -1700,7 +1705,7 @@ function chShowHub(){
       '</div>'+
       '<div style="color:var(--text-dim);font-size:12px;margin-top:4px">'+ERAS[ch.era].desc+'</div>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;margin:8px 0;justify-content:center;flex-wrap:wrap">'+
+    '<div style="display:flex;gap:8px;margin:8px 0;justify-content:center;flex-wrap:wrap;grid-column:1/-1">'+
       '<div style="background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:11px">'+w.icon+' '+w.name+(ch.weatherTurns>0?' ('+ch.weatherTurns+' turns)':'')+'</div>'+
       (fusionInfo?'<div style="background:rgba(247,201,72,0.15);padding:6px 12px;border-radius:8px;border:1px solid rgba(247,201,72,0.3);font-size:11px;color:var(--ctp-yellow)">'+fusionInfo.icon+' Fused: '+fusionInfo.name+'</div>':'')+
       '<div style="background:var(--surface);padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:11px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-list"/></svg> '+activeTask.name+'</div>'+
@@ -1837,7 +1842,7 @@ function chShowTrainerShop(){
     '<div style="text-align:center;margin-top:12px"><button class="b-btn b-btn-secondary" onclick="chShowHub()">← Back</button></div>'
 }
 function chTsRenderSection(title,items,type){
-  return '<div><h3 style="font-size:14px;margin-bottom:6px;color:var(--text)">'+title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px">'+
+  return '<div><h3 style="font-size:16px;margin-bottom:8px;color:var(--text)">'+title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+
     items.map(item=>{
       const owned=chCustom.unlocked.includes(item.id)
       const active=(type==='avatar'&&chCustom.avatar===item.id)||(type==='badge'&&chCustom.badge===item.id)||(type==='bg'&&chCustom.bg===item.id)
@@ -2128,6 +2133,13 @@ function chRenderBattle(){
       ov.className='ch-weather-overlay ch-weather-'+ch.weather
       bg.appendChild(ov)
     }
+    // Update weather badge
+    const wb=document.getElementById('chWeatherBadge')
+    if(wb){
+      const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+      if(ch.weather!=='clear'){wb.innerHTML=w.icon+' '+w.name+(ch.weatherTurns>0?' · '+ch.weatherTurns+'t':'');wb.style.display='flex'}
+      else{wb.style.display='none'}
+    }
   }
 }
 function chRenderTeamMinis(id,team,activeIdx){
@@ -2269,6 +2281,12 @@ function chCommitTurn(){
   if(pd.eff>1)ch.battle.lastSuperEff=true
   // Weather tick
   if(ch.weatherTurns>0){ch.weatherTurns--;if(ch.weatherTurns<=0){ch.weather='clear';ch.weatherTurns=0}}
+  // Update weather badge
+  const wb2=document.getElementById('chWeatherBadge')
+  if(wb2){const w2=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
+    if(ch.weather!=='clear'){wb2.innerHTML=w2.icon+' '+w2.name+(ch.weatherTurns>0?' · '+ch.weatherTurns+'t':'');wb2.style.display='flex'}
+    else{wb2.style.display='none'}
+  }
   // Show results
   let log='<span class="highlight">'+cap(p.name)+'</span> used <span class="dmg">'+pm.n+'</span>!'
   if(pd.eff>1)log+=' <span style="color:var(--ctp-green)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>Super effective!</span>'
@@ -2586,7 +2604,7 @@ function chShowParty(){
     fusionHtml='<div class="party-card" style="border-color:var(--ctp-yellow)">'+imgTag(f.baseA,'52px')+
       '<div class="pi"><div class="pn" style="color:var(--ctp-yellow)">'+f.icon+' '+cap(f.name)+' [FUSED]</div>'+
       '<div class="pm">CP '+calcCp(f)+' · Lv.'+f.level+'</div>'+
-      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#f7c948,#ff9800)"></div></div><span style="font-size:10px">'+f.currentHp+'/'+f.maxHp+'</span></div>'+
+      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#f7c948,#ff9800)"></div></div><span style="font-size:10px;font-weight:700;color:var(--text);text-shadow:0 1px 3px rgba(0,0,0,.6)">'+f.currentHp+'/'+f.maxHp+'</span></div>'+
       '<div style="display:flex;gap:3px;margin-top:4px">'+f.types.map(t=>'<span class="type-badge type-'+t+'">'+t+'</span>').join('')+'</div>'+
     '</div></div>'
   }
@@ -2597,8 +2615,8 @@ function chShowParty(){
     return '<div class="party-card '+f+'">'+imgTag(sid,'52px')+
       '<div class="pi"><div class="pn">'+cap(p.name)+(i===ch.battle.playerIdx&&ch.phase!=='idle'?' <span class="active-tag">[OUT]</span>':'')+'</div>'+
       '<div class="pm">CP '+calcCp(p)+' · Lv.'+p.level+(p.status?' · <span class="ch-status-badge '+p.status+'">'+p.status.toUpperCase()+'</span>':'')+'</div>'+
-      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#4caf50,#8bc34a)"></div></div><span style="font-size:10px">'+p.currentHp+'/'+p.maxHp+'</span></div>'+
-      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+xpPct+'%;background:linear-gradient(90deg,#2196f3,#03a9f4)"></div></div><span style="font-size:10px">XP '+p.xp+'/'+p.xpNext+'</span></div>'+
+      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+hpPct+'%;background:linear-gradient(90deg,#4caf50,#8bc34a)"></div></div><span style="font-size:10px;font-weight:700;color:var(--text);text-shadow:0 1px 3px rgba(0,0,0,.6)">'+p.currentHp+'/'+p.maxHp+'</span></div>'+
+      '<div class="bar-row"><div class="bar-bg"><div class="bar-fill" style="width:'+xpPct+'%;background:linear-gradient(90deg,#2196f3,#03a9f4)"></div></div><span style="font-size:10px;font-weight:700;color:var(--text);text-shadow:0 1px 3px rgba(0,0,0,.6)">XP '+p.xp+'/'+p.xpNext+'</span></div>'+
       '<div style="font-size:10px;color:var(--text-dim);margin-top:2px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg> '+candyAmt+(candyAmt>0?' <span style="color:var(--ctp-yellow);cursor:pointer" onclick="event.stopPropagation();chPowerUp('+i+')">[Power Up]</span>':'')+(i>0&&p.currentHp>0?' · <span style="color:var(--ctp-blue);cursor:pointer" onclick="event.stopPropagation();chSetLead('+i+')">[Set Lead]</span>':'')+'</div>'+
     '</div></div>'
   }).join('')
@@ -3773,7 +3791,7 @@ function lbPlayerId(){
 async function lbFetch(){
   if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
   try{
-    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20&period=week')
+    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20')
     if(!r.ok)return lbCache||[]
     const d=await r.json()
     if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))
@@ -3788,7 +3806,6 @@ async function lbSubmit(score){
   try{
     const url='https://leaderboard-game.vercel.app/api/add?key='+LB_KEY+'&player_id='+encodeURIComponent(lbPlayerId())+'&player='+encodeURIComponent(user)+'&score='+score
     const r=await fetch(url)
-    const d=await r.json()
     if(!r.ok)return 'full'
     await lbFetch()
     return 'ok'
@@ -4121,41 +4138,37 @@ function phGetAll(){try{return JSON.parse(localStorage.getItem(phKey())||'{}')}c
 function phSave(d){try{localStorage.setItem(phKey(),JSON.stringify(d))}catch(e){}}
 let _pcAutoTimer=null
 let _pcAutoCache={}
+let _pcViewAll=false
 function pcAutocomplete(q){
   const el=document.getElementById('colAutocomplete')
   if(!el)return
-  if(!q.trim()){el.style.display='none';return}
+  if(!q.trim()){el.style.display='none';_pcViewAll=false;return}
   if(_pcAutoTimer)clearTimeout(_pcAutoTimer)
   _pcAutoTimer=setTimeout(async()=>{
     const key=q.trim().toLowerCase()
-    if(_pcAutoCache[key]){renderPcAuto(_pcAutoCache[key]);return}
+    const ck=(_pcViewAll?'v:':'')+key
+    if(_pcAutoCache[ck]){renderPcAuto(_pcAutoCache[ck]);return}
+    el.innerHTML='<div style="padding:10px 14px;color:var(--text-muted);font-size:13px">Searching...</div>'
+    el.style.display='block'
     let cards=[]
     try{
-      let query
-      const numOnly=key.match(/^(\d{1,4})(?:\/\d+)?$/)
-      const numAndName=key.match(/^(\d{1,4})(?:\/\d+)?\s+(.+)$/)
-      if(numOnly) query='number:'+numOnly[1]
-      else if(numAndName) query='number:'+numAndName[1]+' name:*'+encodeURIComponent(numAndName[2])+'*'
-      else query='name:*'+encodeURIComponent(key)+'*'
-      const res=await fetch('https://api.pokemontcg.io/v2/cards?q='+query+'&orderBy=set.releaseDate&pageSize=50')
+      const query='name:'+key
+      const res=await fetch('https://api.pokemontcg.io/v2/cards?q='+encodeURIComponent(query)+'&orderBy=set.releaseDate&pageSize='+(_pcViewAll?200:50))
       if(res.ok){
         const data=await res.json()
-        cards=data.data||[]
+        cards=(data.data||[]).slice(0,_pcViewAll?200:50)
       }
     }catch(e){}
     if(!cards.length){
       try{
-        let params='pageSize=50'
-        if(/^\d+$/.test(key)) params+='&setCode='+key
-        else params+='&name='+encodeURIComponent(key)
-        const res=await fetch('https://api.pokemontcg.io/v1/cards?'+params)
+        const res=await fetch('https://api.pokemontcg.io/v1/cards?name='+encodeURIComponent(key)+'&pageSize='+(_pcViewAll?200:50))
         if(res.ok){
           const data=await res.json()
           cards=(data.cards||[]).map(c=>({
             id:c.id,name:c.name,set:c.set||{name:c.setName||''},
             images:{small:c.imageUrl||c.imageUrlHiRes||''},
             cardmarket:c.cardmarket,tcgplayer:c.tcgplayer
-          }))
+          })).slice(0,_pcViewAll?200:50)
         }
       }catch(e){}
     }
@@ -4166,30 +4179,71 @@ function pcAutocomplete(q){
       })})
       cards=all.slice(0,50)
     }
-    _pcAutoCache[key]=cards
+    _pcAutoCache[ck]=cards
     renderPcAuto(cards)
-  },300)
+  },150)
 }
 function renderPcAuto(cards){
   const el=document.getElementById('colAutocomplete')
   if(!el)return
-  if(!cards.length){el.innerHTML='<div style="padding:12px;color:var(--text-muted);font-size:13px">No cards found</div>';el.style.display='block';return}
-  el.style.maxHeight='360px'
-  el.innerHTML=cards.map(c=>{
-    const price=c.cardmarket?.prices?.averageSellPrice||c.tcgplayer?.prices?.normal?.market
-    const inCol=pcGetCard(c.id)
-    return '<div style="display:flex;gap:10px;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);transition:.1s" '+
-      'onmouseenter="this.style.background=\'var(--surface-hover)\'" onmouseleave="this.style.background=\'transparent\'" '+
-      'onclick="pcShowAddModal(\''+c.id+'\',\''+c.name.replace(/'/g,"\\'")+'\',\''+(c.set?.name||'').replace(/'/g,"\\'")+'\','+(price||0)+',\''+((c.images?.small||'')||'')+'\');document.getElementById(\'colAddSearch\').value=\'\';document.getElementById(\'colAutocomplete\').style.display=\'none\'">'+
-      (c.images?.small?'<img src="'+c.images.small+'" style="width:44px;height:62px;border-radius:4px;object-fit:contain;flex-shrink:0;background:var(--surface)">':'<div style="width:44px;height:62px;border-radius:4px;background:var(--surface);flex-shrink:0"></div>')+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.name+'</div>'+
-        '<div style="font-size:11px;color:var(--text-muted)">'+(c.set?.name||'')+(price?' <span style="color:var(--ctp-green)">$'+price.toFixed(2)+'</span>':'')+'</div>'+
-      '</div>'+
-      (inCol?'<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">✓×'+inCol.qty+'</span>':'<span style="font-size:11px;color:var(--ctp-green);font-weight:600;white-space:nowrap">+ Add</span>')+
-    '</div>'
-  }).join('')
+  if(!cards.length){el.innerHTML='<div style="padding:10px 14px;color:var(--text-muted);font-size:13px">No cards found</div>';el.style.display='block';return}
+  if(!_pcViewAll){
+    const grouped={}
+    cards.forEach(c=>{
+      const name=c.name
+      if(!grouped[name])grouped[name]={name,cards:[]}
+      grouped[name].cards.push(c)
+    })
+    const groups=Object.values(grouped).slice(0,20)
+    el.innerHTML=groups.map(g=>{
+      const count=g.cards.length
+      const inCol=g.cards.some(c=>pcGetCard(c.id))
+      const rep=g.cards[0]
+      const dex=rep.nationalPokedexNumbers?.[0]||rep.id.split('-')[0]||''
+      const img=rep.images?.small||''
+      return '<div style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-light);transition:background .1s" '+
+        'onmouseenter="this.style.background=\'var(--surface-hover)\'" onmouseleave="this.style.background=\'\'" '+
+        'onclick="pcViewAllCards(\''+g.name.replace(/'/g,"\\'")+'\')">'+
+        (img?'<img src="'+img+'" style="width:44px;height:62px;border-radius:4px;object-fit:contain;flex-shrink:0;background:var(--surface-hover)">':'')+
+        '<span style="flex:1;font-size:14px;font-weight:600;color:var(--text)">#'+dex+' '+g.name+'</span>'+
+        '<span style="font-size:12px;color:var(--text-muted)">'+count+' card'+(count>1?'s':'')+(inCol?' · owned':'')+'</span>'+
+      '</div>'
+    }).join('')
+  }else{
+    el.innerHTML='<div style="padding:8px 14px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border-light);cursor:pointer" onmouseenter="this.style.background=\'var(--surface-hover)\'" onmouseleave="this.style.background=\'\'" onclick="pcBackToGroups()">← Back to groups</div>'+
+    cards.map(c=>{
+      const price=c.cardmarket?.prices?.averageSellPrice||c.tcgplayer?.prices?.normal?.market||c.tcgplayer?.prices?.holofoil?.market
+      const inCol=pcGetCard(c.id)
+      const dex=c.nationalPokedexNumbers?.[0]||c.id.split('-')[0]||''
+      const img=c.images?.small||''
+      const setNum=c.number||''
+      return '<div style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-light);transition:background .1s" '+
+        'onmouseenter="this.style.background=\'var(--surface-hover)\'" onmouseleave="this.style.background=\'\'" '+
+        'onclick="pcShowAddModal(\''+c.id+'\',\''+c.name.replace(/'/g,"\\'")+'\',\''+(c.set?.name||'').replace(/'/g,"\\'")+'\','+(price||0)+',\''+img+'\');document.getElementById(\'colAutocomplete\').style.display=\'none\'">'+
+        (img?'<img src="'+img+'" style="width:44px;height:62px;border-radius:4px;object-fit:contain;flex-shrink:0;background:var(--surface-hover)">':'<div style="width:44px;height:62px;border-radius:4px;background:var(--surface-hover);flex-shrink:0"></div>')+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:600;color:var(--text)">#'+dex+' '+c.name+'</div>'+
+          '<div style="font-size:11px;color:var(--text-muted)">'+(c.set?.name||'')+(setNum?' · #'+setNum:'')+'</div>'+
+        '</div>'+
+        (inCol?'<span style="font-size:11px;color:var(--text-muted)">×'+inCol.qty+'</span>':
+          (price?'<span style="font-size:11px;color:var(--ctp-green)">$'+Number(price).toFixed(2)+'</span>':
+          '<span style="font-size:11px;color:var(--ctp-green)">+ Add</span>'))+
+      '</div>'
+    }).join('')
+  }
   el.style.display='block'
+}
+function pcViewAllCards(name){
+  _pcViewAll=true
+  const inp=document.getElementById('colAddSearch')
+  if(inp)inp.value=name
+  _pcAutoCache={}
+  pcAutocomplete(name)
+}
+function pcBackToGroups(){
+  _pcViewAll=false
+  const inp=document.getElementById('colAddSearch')
+  if(inp)pcAutocomplete(inp.value)
 }
 document.addEventListener('click',function(e){const ac=document.getElementById('colAutocomplete');if(ac&&!e.target.closest('#colAddSearch')&&!e.target.closest('#colAutocomplete'))ac.style.display='none'})
 function phRecordPrice(id,price){
@@ -4449,18 +4503,18 @@ function initTrainerShop(){
   el.innerHTML='<h2 style="text-align:center;margin-bottom:4px"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> Trainer Shop</h2>'+
     '<p style="text-align:center;color:var(--text-dim);font-size:12px;margin-bottom:4px">Customize your trainer with stardust from battles!</p>'+
     '<div style="text-align:center;margin-bottom:12px;color:var(--ctp-yellow);font-weight:700"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg> Stardust: '+ch.stardust+'</div>'+
-    '<div style="display:grid;gap:12px">'+tsRenderSection('Avatars',SHOP_AVATARS,'avatar')+tsRenderSection('Badges',SHOP_BADGES,'badge')+tsRenderSection('Backgrounds',SHOP_BACKGROUNDS,'bg')+'</div>'
+    '<div style="display:grid;gap:16px">'+tsRenderSection('Avatars',SHOP_AVATARS,'avatar')+tsRenderSection('Badges',SHOP_BADGES,'badge')+tsRenderSection('Backgrounds',SHOP_BACKGROUNDS,'bg')+'</div>'
 }
 function tsRenderSection(title,items,type){
   return '<div><h3 style="font-size:14px;margin-bottom:6px;color:var(--text)">'+title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px">'+
     items.map(item=>{
       const owned=chCustom.unlocked.includes(item.id)
       const active=(type==='avatar'&&chCustom.avatar===item.id)||(type==='badge'&&chCustom.badge===item.id)||(type==='bg'&&chCustom.bg===item.id)
-      return '<div style="background:var(--surface);border:1px solid '+(active?'#f7c948':owned?'#4caf50':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer;opacity:'+(owned||ch.stardust>=item.cost?1:0.5)+'" onclick="tsBuyOrEquip(\''+item.id+'\',\''+type+'\','+item.cost+')">'+
+      return '<div style="background:var(--surface);border:1px solid '+(active?'#f7c948':owned?'#4caf50':'var(--border)')+';border-radius:10px;padding:10px;text-align:center;cursor:pointer;opacity:'+(owned||ch.stardust>=item.cost?1:0.5)+';position:relative;z-index:1" onclick="tsBuyOrEquip(\''+item.id+'\',\''+type+'\','+item.cost+')">'+
         '<div style="font-size:24px">'+item.icon+'</div>'+
-        '<div style="font-size:11px;font-weight:600;margin:4px 0">'+item.name+'</div>'+
+        '<div style="font-size:11px;font-weight:700;margin:4px 0;color:var(--text)">'+item.name+'</div>'+
         '<div style="font-size:9px;color:var(--text-dim)">'+item.desc+'</div>'+
-        '<div style="font-size:10px;margin-top:4px;color:'+(owned?'#4caf50':'#f7c948')+'">'+(owned?(active?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-check"/></svg> ACTIVE':'OWNED'):item.cost+' SD')+'</div>'+
+        '<div style="font-size:10px;margin-top:4px;font-weight:600;color:'+(owned?'#4caf50':'#f7c948')+'">'+(owned?(active?'✓ ACTIVE':'OWNED'):item.cost+' SD')+'</div>'+
       '</div>'
     }).join('')+'</div></div>'
 }
@@ -4693,49 +4747,44 @@ async function bpFetchBattlePokemon(cards){
   const el=document.getElementById('bpBattlePokemon')
   if(!el)return
   el.innerHTML='<div style="text-align:center;padding:12px"><div class="spinner" style="width:20px;height:20px;margin:0 auto"></div><div style="font-size:11px;color:var(--text-dim);margin-top:6px">Summoning battle Pokémon...</div></div>'
-  const names=[...new Set(cards.map(c=>{
+  const names=cards.map(c=>{
     let n=c.name.toLowerCase().replace(/[-\s]+/g,'')
       .replace(/ex$|gx$|v$|vmax$|vstar$|prime$|lv\.x$|legend$|level up$|break$|mega$/,'')
       .replace(/\s*[-–]\s*.*/,'').trim()
     return n
-  }))]
-  const picked=[];const used=new Set()
-  for(let i=0;i<3&&i<names.length*3;i++){
-    const nm=names[Math.floor(Math.random()*names.length)]
-    if(used.has(nm))continue
+  }).filter(n=>n.length>0)
+  let picked=null
+  for(let attempt=0;attempt<20&&!picked;attempt++){
+    const nm=names[attempt<names.length?attempt:Math.floor(Math.random()*names.length)]
     const match=allPokemon.find(p=>p.name===nm)
     if(!match)continue
     try{
       const d=await fetchPkmn(match.id)
       const lvl=Math.max(5,Math.min(25,Math.floor(Math.random()*15)+5))
-      const p=makePkmn(d,lvl)
-      picked.push(p);used.add(nm)
+      picked=makePkmn(d,lvl)
     }catch(e){}
   }
-  if(!picked.length){
-    for(let i=0;i<3;i++){
-      const id=Math.floor(Math.random()*151)+1
-      try{const d=await fetchPkmn(id);picked.push(makePkmn(d,Math.floor(Math.random()*15)+5))}catch(e){}
-    }
+  if(!picked){
+    try{const id=Math.floor(Math.random()*151)+1;const d=await fetchPkmn(id);picked=makePkmn(d,Math.floor(Math.random()*15)+5)}catch(e){}
   }
-  bpBattlePokemon=picked
+  bpBattlePokemon=picked?[picked]:[]
   el.innerHTML=
     '<div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid rgba(247,201,72,0.3)">'+
       '<div style="text-align:center;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:var(--ctp-yellow)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg> Battle Pokémon</div><div style="font-size:11px;color:var(--text-dim)">These Pokémon are ready to join your team!</div></div>'+
-      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px">'+
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">'+
         picked.map((p,i)=>{
           const hpPct=Math.round(p.currentHp/p.maxHp*100)
-          return '<div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--border);text-align:center;min-width:110px;animation:bpCardReveal 0.4s ease '+(i*0.15)+'s both">'+
+          return '<div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);text-align:center;min-width:130px;animation:bpCardReveal 0.4s ease '+(i*0.15)+'s both;position:relative;z-index:1">'+
             '<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.id+'.png" style="width:72px;height:72px;image-rendering:pixelated">'+
-            '<div style="font-size:12px;font-weight:700;margin-top:4px;text-transform:capitalize">'+p.name+'</div>'+
+            '<div style="font-size:12px;font-weight:700;margin-top:4px;text-transform:capitalize;color:var(--text)">'+p.name+'</div>'+
             '<div style="font-size:10px;color:var(--text-dim)">Lv.'+p.level+'</div>'+
             '<div style="display:flex;gap:3px;justify-content:center;margin-top:3px">'+p.types.map(t=>'<span class="type-badge type-'+t+'" style="font-size:8px;padding:1px 5px">'+t+'</span>').join('')+'</div>'+
             '<div style="margin-top:4px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+hpPct+'%;background:'+(hpPct>50?'#4caf50':hpPct>25?'#ff9800':'#f44336')+';border-radius:3px"></div></div>'+
-            '<div style="font-size:8px;color:var(--text-muted);margin-top:2px">HP '+p.currentHp+'/'+p.maxHp+'</div>'+
+            '<div style="font-size:8px;color:var(--text);font-weight:600;margin-top:2px">HP '+p.currentHp+'/'+p.maxHp+'</div>'+
           '</div>'
         }).join('')+
       '</div>'+
-      '<div style="text-align:center"><button class="b-btn b-btn-primary" style="font-size:13px;padding:10px 24px'+(bpBattleAdded?';opacity:0.5':'')+'" onclick="bpAddBattlePokemon()"'+(bpBattleAdded?' disabled':'')+'>'+(bpBattleAdded?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-check"/></svg> Added to Team':'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-plus"/></svg> Add All to Team')+'</button></div>'+
+      '<div style="text-align:center"><button class="b-btn b-btn-primary" style="font-size:13px;padding:10px 24px'+(bpBattleAdded?';opacity:0.5':'')+'" onclick="bpAddBattlePokemon()"'+(bpBattleAdded?' disabled':'')+'>'+(bpBattleAdded?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-check"/></svg> Added to Team':'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-plus"/></svg> Add to Team')+'</button></div>'+
     '</div>'
   chSave()
 }
@@ -5350,7 +5399,6 @@ function dmgCalc(){
       '<div style="font-size:28px;font-weight:800;color:var(--ctp-yellow)">'+baseDmg+'</div>'+
       '<div style="font-size:12px;color:var(--text-dim)">Damage range: '+minDmg+' – '+maxDmg+' ('+pct+'% HP)</div>'+
       ko+'</div>'
-  achCheck('dmgcalc')
 }
 
 // ===== ACHIEVEMENTS =====
@@ -5734,7 +5782,6 @@ async function evoLoadChain(id){
     if(!chainUrl){el.innerHTML='<div style="color:var(--text-dim)">This Pokémon does not evolve</div>';return}
     const chain=await fetch(chainUrl).then(r=>r.json())
     evoRenderChain(chain)
-    dailyCheckProgress('evo',1)
   }catch(e){el.innerHTML='<div style="color:var(--ctp-red)">Error loading evolution data</div>'}
 }
 function evoRenderChain(chain){

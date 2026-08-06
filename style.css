@@ -241,7 +241,7 @@ header h1{
 .wg-header p{color:var(--text-dim);font-size:13px}
 .wg-status{text-align:center;margin-top:16px;font-size:14px}
 .wg-info{text-align:center;color:var(--text-muted);font-size:11px;margin-top:8px}
-.home-page{max-width:900px;margin:0 auto;padding:40px 20px;text-align:center}
+.home-page{max-width:1200px;margin:0 auto;padding:40px 20px;text-align:center}
 .home-page h1{font-size:38px;font-weight:800;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow),var(--ctp-teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
 .home-page .subtitle{color:var(--text-dim);font-size:15px;margin-bottom:32px;line-height:1.5}
 .potd{display:flex;align-items:center;gap:24px;padding:20px 28px;background:var(--surface);border:1px solid var(--border-light);border-radius:16px;margin-bottom:28px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
@@ -280,7 +280,7 @@ body.light .potd{background:var(--surface);border-color:var(--border)}
 .card-abilities{background:linear-gradient(135deg,rgba(163,62,161,0.15),rgba(99,144,240,0.1));border-color:rgba(163,62,161,0.2)}
 .card-wordle{background:linear-gradient(135deg,rgba(76,175,80,0.15),rgba(247,200,72,0.1));border-color:rgba(76,175,80,0.2)}
 #battlePage,#operatorPage,#collectionPage{display:none}
-.b-container{max-width:600px;margin:0 auto;padding:20px}
+.b-container{width:100%;padding:20px}
 .b-title{text-align:center;font-size:22px;font-weight:800;margin-bottom:20px;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .b-start-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .b-start-card{border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;transition:.25s;background:rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.15);backdrop-filter:blur(8px)}
@@ -293,11 +293,11 @@ body.light .potd{background:var(--surface);border-color:var(--border)}
 .b-field .active-pkmn img{width:96px;height:96px;image-rendering:pixelated}
 .b-field .active-pkmn .name{font-size:18px;font-weight:700;text-transform:capitalize}
 .b-field .active-pkmn .level{font-size:13px;color:var(--text-dim)}
-.b-bar-bg{height:10px;background:var(--surface-hover);border-radius:6px;overflow:hidden;margin:6px 0}
+.b-bar-bg{height:12px;background:var(--surface-hover);border-radius:6px;overflow:hidden;margin:6px 0}
 .b-bar-fill{height:100%;border-radius:6px;transition:width .5s}
 .b-bar-hp{background:linear-gradient(90deg,var(--ctp-green),#a6e3a1)}
 .b-bar-xp{background:linear-gradient(90deg,var(--ctp-blue),var(--ctp-sky))}
-.b-bar-text{font-size:11px;color:var(--text-muted)}
+.b-bar-text{font-size:11px;color:var(--text);font-weight:600}
 .b-btn{display:inline-block;padding:10px 24px;border-radius:12px;border:none;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;margin:4px}
 .b-btn-primary{background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow));color:#1a1a1a}
 .b-btn-primary:hover{transform:translateY(-2px)}
@@ -420,11 +420,86 @@ header h1{font-size:18px}
 .b-go-nearby{display:flex;gap:8px;justify-content:center;margin:6px 0}
 .b-go-nearby .near-item{width:40px;height:40px;border-radius:8px;background:var(--surface);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);text-transform:uppercase}
 .b-go-stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--text-dim);margin-top:8px}
-.ch-bg{background:linear-gradient(180deg,#3a5a8c 0%,#5a8ab5 35%,#7ab55a 35%,#5a9a4a 100%);position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--border-light);min-height:520px}
-.ch-bg.era-medieval{background:linear-gradient(180deg,#2a3a5c 0%,#4a6a8c 35%,#8a6a4a 35%,#6a5a3a 100%)}
-.ch-bg.era-cyberpunk{background:linear-gradient(180deg,#1a1a3a 0%,#3a2a5a 35%,#2a4a4a 35%,#1a3a3a 100%)}
-.ch-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(255,255,255,0.08) 0%,transparent 60%);pointer-events:none;z-index:0}
-.ch-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:65%;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.15) 100%);pointer-events:none;z-index:0}
+.ch-bg{background:linear-gradient(180deg,#1a2a4a 0%,#3a6a9a 30%,#5a9a5a 30%,#4a8a3a 60%,#3a6a2a 100%);position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--border-light);min-height:520px}
+.ch-bg::before{content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 20%,rgba(255,255,200,0.15) 0%,transparent 40%),
+    radial-gradient(ellipse at 80% 15%,rgba(255,255,200,0.1) 0%,transparent 30%),
+    radial-gradient(circle at 50% 100%,rgba(0,0,0,0.3) 0%,transparent 50%);
+  pointer-events:none;z-index:0}
+.ch-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:70%;
+  background:
+    linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.05) 30%,rgba(0,0,0,0.15) 100%),
+    radial-gradient(ellipse at 50% 100%,rgba(100,180,60,0.2) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+.ch-bg.era-medieval{background:linear-gradient(180deg,#1a1520 0%,#2a2535 20%,#3a3040 40%,#4a3a30 60%,#3a2a20 100%)}
+.ch-bg.era-medieval::before{background:
+  radial-gradient(ellipse at 15% 30%,rgba(255,150,50,0.2) 0%,transparent 30%),
+  radial-gradient(ellipse at 85% 30%,rgba(255,150,50,0.2) 0%,transparent 30%),
+  radial-gradient(ellipse at 50% 10%,rgba(200,180,140,0.1) 0%,transparent 40%),
+  repeating-linear-gradient(90deg,rgba(100,80,60,0.05) 0,transparent 2px,transparent 60px),
+  repeating-linear-gradient(0deg,rgba(100,80,60,0.05) 0,transparent 2px,transparent 60px);
+  pointer-events:none;z-index:0}
+.ch-bg.era-medieval::after{background:
+  linear-gradient(180deg,transparent 0%,rgba(80,50,30,0.2) 50%,rgba(60,40,20,0.3) 100%),
+  radial-gradient(ellipse at 50% 100%,rgba(120,80,40,0.15) 0%,transparent 50%);
+  pointer-events:none;z-index:0}
+.ch-bg.era-cyberpunk{background:linear-gradient(180deg,#0a0015 0%,#150030 20%,#1a0a3a 40%,#0a1a2a 70%,#050a15 100%)}
+.ch-bg.era-cyberpunk::before{background:
+  linear-gradient(90deg,rgba(0,255,255,0.08) 1px,transparent 1px),
+  linear-gradient(0deg,rgba(0,255,255,0.08) 1px,transparent 1px),
+  radial-gradient(ellipse at 50% 20%,rgba(0,200,255,0.18) 0%,transparent 50%),
+  radial-gradient(ellipse at 20% 60%,rgba(255,0,200,0.12) 0%,transparent 40%),
+  radial-gradient(ellipse at 80% 70%,rgba(0,255,150,0.10) 0%,transparent 40%),
+  radial-gradient(ellipse at 50% 90%,rgba(0,100,200,0.15) 0%,transparent 50%);
+  background-size:30px 30px,30px 30px,100% 100%,100% 100%,100% 100%,100% 100%;
+  pointer-events:none;z-index:0}
+.ch-bg.era-cyberpunk::after{background:
+  linear-gradient(180deg,transparent 0%,rgba(0,200,255,0.08) 40%,rgba(0,0,0,0.5) 100%),
+  repeating-linear-gradient(0deg,rgba(0,255,255,0.04) 0,transparent 1px,transparent 3px);
+  pointer-events:none;z-index:0}
+/* Cyberpunk scanline overlay */
+.era-cyberpunk .ch-bg::before{animation:cyberScanline 6s linear infinite}
+@keyframes cyberScanline{0%{background-position:0 0,0 0,0 0,0 0,0 0,0 0}100%{background-position:0 0,0 0,0 0,0 0,0 0,0 30px}}
+.era-cyberpunk .ch-bg{border-color:rgba(0,255,255,0.35);box-shadow:0 0 40px rgba(0,255,255,0.1),inset 0 0 40px rgba(0,255,255,0.05)}
+/* Cyberpunk neon pulse on borders */
+.era-cyberpunk .ch-pkmn-slot{position:relative}
+.era-cyberpunk .ch-pkmn-slot::after{content:'';position:absolute;inset:-2px;border-radius:16px;
+  background:linear-gradient(45deg,rgba(0,255,255,0.1),rgba(255,0,200,0.1),rgba(0,255,150,0.1));
+  opacity:0;transition:opacity .3s;pointer-events:none;z-index:-1}
+.era-cyberpunk .ch-pkmn-slot:hover::after{opacity:1}
+/* Medieval torch glow */
+.era-medieval .ch-bg::before{animation:torchFlicker 3s ease-in-out infinite alternate}
+@keyframes torchFlicker{0%{opacity:0.7}50%{opacity:1}100%{opacity:0.8}}
+/* Weather effects */
+.ch-weather-badge{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);
+  backdrop-filter:blur(8px);display:flex;align-items:center;gap:6px;
+  color:rgba(255,255,255,0.9);text-shadow:0 1px 2px rgba(0,0,0,0.5)}
+.era-cyberpunk .ch-weather-badge{border-color:rgba(0,255,255,0.3);background:rgba(0,20,40,0.7)}
+.era-medieval .ch-weather-badge{border-color:rgba(180,140,80,0.3);background:rgba(30,20,10,0.7)}
+/* Terrain detail layers */
+.ch-terrain{position:absolute;bottom:0;left:0;right:0;height:35%;pointer-events:none;z-index:0;overflow:hidden}
+.ch-terrain::before{content:'';position:absolute;bottom:0;left:0;right:0;height:100%;
+  background:linear-gradient(180deg,transparent 0%,rgba(80,120,50,0.15) 60%,rgba(60,100,40,0.25) 100%);
+  clip-path:polygon(0% 40%,5% 35%,10% 38%,15% 30%,20% 35%,25% 28%,30% 32%,35% 25%,40% 30%,45% 22%,50% 28%,55% 20%,60% 25%,65% 18%,70% 22%,75% 15%,80% 20%,85% 12%,90% 18%,95% 10%,100% 15%,100% 100%,0% 100%)}
+.ch-terrain::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60%;
+  background:linear-gradient(180deg,transparent 0%,rgba(50,80,30,0.2) 100%);
+  clip-path:polygon(0% 60%,8% 55%,15% 58%,22% 50%,30% 55%,38% 48%,45% 52%,52% 45%,60% 50%,68% 42%,75% 48%,82% 40%,90% 45%,100% 38%,100% 100%,0% 100%)}
+.era-medieval .ch-terrain::before{background:linear-gradient(180deg,transparent 0%,rgba(100,70,40,0.2) 60%,rgba(80,55,30,0.3) 100%);
+  clip-path:polygon(0% 50%,10% 45%,20% 48%,30% 40%,40% 45%,50% 38%,60% 42%,70% 35%,80% 40%,90% 32%,100% 38%,100% 100%,0% 100%)}
+.era-medieval .ch-terrain::after{background:linear-gradient(180deg,transparent 0%,rgba(60,40,20,0.25) 100%)}
+.era-cyberpunk .ch-terrain::before{background:linear-gradient(180deg,transparent 0%,rgba(0,40,60,0.2) 60%,rgba(0,30,50,0.3) 100%);
+  clip-path:polygon(0% 55%,5% 50%,10% 52%,15% 45%,20% 48%,25% 42%,30% 45%,35% 38%,40% 42%,45% 35%,50% 40%,55% 32%,60% 38%,65% 30%,70% 35%,75% 28%,80% 32%,85% 25%,90% 30%,95% 22%,100% 28%,100% 100%,0% 100%)}
+.era-cyberpunk .ch-terrain::after{background:linear-gradient(180deg,transparent 0%,rgba(0,30,50,0.2) 100%)}
+/* Cyberpunk city silhouette */
+.ch-city{position:absolute;bottom:25%;left:0;right:0;height:30%;pointer-events:none;z-index:0;opacity:0.25;filter:drop-shadow(0 0 8px rgba(0,255,255,0.3))}
+.ch-city::before{content:'';position:absolute;bottom:0;left:0;right:0;height:100%;
+  background:
+    linear-gradient(0deg,rgba(0,200,255,0.3) 0%,transparent 100%),
+    repeating-linear-gradient(90deg,rgba(0,200,255,0.2) 0,rgba(0,200,255,0.2) 8px,transparent 8px,transparent 20px);
+  clip-path:polygon(0% 100%,0% 60%,3% 60%,3% 40%,6% 40%,6% 55%,9% 55%,9% 30%,12% 30%,12% 50%,15% 50%,15% 35%,18% 35%,18% 65%,21% 65%,21% 45%,24% 45%,24% 25%,27% 25%,27% 55%,30% 55%,30% 40%,33% 40%,33% 60%,36% 60%,36% 35%,39% 35%,39% 50%,42% 50%,42% 30%,45% 30%,45% 55%,48% 55%,48% 40%,51% 40%,51% 60%,54% 60%,54% 45%,57% 45%,57% 20%,60% 20%,60% 50%,63% 50%,63% 35%,66% 35%,66% 55%,69% 55%,69% 40%,72% 40%,72% 60%,75% 60%,75% 45%,78% 45%,78% 30%,81% 30%,81% 55%,84% 55%,84% 40%,87% 40%,87% 65%,90% 65%,90% 50%,93% 50%,93% 35%,96% 35%,96% 60%,100% 60%,100% 100%)}
 .ch-particle{position:absolute;width:3px;height:3px;background:var(--surface-raise);border-radius:50%;pointer-events:none;animation:chFloat linear infinite;border-radius:50%;pointer-events:none;animation:chFloat linear infinite}
 @keyframes chFloat{0%{transform:translateY(0)translateX(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-200px)translateX(50px);opacity:0}}
 .ch-glass{background:var(--surface);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-light);border-radius:14px}
@@ -444,11 +519,11 @@ header h1{font-size:18px}
 .ch-team-mini .mini-slot .faint-x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ctp-red);font-size:18px;font-weight:900;background:rgba(0,0,0,0.5);border-radius:6px}
 .ch-team-mini .mini-slot.active{border-color:var(--ctp-yellow);box-shadow:0 0 12px rgba(247,201,72,0.3)}
 .ch-arena{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;min-height:240px;z-index:1}
-.ch-pkmn-display{display:flex;align-items:center;gap:16px;width:100%;position:relative}
-.ch-pkmn-slot{flex:1;padding:12px;position:relative}
+.ch-pkmn-display{display:flex;align-items:center;gap:24px;width:100%;position:relative;justify-content:center}
+.ch-pkmn-slot{flex:1;padding:12px;position:relative;max-width:400px}
 .ch-pkmn-slot.opponent{text-align:left}
 .ch-pkmn-slot.player{text-align:right}
-.ch-pkmn-slot .sprite{width:120px;height:120px;image-rendering:pixelated;transition:all .3s;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.4))}
+.ch-pkmn-slot .sprite{width:140px;height:140px;image-rendering:pixelated;transition:all .3s;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.4))}
 .ch-pkmn-slot.opponent .sprite{margin:0 auto 0 0}
 .ch-pkmn-slot.player .sprite{margin:0 0 0 auto}
 .ch-pkmn-slot .cp-badge{font-size:10px;color:rgba(255,255,255,0.8);margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,0.5)}
@@ -478,7 +553,7 @@ header h1{font-size:18px}
 @keyframes spriteParalyze{0%,100%{filter:none}50%{filter:brightness(1.5) drop-shadow(0 0 10px rgba(255,235,59,0.5))}}
 @keyframes spritePoison{0%,100%{filter:drop-shadow(0 0 6px rgba(156,39,176,0.4))}50%{filter:drop-shadow(0 0 12px rgba(156,39,176,0.7))}}
 .ch-vs{font-size:16px;font-weight:900;color:rgba(255,255,255,0.9);letter-spacing:4px;text-shadow:0 2px 8px rgba(0,0,0,0.5);z-index:2}
-.ch-move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;background:rgba(0,0,0,0.4);border-radius:12px;padding:10px;border:1px solid rgba(255,255,255,0.1)}
+.ch-move-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;background:rgba(0,0,0,0.4);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.1)}
 .ch-move-btn{padding:12px;border-radius:10px;border:2px solid rgba(255,255,255,0.2);cursor:pointer;transition:all .2s;text-align:left;position:relative;overflow:hidden;background:rgba(255,255,255,0.08);backdrop-filter:blur(4px)}
 .ch-move-btn::before{content:'';position:absolute;inset:0;opacity:0.2;transition:opacity .2s;pointer-events:none}
 .ch-move-btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.15)}
@@ -554,17 +629,18 @@ header h1{font-size:18px}
 .ch-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700}
 .ch-badge.win{background:rgba(76,175,80,0.2);color:var(--ctp-green);border:1px solid rgba(76,175,80,0.3)}
 .ch-badge.streak{background:rgba(247,201,72,0.2);color:var(--ctp-yellow);border:1px solid rgba(247,201,72,0.3)}
-.ch-hub{min-height:400px;display:flex;flex-direction:column;gap:12px;padding:16px}
-.ch-hub .hub-header{text-align:center;padding:16px 0}
-.ch-hub .hub-header h2{font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow),var(--ctp-teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.ch-hub .hub-pokemon{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;background:rgba(0,0,0,0.3);border-radius:16px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px)}
-.ch-hub .hub-pokemon img{width:110px;height:110px;image-rendering:pixelated;filter:drop-shadow(0 8px 20px rgba(0,0,0,0.4))}
-.ch-hub .hub-pokemon .h-name{font-size:18px;font-weight:800;text-transform:capitalize;color:rgba(255,255,255,0.95);text-shadow:0 1px 3px rgba(0,0,0,0.5)}
-.ch-hub .hub-pokemon .h-cp{font-size:13px;color:rgba(255,255,255,0.7)}
-.ch-hub .hub-stats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:12px;color:rgba(255,255,255,0.8)}
-.ch-hub .hub-stats span{background:rgba(0,0,0,0.3);padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(4px)}
-.ch-hub .hub-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.ch-hub .hub-actions .b-btn{font-size:13px;padding:12px;background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(4px)}
+.ch-hub{min-height:400px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto;gap:16px;padding:20px}
+.ch-hub .hub-header{grid-column:1/-1;text-align:center;padding:16px 0}
+.ch-hub .hub-header h2{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow),var(--ctp-teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ch-hub .hub-pokemon{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;background:rgba(0,0,0,0.3);border-radius:16px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);justify-content:center}
+.ch-hub .hub-pokemon img{width:130px;height:130px;image-rendering:pixelated;filter:drop-shadow(0 8px 20px rgba(0,0,0,0.4))}
+.ch-hub .hub-pokemon .h-name{font-size:22px;font-weight:800;text-transform:capitalize;color:rgba(255,255,255,0.95);text-shadow:0 1px 3px rgba(0,0,0,0.5)}
+.ch-hub .hub-pokemon .h-cp{font-size:14px;color:rgba(255,255,255,0.7)}
+.ch-hub .hub-pokemon .b-bar-text{color:rgba(255,255,255,0.9);font-weight:600}
+.ch-hub .hub-stats{grid-column:1/-1;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,0.8)}
+.ch-hub .hub-stats span{background:rgba(0,0,0,0.3);padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(4px)}
+.ch-hub .hub-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ch-hub .hub-actions .b-btn{font-size:14px;padding:14px;background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(4px)}
 .ch-hub .hub-actions .b-btn:hover{background:rgba(0,0,0,0.5);border-color:rgba(255,255,255,0.3)}
 .ch-party{display:flex;flex-direction:column;gap:8px;padding:16px;min-height:400px}
 .ch-party .party-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;cursor:pointer;transition:.2s;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(4px)}
@@ -637,12 +713,90 @@ header h1{font-size:18px}
   background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1) 20%,rgba(255,255,255,0.1) 80%,transparent);
   pointer-events:none;z-index:1
 }
+.era-cyberpunk #chBattleBg{border-color:rgba(0,255,255,0.4);box-shadow:0 0 40px rgba(0,255,255,0.15),0 0 80px rgba(0,255,255,0.05),inset 0 0 60px rgba(0,255,255,0.08)}
+.era-cyberpunk #chBattleBg::before{background:
+  linear-gradient(90deg,rgba(0,255,255,0.04) 1px,transparent 1px),
+  linear-gradient(0deg,rgba(0,255,255,0.04) 1px,transparent 1px);
+  background-size:30px 30px;
+  pointer-events:none;z-index:0}
+.era-cyberpunk #chBattleBg::after{background:linear-gradient(90deg,transparent,rgba(0,255,255,0.3) 20%,rgba(0,255,255,0.3) 80%,transparent);height:2px}
+.era-medieval #chBattleBg{border-color:rgba(180,140,80,0.3);box-shadow:0 0 20px rgba(180,120,40,0.1),inset 0 0 40px rgba(100,60,20,0.1)}
+.era-medieval #chBattleBg::after{background:linear-gradient(90deg,transparent,rgba(180,140,80,0.2) 20%,rgba(180,140,80,0.2) 80%,transparent);height:3px}
 .ch-field-floor{position:absolute;bottom:0;left:0;right:0;height:40%;
   background:linear-gradient(180deg,transparent,rgba(255,255,255,0.03) 40%,rgba(255,255,255,0.06) 100%);
   pointer-events:none;z-index:0;
   mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,0.3) 30%,#000 100%);
   -webkit-mask-image:linear-gradient(180deg,transparent 0,rgba(0,0,0,0.3) 30%,#000 100%)
 }
+/* Cyberpunk HP bars and UI */
+.era-cyberpunk .ch-hp-group{border-color:rgba(0,255,255,0.3);box-shadow:0 0 10px rgba(0,255,255,0.1)}
+.era-cyberpunk .ch-hp-fill{background:linear-gradient(180deg,#00ffcc,#00cc99)!important;box-shadow:0 0 8px rgba(0,255,200,0.4)}
+.era-cyberpunk .ch-hp-fill.low{background:linear-gradient(180deg,#ff0066,#cc0044)!important}
+.era-cyberpunk .ch-hp-fill.mid{background:linear-gradient(180deg,#ffcc00,#ff9900)!important}
+.era-cyberpunk .ch-move-grid{border-color:rgba(0,255,255,0.2);background:rgba(0,20,40,0.6);box-shadow:0 0 20px rgba(0,255,255,0.05)}
+.era-cyberpunk .ch-move-btn{border-color:rgba(0,255,255,0.2);background:rgba(0,40,60,0.4)}
+.era-cyberpunk .ch-move-btn:hover{border-color:rgba(0,255,255,0.5);box-shadow:0 0 15px rgba(0,255,255,0.2)}
+.era-cyberpunk .ch-move-btn.selected{border-color:rgba(0,255,255,0.9)!important;box-shadow:0 0 25px rgba(0,255,255,0.5),0 0 50px rgba(0,255,255,0.15)}
+.era-cyberpunk .ch-log{border-color:rgba(0,255,255,0.2);background:rgba(0,10,20,0.7)}
+.era-cyberpunk .ch-action-bar .b-btn{border-color:rgba(0,255,255,0.3);background:rgba(0,20,40,0.6)}
+.era-cyberpunk .ch-action-bar .b-btn:hover{border-color:rgba(0,255,255,0.5);box-shadow:0 0 10px rgba(0,255,255,0.2)}
+.era-cyberpunk .ch-top-bar .name{color:rgba(0,255,255,0.95);text-shadow:0 0 10px rgba(0,255,255,0.5)}
+.era-cyberpunk .ch-top-bar .title{color:rgba(0,255,200,0.7)}
+.era-cyberpunk .ch-vs{color:rgba(0,255,255,0.9);text-shadow:0 0 20px rgba(0,255,255,0.5)}
+.era-cyberpunk .mini-slot{border-color:rgba(0,255,255,0.3)!important}
+.era-cyberpunk .mini-slot.active{border-color:rgba(0,255,255,0.8)!important;box-shadow:0 0 12px rgba(0,255,255,0.4)!important}
+/* Medieval HP bars and UI */
+.era-medieval .ch-hp-group{border-color:rgba(180,140,80,0.3);background:rgba(40,25,15,0.7)}
+.era-medieval .ch-hp-fill{background:linear-gradient(180deg,#8a6a4a,#6a5030)!important}
+.era-medieval .ch-hp-fill.low{background:linear-gradient(180deg,#cc4444,#993333)!important}
+.era-medieval .ch-hp-fill.mid{background:linear-gradient(180deg,#cc9944,#aa7722)!important}
+.era-medieval .ch-move-grid{border-color:rgba(180,140,80,0.2);background:rgba(30,20,10,0.6)}
+.era-medieval .ch-move-btn{border-color:rgba(180,140,80,0.2);background:rgba(50,30,15,0.4)}
+.era-medieval .ch-move-btn:hover{border-color:rgba(180,140,80,0.5);box-shadow:0 0 10px rgba(180,120,40,0.2)}
+.era-medieval .ch-move-btn.selected{border-color:rgba(255,200,100,0.8)!important;box-shadow:0 0 15px rgba(255,180,60,0.3)}
+.era-medieval .ch-log{border-color:rgba(180,140,80,0.2);background:rgba(30,20,10,0.7)}
+.era-medieval .ch-action-bar .b-btn{border-color:rgba(180,140,80,0.3);background:rgba(40,25,15,0.6)}
+.era-medieval .ch-action-bar .b-btn:hover{border-color:rgba(180,140,80,0.5)}
+.era-medieval .ch-top-bar .name{color:rgba(220,190,140,0.95);text-shadow:0 1px 3px rgba(0,0,0,0.8)}
+.era-medieval .ch-top-bar .title{color:rgba(180,150,100,0.7)}
+.era-medieval .ch-vs{color:rgba(220,190,140,0.9);text-shadow:0 2px 8px rgba(0,0,0,0.6)}
+.era-medieval .mini-slot{border-color:rgba(180,140,80,0.3)!important}
+.era-medieval .mini-slot.active{border-color:rgba(255,200,100,0.8)!important;box-shadow:0 0 10px rgba(255,180,60,0.3)!important}
+.era-medieval .e-dot.filled{background:rgba(200,160,60)!important;border-color:rgba(200,160,60)!important}
+/* Cyberpunk neon pulse animation */
+@keyframes cyberNeonPulse{0%,100%{box-shadow:0 0 8px rgba(0,255,255,0.3),0 0 20px rgba(0,255,255,0.1)}50%{box-shadow:0 0 25px rgba(0,255,255,0.6),0 0 50px rgba(0,255,255,0.2),0 0 80px rgba(0,255,255,0.05)}}
+.era-cyberpunk .ch-pkmn-slot .sprite{animation:cyberNeonPulse 3s ease-in-out infinite}
+/* Cyberpunk holographic shimmer on VS */
+.era-cyberpunk .ch-vs{background:linear-gradient(90deg,rgba(0,255,255,0.2),rgba(255,0,200,0.2),rgba(0,255,150,0.2));-webkit-background-clip:text;background-clip:text;animation:holographicShimmer 3s linear infinite;font-weight:900}
+@keyframes holographicShimmer{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+/* Medieval banner decorations */
+.era-medieval .ch-top-bar::before,.era-medieval .ch-top-bar::after{content:'';position:absolute;top:-5px;width:20px;height:30px;
+  background:linear-gradient(180deg,rgba(180,40,40,0.6),rgba(140,30,30,0.4));
+  clip-path:polygon(0% 0%,100% 0%,100% 80%,50% 100%,0% 80%);pointer-events:none}
+.era-medieval .ch-top-bar::before{left:10px}
+.era-medieval .ch-top-bar::after{right:10px}
+.era-medieval .ch-top-bar{position:relative}
+/* Cyberpunk data stream effect */
+.era-cyberpunk .ch-log{position:relative;overflow:hidden}
+.era-cyberpunk .ch-log::before{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,255,255,0.05),transparent);
+  animation:dataStream 3s linear infinite;pointer-events:none}
+@keyframes dataStream{0%{left:-50%}100%{left:150%}}
+/* Medieval stone texture on HP groups */
+.era-medieval .ch-hp-group{background:rgba(40,25,15,0.8);border:1px solid rgba(120,80,40,0.4);box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)}
+/* Cyberpunk energy dots glow */
+.era-cyberpunk .e-dot.filled{box-shadow:0 0 6px rgba(0,255,255,0.5)}
+/* Weather overlay effects */
+.ch-weather-overlay{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0.3}
+.ch-weather-rain{background:repeating-linear-gradient(100deg,transparent,transparent 10px,rgba(100,150,255,0.1) 10px,rgba(100,150,255,0.1) 11px);animation:rainFall 0.5s linear infinite}
+@keyframes rainFall{0%{background-position:0 0}100%{background-position:20px 40px}}
+.ch-weather-sun{background:radial-gradient(ellipse at 50% 20%,rgba(255,200,50,0.2) 0%,transparent 60%)}
+.ch-weather-snow{background:repeating-radial-gradient(circle at 20% 30%,rgba(255,255,255,0.1) 0,transparent 3px),repeating-radial-gradient(circle at 70% 60%,rgba(255,255,255,0.08) 0,transparent 4px);animation:snowDrift 2s linear infinite}
+@keyframes snowDrift{0%{background-position:0 0,0 0}100%{background-position:10px 20px,-10px 15px}}
+.ch-weather-fog{background:radial-gradient(ellipse at 50% 60%,rgba(200,200,220,0.15) 0%,transparent 70%);animation:fogPulse 4s ease-in-out infinite}
+@keyframes fogPulse{0%,100%{opacity:0.3}50%{opacity:0.6}}
+.ch-weather-sandstorm{background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(180,140,60,0.08) 5px,rgba(180,140,60,0.08) 6px);animation:sandDrift 1s linear infinite}
+@keyframes sandDrift{0%{background-position:0 0}100%{background-position:20px 20px}}
 
 /* Type-colored move buttons */
 .b-move-btn{position:relative;overflow:hidden;transition:all .25s cubic-bezier(.34,1.56,.64,1);border-width:2px!important}
@@ -709,7 +863,7 @@ header h1{font-size:18px}
 .b-move-btn .move-type{display:inline-block;margin-top:3px}
 
 /* ===== MINIGAMES ===== */
-.mg-box{background:var(--surface);border-radius:16px;padding:30px 24px;text-align:center;border:1px solid var(--border-light);max-width:450px;margin:0 auto}
+.mg-box{background:var(--surface);border-radius:16px;padding:30px 24px;text-align:center;border:1px solid var(--border-light);max-width:700px;margin:0 auto}
 .mg-box h2{font-size:20px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .mg-box .sub{color:var(--text-muted);font-size:13px;margin-bottom:20px}
 .mg-box input[type="text"]{width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface-hover);color:var(--text);font-size:16px;outline:none;text-align:center}
@@ -768,7 +922,7 @@ header h1{font-size:18px}
 .mg5-options .eff0{background:var(--ctp-red);color:#fff;border-color:var(--ctp-red)}
 
 /* Leaderboard */
-.lb-wrap{max-width:800px;margin:0 auto;padding:20px}
+.lb-wrap{max-width:1000px;margin:0 auto;padding:20px}
 .lb-wrap h2{font-size:22px;font-weight:800;text-align:center;margin-bottom:16px;background:linear-gradient(135deg,var(--ctp-peach),var(--ctp-yellow));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .lb-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border-radius:14px;border:1px solid var(--border-light)}
 .lb-table th{background:var(--surface-hover);padding:10px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);text-align:left}
@@ -782,7 +936,7 @@ header h1{font-size:18px}
 .gs-btn:hover{background:var(--surface-active);color:var(--text)}
 .gs-btn.active{background:rgba(247,201,72,0.15);border-color:var(--ctp-yellow);color:var(--ctp-yellow)}
 
-.nr-wrap{max-width:480px;margin:0 auto;padding:10px 0}
+.nr-wrap{max-width:600px;margin:0 auto;padding:10px 0}
 .nr-wrap.rngdle{text-align:center}
 .nr-big-number{font-size:56px;font-weight:900;letter-spacing:8px;min-height:70px;color:var(--text-dim);font-family:monospace;margin:20px 0 4px;transition:color .3s}
 .nr-subtitle{font-size:13px;color:var(--text-muted);margin-bottom:20px;font-style:italic}
@@ -894,7 +1048,7 @@ body.light .lb-row.me{background:rgba(247,201,72,0.06);border-color:rgba(247,201
 .rv-item{display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text-dim);cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0}
 .rv-item:hover{background:var(--surface-active);color:var(--text)}
 .rv-item img{width:18px;height:18px;border-radius:3px;object-fit:contain}
-.col-page{max-width:900px;margin:0 auto;padding:20px}
+.col-page{max-width:1200px;margin:0 auto;padding:20px}
 .col-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
 .col-stats{display:flex;gap:16px;font-size:14px}
 .col-stat{color:var(--text-dim)}
@@ -1270,9 +1424,21 @@ body.light .b-bar-hp{background:linear-gradient(90deg,var(--ctp-green),#a6e3a1)!
 body.light .ch-hp-fill{background:linear-gradient(180deg,#6adf6a,#4caf50)!important}
 body.light .ch-hp-fill.low{background:linear-gradient(180deg,#ff6b6b,#e53935)!important}
 body.light .ch-hp-fill.mid{background:linear-gradient(180deg,#ffcc02,#ff9800)!important}
-body.light .ch-bg{background:linear-gradient(180deg,#a0c4e8 0%,#c4e0f0 35%,#b8d8a0 35%,#a0c888 100%)!important}
-body.light .ch-bg.era-medieval{background:linear-gradient(180deg,#8898b0 0%,#b0c8e0 35%,#d8c0a0 35%,#c0b090 100%)!important}
-body.light .ch-bg.era-cyberpunk{background:linear-gradient(180deg,#b0b0d0 0%,#d0c0e0 35%,#c0d8d8 35%,#b0d0d0 100%)!important}
+body.light .ch-bg{background:linear-gradient(180deg,#a0c4e8 0%,#c4e0f0 30%,#b8d8a0 30%,#a0c888 60%,#88b070 100%)!important}
+body.light .ch-bg.era-medieval{background:linear-gradient(180deg,#c8b8a0 0%,#d8c8b0 20%,#e0d0b8 40%,#d0c0a0 60%,#c0b090 100%)!important}
+body.light .ch-bg.era-cyberpunk{background:linear-gradient(180deg,#c0c0e0 0%,#d8d0f0 25%,#e0d8f0 50%,#d0d8e8 75%,#c0d0e0 100%)!important}
+body.light .era-cyberpunk .ch-hp-group{border-color:rgba(100,100,200,0.3);background:rgba(220,220,240,0.8)}
+body.light .era-cyberpunk .ch-move-grid{border-color:rgba(100,100,200,0.2);background:rgba(230,230,250,0.6)}
+body.light .era-cyberpunk .ch-move-btn{border-color:rgba(100,100,200,0.2);background:rgba(240,240,255,0.4)}
+body.light .era-cyberpunk .ch-log{border-color:rgba(100,100,200,0.2);background:rgba(230,230,250,0.7)}
+body.light .era-cyberpunk .ch-top-bar .name{color:rgba(60,60,140,0.95)}
+body.light .era-cyberpunk .ch-vs{color:rgba(80,80,160,0.9)}
+body.light .era-medieval .ch-hp-group{border-color:rgba(140,100,60,0.3);background:rgba(240,230,210,0.8)}
+body.light .era-medieval .ch-move-grid{border-color:rgba(140,100,60,0.2);background:rgba(245,235,220,0.6)}
+body.light .era-medieval .ch-move-btn{border-color:rgba(140,100,60,0.2);background:rgba(250,245,235,0.4)}
+body.light .era-medieval .ch-log{border-color:rgba(140,100,60,0.2);background:rgba(245,235,220,0.7)}
+body.light .era-medieval .ch-top-bar .name{color:rgba(80,50,20,0.95)}
+body.light .era-medieval .ch-vs{color:rgba(100,70,30,0.9)}
 body.light .ch-pkmn-slot .sprite{filter:drop-shadow(0 4px 8px rgba(0,0,0,0.2))}
 body.light .ch-pkmn-slot .cp-badge{color:rgba(0,0,0,0.7);text-shadow:none}
 body.light .ch-hp-group{background:rgba(255,255,255,0.8);border-color:rgba(0,0,0,0.1)}
@@ -1311,10 +1477,18 @@ body.light .ch-hub .hub-pokemon{background:var(--surface);border-color:var(--bor
 body.light .ch-hub .hub-pokemon img{filter:drop-shadow(0 4px 12px rgba(0,0,0,0.15))}
 body.light .ch-hub .hub-pokemon .h-name{color:var(--text);text-shadow:none}
 body.light .ch-hub .hub-pokemon .h-cp{color:var(--text-dim)}
+body.light .ch-hub .hub-pokemon .b-bar-text{color:var(--text)}
 body.light .ch-hub .hub-stats{color:var(--text-dim)}
-body.light .ch-hub .hub-stats span{background:var(--surface);border-color:var(--border)}
-body.light .ch-hub .hub-actions .b-btn{background:var(--surface);color:var(--text);border-color:var(--border)}
-body.light .ch-hub .hub-actions .b-btn:hover{background:var(--surface-hover)}
+body.light .ch-hub .hub-stats span{background:var(--surface);border-color:var(--border);color:var(--text)}
+body.light .ch-hub .hub-actions .b-btn{background:var(--surface);color:var(--text);border-color:var(--border);font-weight:600}
+body.light .ch-hub .hub-actions .b-btn:hover{background:var(--surface-hover);border-color:var(--ctp-mauve)}
+/* Desktop responsive */
+@media(max-width:900px){
+  .ch-hub{grid-template-columns:1fr}
+  .ch-hub .hub-actions{grid-template-columns:1fr 1fr}
+  .ch-move-grid{grid-template-columns:1fr 1fr}
+  .ch-pkmn-slot .sprite{width:110px;height:110px}
+}
 body.light .ch-party .party-card{background:var(--surface);border-color:var(--border)}
 body.light .ch-party .party-card:hover{background:var(--surface-hover)}
 body.light .ch-party .party-card img{filter:none}
