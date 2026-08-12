@@ -3524,15 +3524,12 @@ function renderNr(){
     // Badges as pills
     if(c.length){
       html+='<div class="nr-pill-row">'
-      const maxShow=6
-      const sorted=c.slice(0,maxShow)
-      sorted.forEach(id=>{
+      c.forEach(id=>{
         const bg=nrLookup.get(id)
         if(!bg)return
         const isNew=nrState.newBadges&&nrState.newBadges.has(id)
         html+='<span class="nr-pill '+bg.rarity.toLowerCase()+(isNew?' new':'')+'" onclick="nrBadgeDetail(\''+id+'\')" title="'+bg.desc+'">'+bg.emoji+' '+bg.name+'</span>'
       })
-      if(c.length>maxShow)html+='<span class="nr-pill more">+'+(c.length-maxShow)+' more</span>'
       html+='</div>'
     }
     // EP display

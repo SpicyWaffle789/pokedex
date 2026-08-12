@@ -956,7 +956,7 @@ header h1{font-size:18px}
 .nr-result-number.rarity-epic{color:#ff6f00;text-shadow:0 0 35px rgba(255,111,0,0.5)}
 .nr-result-number.rarity-anomaly{color:#ffd700;text-shadow:0 0 40px rgba(255,215,0,0.6);animation:nrGlow 1.5s ease infinite alternate}
 .nr-result-number.rarity-mythic{color:#ff1744;text-shadow:0 0 45px rgba(255,23,68,0.7);animation:nrGlow 1s ease infinite alternate}
-.nr-pill-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+.nr-pill-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;max-height:120px;overflow-y:auto}
 .nr-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(76,175,80,0.4);background:rgba(76,175,80,0.08);color:#81c784;cursor:pointer;transition:.2s;white-space:nowrap}
 .nr-pill:hover{background:rgba(76,175,80,0.15)}
 .nr-pill.uncommon{border-color:rgba(79,195,247,0.4);background:rgba(79,195,247,0.08);color:#4fc3f7}
