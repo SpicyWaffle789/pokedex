@@ -1,5 +1,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+@font-face{font-family:'Apple Symbols';src:local('Apple Symbols');font-display:swap}
 .ico{display:inline-block;vertical-align:middle;width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.emoji{font-family:'Apple Symbols',-apple-system,system-ui,sans-serif}
 :root{
   --ctp-rosewater:#f5e0dc;--ctp-flamingo:#f2cdcd;--ctp-pink:#f5c2e7;--ctp-mauve:#cba6f7;
   --ctp-red:#f38ba8;--ctp-maroon:#eba0ac;--ctp-peach:#fab387;--ctp-yellow:#f9e2af;

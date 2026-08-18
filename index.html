@@ -17,7 +17,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 </script>
 <header>
   <div class="header-top">
-    <h1><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="24" height="24" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px">Pokédex</h1>
+    <h1>♔ Pokédex</h1>
     <div class="search-container">
       <input type="text" id="searchInput" placeholder="Search Pokemon..." oninput="filterCurrent()">
     </div>
@@ -74,17 +74,17 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
     <button class="tab" data-tab="attacks" onclick="switchTab('attacks')">Attacks</button>
     <button class="tab" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
     <button class="tab" data-tab="games" onclick="switchTab('games')">Games</button>
-    <button class="tab" data-tab="tools" onclick="switchTab('tools')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tool"/></svg> Tools</button>
-    <button class="tab" data-tab="battle" onclick="switchTab('battle')">Battle</button>
-    <button class="tab" data-tab="collection" onclick="switchTab('collection')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> My Cards</button>
-    <button class="tab" data-tab="about" onclick="switchTab('about')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-book-open"/></svg> About</button>
-    <button class="tab" data-tab="wallpaper" onclick="switchTab('wallpaper')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-image"/></svg> Wallpaper</button>
-    <button class="tab" data-tab="operator" onclick="switchTab('operator')" id="operatorTab"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-settings"/></svg> Settings</button>
+    <button class="tab" data-tab="tools" onclick="switchTab('tools')">☣ Tools</button>
+    <button class="tab" data-tab="battle" onclick="switchTab('battle')">⚔ Battle</button>
+    <button class="tab" data-tab="collection" onclick="switchTab('collection')">♔ My Cards</button>
+    <button class="tab" data-tab="about" onclick="switchTab('about')">♧ About</button>
+    <button class="tab" data-tab="wallpaper" onclick="switchTab('wallpaper')">♤ Wallpaper</button>
+    <button class="tab" data-tab="operator" onclick="switchTab('operator')" id="operatorTab">♕ Settings</button>
   </div>
 </header>
 <div id="rvBar" class="rv-bar"><span style="color:var(--text-muted);font-size:11px;white-space:nowrap">Recently Viewed</span></div>
 <div id="homePage" class="home-page">
-  <h1><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="32" height="32" style="image-rendering:pixelated;vertical-align:middle;margin-right:8px">Pokédex</h1>
+  <h1>♔ Pokédex</h1>
   <div class="subtitle">Your complete Pokémon reference — explore 1025+ Pokémon, TCG sets, attacks, abilities, and more</div>
   <div id="potdContainer"></div>
   <div class="home-grid">
@@ -114,61 +114,61 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
     </div>
     <div class="home-card card-wordle" onclick="switchTab('wordle')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="Ditto" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(236,72,153,0.4))"></div>
-      <h3>Wordle</h3>
+      <h3> ☐ Wordle</h3>
       <p>Guess the 6-letter Pokémon — classic Wordle with letter-based hints and autocomplete</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,152,0,0.1));border-color:rgba(255,215,0,0.4)" onclick="switchTab('whosthat')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbasaur" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(122,199,76,0.4)) brightness(0.3)"></div>
-      <h3>Who's That Pokémon?</h3>
+      <h3>☆ Who's That Pokémon?</h3>
       <p>Guess the Pokémon from its silhouette — test your recognition skills!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(99,144,240,0.15),rgba(53,208,186,0.1));border-color:rgba(99,144,240,0.4)" onclick="switchTab('typespeed')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/135.png" alt="Jolteon" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(247,208,44,0.4))"></div>
-      <h3>Type Speed</h3>
+      <h3>⚡ Type Speed</h3>
       <p>Identify Pokémon types as fast as you can — build a streak!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(156,39,176,0.15),rgba(99,144,240,0.1));border-color:rgba(156,39,176,0.4)" onclick="switchTab('memory')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="Alakazam" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(249,85,135,0.4))"></div>
-      <h3>Memory Match</h3>
+      <h3>♫ Memory Match</h3>
       <p>Flip cards and match Pokémon pairs — test your memory!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(244,67,54,0.15),rgba(255,152,0,0.1));border-color:rgba(244,67,54,0.4)" onclick="switchTab('speedrun')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/291.png" alt="Ninjask" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(166,185,26,0.4))"></div>
-      <h3>Speedrun</h3>
+      <h3>⚗ Speedrun</h3>
       <p>Name as many Pokémon as you can in 30 seconds!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(233,30,99,0.15),rgba(156,39,176,0.1));border-color:rgba(233,30,99,0.4)" onclick="switchTab('typequiz')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/59.png" alt="Arcanine" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(238,129,48,0.4))"></div>
-      <h3>Type Quiz</h3>
+      <h3>★ Type Quiz</h3>
       <p>Test your type matchup knowledge — Super Effective or Not Very Effective?</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(255,215,0,0.15),var(--surface));border-color:rgba(255,215,0,0.4)" onclick="switchTab('leaderboard')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png" alt="Dragonite" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(247,201,72,0.4))"></div>
-      <h3>Leaderboard</h3>
+      <h3>♔ Leaderboard</h3>
       <p>See how your scores compare — track records across all games!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(244,67,54,0.15),rgba(255,152,0,0.1));border-color:rgba(244,67,54,0.4)" onclick="switchTab('battle')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/68.png" alt="Machamp" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(194,46,40,0.4))"></div>
-      <h3>Champions</h3>
+      <h3>⚔ Champions</h3>
       <p>3v3 trainer battles with 4-move combat, type strategy, status effects, badges, and rank progression!</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(156,39,176,0.15),rgba(99,144,240,0.1));border-color:rgba(156,39,176,0.4)" onclick="switchTab('about')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/142.png" alt="Aerodactyl" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(183,161,54,0.4))"></div>
-      <h3>About Pokémon</h3>
+      <h3>♔ About Pokémon</h3>
       <p>The history and origins of Pokémon — from Satoshi Tajiri's childhood to a global phenomenon</p>
       <div class="arrow">→</div>
     </div>
     <div class="home-card" style="background:linear-gradient(135deg,rgba(33,150,243,0.15),rgba(0,188,212,0.1));border-color:rgba(33,150,243,0.4)" onclick="switchTab('wallpaper')">
       <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/384.png" alt="Rayquaza" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(63,81,181,0.4))"></div>
-      <h3>Wallpaper Generator</h3>
+      <h3>☣ Wallpaper Generator</h3>
       <p>Create custom Pokémon wallpapers with your favorite Pokémon</p>
       <div class="arrow">→</div>
     </div>
@@ -225,19 +225,19 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 <div id="gamesPage" style="display:none">
   <div style="max-width:1200px;margin:0 auto;padding:16px 20px">
     <div style="display:flex;gap:6px;padding:4px 0 12px;flex-wrap:wrap;justify-content:center" id="gameSelector">
-      <button class="gs-btn active" data-game="wordle" onclick="selectGame('wordle')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Wordle</button>
-      <button class="gs-btn" data-game="whosthat" onclick="selectGame('whosthat')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Who's That</button>
-      <button class="gs-btn" data-game="typespeed" onclick="selectGame('typespeed')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/135.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Type Speed</button>
-      <button class="gs-btn" data-game="memory" onclick="selectGame('memory')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Memory</button>
-      <button class="gs-btn" data-game="speedrun" onclick="selectGame('speedrun')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/291.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Speedrun</button>
-      <button class="gs-btn" data-game="typequiz" onclick="selectGame('typequiz')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/59.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Type Quiz</button>
-      <button class="gs-btn" data-game="numberroll" onclick="selectGame('numberroll')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/37.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Number Roll</button>
-      <button class="gs-btn" data-game="achievements" onclick="selectGame('achievements')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" width="16" height="16" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> Achievements</button>
+      <button class="gs-btn active" data-game="wordle" onclick="selectGame('wordle')">☐ Wordle</button>
+      <button class="gs-btn" data-game="whosthat" onclick="selectGame('whosthat')">☆ Who's That</button>
+      <button class="gs-btn" data-game="typespeed" onclick="selectGame('typespeed')">⚡ Type Speed</button>
+      <button class="gs-btn" data-game="memory" onclick="selectGame('memory')">♫ Memory</button>
+      <button class="gs-btn" data-game="speedrun" onclick="selectGame('speedrun')">⚗ Speedrun</button>
+      <button class="gs-btn" data-game="typequiz" onclick="selectGame('typequiz')">★ Type Quiz</button>
+      <button class="gs-btn" data-game="numberroll" onclick="selectGame('numberroll')">♔ Number Roll</button>
+      <button class="gs-btn" data-game="achievements" onclick="selectGame('achievements')">♕ Achievements</button>
     </div>
     <div id="gameContent">
       <div id="gameWordle">
         <div class="wg-header">
-          <h2>Pokémon Wordle</h2>
+          <h2>☐ Pokémon Wordle</h2>
           <p>Guess the 6-letter Pokémon!<br><span style="color:var(--ctp-green)">■</span> correct · <span style="color:var(--ctp-yellow)">■</span> wrong spot · <span style="color:var(--text-muted)">■</span> not in word</p>
         </div>
         <div id="wgGrid" class="wg-grid"></div>
@@ -285,7 +285,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 <div id="battlePage">
   <div class="b-container">
     <div id="chStarter">
-      <div class="b-title">Choose your starter Pokémon!</div>
+      <div class="b-title">⚔ Choose your starter Pokémon!</div>
       <div id="chStarterOptions" class="b-start-grid"></div>
     </div>
 
@@ -418,15 +418,15 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 <div id="toolsPage" style="display:none">
   <div style="max-width:1200px;margin:0 auto;padding:16px 20px">
     <div style="display:flex;gap:6px;padding:4px 0 12px;flex-wrap:wrap;justify-content:center" id="toolSelector">
-      <button class="gs-btn active" data-tool="teambuilder" onclick="selectTool('teambuilder')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tool"/></svg> Team Builder</button>
-      <button class="gs-btn" data-tool="typecalc" onclick="selectTool('typecalc')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg> Type Calc</button>
-      <button class="gs-btn" data-tool="compare" onclick="selectTool('compare')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg> Compare</button>
-      <button class="gs-btn" data-tool="simulator" onclick="selectTool('simulator')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg> Simulator</button>
-      <button class="gs-btn" data-tool="movetutor" onclick="selectTool('movetutor')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-search"/></svg> Move Tutor</button>
-      <button class="gs-btn" data-tool="dmgcalc" onclick="selectTool('dmgcalc')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg> Dmg Calc</button>
-      <button class="gs-btn" data-tool="coverage" onclick="selectTool('coverage')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-grid"/></svg> Type Matrix</button>
-      <button class="gs-btn" data-tool="teamcard" onclick="selectTool('teamcard')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> Team Card</button>
-      <button class="gs-btn" data-tool="evotree" onclick="selectTool('evotree')"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-git-branch"/></svg> Evo Tree</button>
+      <button class="gs-btn active" data-tool="teambuilder" onclick="selectTool('teambuilder')">☣ Team Builder</button>
+      <button class="gs-btn" data-tool="typecalc" onclick="selectTool('typecalc')">∑ Type Calc</button>
+      <button class="gs-btn" data-tool="compare" onclick="selectTool('compare')">⚖ Compare</button>
+      <button class="gs-btn" data-tool="simulator" onclick="selectTool('simulator')">⚔ Simulator</button>
+      <button class="gs-btn" data-tool="movetutor" onclick="selectTool('movetutor')">☣ Move Tutor</button>
+      <button class="gs-btn" data-tool="dmgcalc" onclick="selectTool('dmgcalc')">⚡ Dmg Calc</button>
+      <button class="gs-btn" data-tool="coverage" onclick="selectTool('coverage')">☷ Type Matrix</button>
+      <button class="gs-btn" data-tool="teamcard" onclick="selectTool('teamcard')">♔ Team Card</button>
+      <button class="gs-btn" data-tool="evotree" onclick="selectTool('evotree')">☭ Evo Tree</button>
     </div>
     <div id="toolContent">
       <div id="toolTeambuilder"><div class="mg-box" id="tbContent"></div></div>
@@ -441,9 +441,9 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center">
           <input type="text" id="tcNameInput" placeholder="Trainer Name" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;width:180px" value="Ash">
           <select id="tcBgSelect" onchange="tcSetTheme(this.value)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px">
-            <option value="fire">🔥 Fire</option><option value="water">💧 Water</option><option value="grass">🌿 Grass</option>
-            <option value="electric">⚡ Electric</option><option value="psychic">🔮 Psychic</option><option value="dragon">🐉 Dragon</option>
-            <option value="retro">🎮 Retro GB</option><option value="cyberpunk">🌆 Cyberpunk</option><option value="noir">🖤 Noir</option>
+            <option value="fire">☀ Fire</option><option value="water">☂ Water</option><option value="grass">♠ Grass</option>
+            <option value="electric">⚡ Electric</option><option value="psychic">☯ Psychic</option><option value="dragon">♔ Dragon</option>
+            <option value="retro">☐ Retro GB</option><option value="cyberpunk">♞ Cyberpunk</option><option value="noir">♠ Noir</option>
           </select>
         </div>
         <div id="tcPickGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px"></div>
@@ -458,13 +458,13 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 </div>
 
 <div id="operatorPage" style="padding:40px 20px;max-width:1200px;margin:0 auto;text-align:center">
-  <h2 style="font-size:24px;font-weight:800;margin-bottom:4px"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" width="24" height="24" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Settings</h2>
+  <h2 style="font-size:24px;font-weight:800;margin-bottom:4px">♔ Settings</h2>
   <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px">Cache management and data tools</p>
   <div style="display:flex;flex-direction:column;gap:10px">
-    <button onclick="opCacheStatus()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(247,201,72,0.3);background:rgba(247,201,72,0.1);color:var(--ctp-yellow);font-size:14px;font-weight:700;cursor:pointer"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="" width="20" height="20" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Show Cache Status</button>
-    <button onclick="opClearApiCache()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,152,0,0.3);background:rgba(255,152,0,0.1);color:var(--ctp-peach);font-size:14px;font-weight:700;cursor:pointer"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="" width="20" height="20" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Clear API Cache</button>
-    <button onclick="opWipeLeaderboard()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.3);background:rgba(255,50,50,0.1);color:var(--ctp-red);font-size:14px;font-weight:700;cursor:pointer"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png" alt="" width="20" height="20" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Wipe All Leaderboard Data</button>
-    <button onclick="opWipeAll()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.5);background:rgba(255,50,50,0.15);color:var(--ctp-red);font-size:14px;font-weight:700;cursor:pointer"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/105.png" alt="" width="20" height="20" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Wipe EVERYTHING (all localStorage)</button>
+    <button onclick="opCacheStatus()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(247,201,72,0.3);background:rgba(247,201,72,0.1);color:var(--ctp-yellow);font-size:14px;font-weight:700;cursor:pointer">♕ Show Cache Status</button>
+    <button onclick="opClearApiCache()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,152,0,0.3);background:rgba(255,152,0,0.1);color:var(--ctp-peach);font-size:14px;font-weight:700;cursor:pointer">♖ Clear API Cache</button>
+    <button onclick="opWipeLeaderboard()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.3);background:rgba(255,50,50,0.1);color:var(--ctp-red);font-size:14px;font-weight:700;cursor:pointer">♗ Wipe All Leaderboard Data</button>
+    <button onclick="opWipeAll()" style="padding:14px 24px;border-radius:12px;border:1px solid rgba(255,50,50,0.5);background:rgba(255,50,50,0.15);color:var(--ctp-red);font-size:14px;font-weight:700;cursor:pointer">♘ Wipe EVERYTHING (all localStorage)</button>
   </div>
   <div id="opResult" style="margin-top:16px;font-size:13px;color:var(--text-dim)"></div>
 </div>
@@ -472,7 +472,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
 <div id="collectionPage" class="col-page">
   <div class="col-header" style="flex-direction:column;align-items:stretch;gap:12px">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="font-size:22px;font-weight:800;margin:0"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="24" height="24" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px"> My Cards</h2>
+      <h2 style="font-size:22px;font-weight:800;margin:0">♔ My Cards</h2>
       <span id="colStats" class="col-stats"></span>
     </div>
     <div style="position:relative">
@@ -503,7 +503,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
       <div id="wlList"></div>
     </div>
     <div style="flex:1;min-width:280px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">📦 Export / Import</h3>
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">☊ Export / Import</h3>
       <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Backup or restore cards, wallpapers, and saves</p>
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <button class="b-btn b-btn-primary" onclick="pcExport()" style="font-size:12px">Export (copies to clipboard)</button>
@@ -518,7 +518,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
   </div>
 </div>
 <div id="wallpaperPage" style="display:none;max-width:1200px;margin:0 auto;padding:20px">
-  <h1 style="font-size:24px;font-weight:800;margin-bottom:16px;text-align:center"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/384.png" alt="" width="28" height="28" style="image-rendering:pixelated;vertical-align:middle;margin-right:6px"> Wallpaper Generator</h1>
+  <h1 style="font-size:24px;font-weight:800;margin-bottom:16px;text-align:center">☣ Wallpaper Generator</h1>
   <div style="display:flex;gap:16px;flex-wrap:wrap">
     <div style="flex:1;min-width:280px">
       <div style="background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border)">
@@ -542,26 +542,26 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
         </select>
         <label style="font-size:12px;font-weight:600;color:var(--text-dim);display:block;margin-top:12px;margin-bottom:6px">Background Style</label>
         <select id="wpBgStyle" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;box-sizing:border-box">
-          <option value="gradient">Gradient</option>
-          <option value="solid">Solid Color</option>
-          <option value="radial">Radial Burst</option>
-          <option value="pattern">Type Pattern</option>
-          <option value="dark">Dark Minimal</option>
-          <option value="neon">Neon Glow</option>
-          <option value="scene_forest"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Forest</option>
-          <option value="scene_cave"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/41.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Cave</option>
-          <option value="scene_beach"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/129.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Beach</option>
-          <option value="scene_mountain"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/95.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Mountain</option>
-          <option value="scene_volcano"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Volcano</option>
-          <option value="scene_space"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/384.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Space</option>
-          <option value="scene_aurora"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/151.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Aurora</option>
-          <option value="scene_city"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/81.png" alt="" width="14" height="14" style="image-rendering:pixelated"> City</option>
-          <option value="scene_ocean"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/130.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Ocean</option>
-          <option value="scene_desert"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/27.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Desert</option>
-          <option value="scene_night"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/35.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Night Sky</option>
-          <option value="scene_storm"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Thunderstorm</option>
-          <option value="scene_cherry"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Cherry Blossom</option>
-          <option value="scene_tundra"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/131.png" alt="" width="14" height="14" style="image-rendering:pixelated"> Tundra</option>
+          <option value="gradient">☆ Gradient</option>
+          <option value="solid">■ Solid Color</option>
+          <option value="radial">◎ Radial Burst</option>
+          <option value="pattern">♧ Type Pattern</option>
+          <option value="dark">♠ Dark Minimal</option>
+          <option value="neon">✦ Neon Glow</option>
+          <option value="scene_forest">♧ Forest</option>
+          <option value="scene_cave">▣ Cave</option>
+          <option value="scene_beach">☂ Beach</option>
+          <option value="scene_mountain">▲ Mountain</option>
+          <option value="scene_volcano">▲ Volcano</option>
+          <option value="scene_space">☆ Space</option>
+          <option value="scene_aurora">☯ Aurora</option>
+          <option value="scene_city">♞ City</option>
+          <option value="scene_ocean">☂ Ocean</option>
+          <option value="scene_desert">▲ Desert</option>
+          <option value="scene_night">☽ Night Sky</option>
+          <option value="scene_storm">⚡ Thunderstorm</option>
+          <option value="scene_cherry">♧ Cherry Blossom</option>
+          <option value="scene_tundra">☃ Tundra</option>
         </select>
         <label style="font-size:12px;font-weight:600;color:var(--text-dim);display:block;margin-top:12px;margin-bottom:6px">Background Color</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap" id="wpColors">
@@ -577,36 +577,36 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
         <input id="wpColorPick" type="color" value="#1a1a2e" style="margin-top:6px;width:100%;height:32px;border:none;border-radius:6px;cursor:pointer;background:transparent" oninput="document.querySelectorAll('.wp-color-swatch').forEach(s=>s.classList.remove('active'))">
         <label style="font-size:12px;font-weight:600;color:var(--text-dim);display:block;margin-top:12px;margin-bottom:6px">Layout</label>
         <select id="wpLayout" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;box-sizing:border-box">
-          <option value="center">Centered Large</option>
-          <option value="bottom">Bottom Center</option>
-          <option value="corner">Bottom Right Corner</option>
-          <option value="tiled">Tiled Pattern</option>
-          <option value="silhouette">Type Silhouette</option>
+          <option value="center">◎ Centered Large</option>
+          <option value="bottom">▼ Bottom Center</option>
+          <option value="corner">◢ Bottom Right Corner</option>
+          <option value="tiled">▣ Tiled Pattern</option>
+          <option value="silhouette">♤ Type Silhouette</option>
         </select>
         <label style="font-size:12px;font-weight:600;color:var(--text-dim);display:block;margin-top:12px;margin-bottom:6px">Sprite Style</label>
         <select id="wpSprite" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;box-sizing:border-box">
-          <option value="official">Official Art</option>
-          <option value="front">Pixel Front</option>
-          <option value="shiny">Shiny</option>
-          <option value="dream">Dream World</option>
-          <option value="home">HOME Art</option>
+          <option value="official">☆ Official Art</option>
+          <option value="front">♤ Pixel Front</option>
+          <option value="shiny">★ Shiny</option>
+          <option value="dream">♧ Dream World</option>
+          <option value="home">♔ HOME Art</option>
         </select>
         <label style="font-size:12px;font-weight:600;color:var(--text-dim);display:block;margin-top:12px;margin-bottom:6px">Text Overlay (optional)</label>
         <input id="wpText" type="text" placeholder="e.g. I choose you!" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:13px;box-sizing:border-box">
         <div style="display:flex;gap:6px;margin-top:6px">
           <select id="wpTextSize" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px">
-            <option value="small">Small</option>
-            <option value="medium" selected>Medium</option>
-            <option value="large">Large</option>
-            <option value="huge">Huge</option>
+            <option value="small">♤ Small</option>
+            <option value="medium" selected>♤ Medium</option>
+            <option value="large">♤ Large</option>
+            <option value="huge">♤ Huge</option>
           </select>
           <select id="wpTextPos" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px">
-            <option value="top">Top</option>
-            <option value="bottom" selected>Bottom</option>
+            <option value="top">▲ Top</option>
+            <option value="bottom" selected>▼ Bottom</option>
           </select>
         </div>
         <details style="margin-top:12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px">
-          <summary style="font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;user-select:none"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png" alt="" width="14" height="14" style="image-rendering:pixelated;vertical-align:middle"> Advanced Options</summary>
+          <summary style="font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;user-select:none">☣ Advanced Options</summary>
           <div style="margin-top:10px">
             <label style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between"><span>Pokémon Size</span><span id="wpSizeVal">100%</span></label>
             <input id="wpSize" type="range" min="30" max="200" value="100" style="width:100%;margin:4px 0" oninput="document.getElementById('wpSizeVal').textContent=this.value+'%'">
