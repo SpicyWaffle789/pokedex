@@ -952,6 +952,61 @@ header h1{font-size:18px}
 .nr-generate-btn:active{transform:scale(0.98)}
 .nr-generate-btn:disabled{opacity:.4;cursor:default;transform:none}
 .nr-generate-btn.rolled{border-color:var(--ctp-pink)}
+.nr-btn-label{display:block}
+.nr-btn-countdown{display:block;font-size:13px;letter-spacing:2px;opacity:.85;margin-top:4px;font-family:monospace}
+.nr-num-placeholder{color:var(--text-dim);opacity:.4;animation:nrShimmer 2.2s ease infinite;display:inline-block}
+.nr-num-final{color:var(--text);animation:nrCountUp .4s ease both}
+@keyframes nrShimmer{0%,100%{opacity:.25;text-shadow:none}50%{opacity:.85;text-shadow:0 0 18px rgba(137,180,250,0.35)}}
+.nr-digit-slot{display:inline-block;min-width:.62em;color:var(--ctp-blue);opacity:0;transform:scale(0.6);filter:blur(4px);transition:.28s ease}
+.nr-digit-slot.first{transition-delay:.1s}
+.nr-digit-slot.revealed{opacity:1;transform:scale(1);filter:blur(0);color:var(--ctp-yellow);text-shadow:0 0 18px rgba(247,201,72,0.6)}
+.nr-big-number.done .nr-digit-slot.revealed{color:var(--text);text-shadow:0 0 24px rgba(203,139,250,0.45)}
+.nr-result-card.nr-rarity-trash{border-color:#C8A87C}
+.nr-result-card.nr-rarity-common{border-color:#E5E7EB}
+.nr-result-card.nr-rarity-uncommon{border-color:#4ade80}
+.nr-result-card.nr-rarity-rare{border-color:#60a5fa}
+.nr-result-card.nr-rarity-epic{border-color:#a78bfa}
+.nr-result-card.nr-rarity-anomaly{border-color:#fbbf24}
+.nr-result-card.nr-rarity-mythic{border-color:#f87171;box-shadow:0 0 30px 14px rgba(236,72,153,0.4),0 0 45px 20px rgba(168,85,247,0.2)}
+.nr-result-number.nr-rarity-trash{color:#C8A87C}
+.nr-result-number.nr-rarity-common{color:#E5E7EB}
+.nr-result-number.nr-rarity-uncommon{color:#4ade80;text-shadow:0 0 28px rgba(74,222,128,0.4)}
+.nr-result-number.nr-rarity-rare{color:#60a5fa;text-shadow:0 0 30px rgba(96,165,250,0.5)}
+.nr-result-number.nr-rarity-epic{color:#a78bfa;text-shadow:0 0 35px rgba(167,139,250,0.5)}
+.nr-result-number.nr-rarity-anomaly{color:#fbbf24;text-shadow:0 0 40px rgba(251,191,36,0.6);animation:nrGlow 1.5s ease infinite alternate}
+.nr-result-number.nr-rarity-mythic{color:#f87171;text-shadow:0 0 45px rgba(248,113,113,0.7);animation:nrGlow 1s ease infinite alternate}
+.nr-rarity-pill-row{display:flex;gap:8px;justify-content:center;align-items:center;margin:6px 0}
+.nr-rarity-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid;animation:nrPop .4s ease both}
+.nr-rarity-pill.trash{color:#C8A87C;border-color:#C8A87C;background:rgba(200,168,124,0.12)}
+.nr-rarity-pill.common{color:#E5E7EB;border-color:#E5E7EB;background:rgba(229,231,235,0.08)}
+.nr-rarity-pill.uncommon{color:#4ade80;border-color:#4ade80;background:rgba(74,222,128,0.1)}
+.nr-rarity-pill.rare{color:#60a5fa;border-color:#60a5fa;background:rgba(96,165,250,0.1)}
+.nr-rarity-pill.epic{color:#a78bfa;border-color:#a78bfa;background:rgba(167,139,250,0.1)}
+.nr-rarity-pill.anomaly{color:#fbbf24;border-color:#fbbf24;background:rgba(251,191,36,0.1);box-shadow:0 0 12px rgba(251,191,36,0.2)}
+.nr-rarity-pill.mythic{color:#f87171;border-color:#f87171;background:rgba(248,113,113,0.12);box-shadow:0 0 16px rgba(236,72,153,0.3)}
+.nr-top-pill{display:inline-flex;align-items:center;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--border-light);background:var(--surface);color:var(--text-dim);font-family:monospace}
+.nr-lifetime-ep{font-size:13px;color:var(--text-muted);margin:4px 0 2px}
+.nr-next-roll{font-size:12px;color:var(--text-muted);margin-top:10px;font-family:monospace}
+.nr-badge-cards{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.nr-badge-card{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;border:1px solid var(--border-light);background:var(--surface);text-align:left;opacity:0;animation:nrSlideUp .45s ease both}
+.nr-badge-card.scoring{border-left:3px solid var(--ctp-yellow)}
+.nr-badge-card-emoji{font-size:30px;line-height:1;flex-shrink:0}
+.nr-badge-card-body{flex:1;min-width:0}
+.nr-badge-card-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nr-badge-new{display:inline-flex;align-items:center;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800;letter-spacing:1px;background:var(--ctp-yellow);color:#1a1a1a;animation:nrPop .4s ease both}
+.nr-badge-card-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.nr-badge-rarity-pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:0.5px;border:1px solid var(--border-light);background:var(--surface-hover);color:var(--text-muted);text-transform:uppercase}
+.nr-badge-rarity-pill.uncommon{color:#4ade80;border-color:rgba(74,222,128,0.4);background:rgba(74,222,128,0.08)}
+.nr-badge-rarity-pill.rare{color:#60a5fa;border-color:rgba(96,165,250,0.4);background:rgba(96,165,250,0.08)}
+.nr-badge-rarity-pill.epic{color:#a78bfa;border-color:rgba(167,139,250,0.4);background:rgba(167,139,250,0.08)}
+.nr-badge-rarity-pill.anomaly{color:#fbbf24;border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.08)}
+.nr-badge-rarity-pill.mythic{color:#f87171;border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.08)}
+.nr-badge-ep-pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;color:var(--ctp-green);border:1px solid rgba(76,175,80,0.4);background:rgba(76,175,80,0.08)}
+.nr-badge-ep-pill.muted{color:var(--text-muted);border-color:var(--border-light);background:transparent}
+.nr-badge-card-desc{font-size:11px;color:var(--text-muted);line-height:1.45}
+.nr-hl-row{display:flex;gap:2px;margin-top:8px;flex-wrap:wrap}
+.nr-hl-digit{display:inline-flex;align-items:center;justify-content:center;width:22px;height:26px;border-radius:5px;font-family:monospace;font-size:14px;font-weight:700;color:var(--text-dim);background:var(--bg-mid);border:1px solid var(--border-light)}
+.nr-hl-digit.on{color:var(--ctp-yellow);background:rgba(247,201,72,0.15);border-color:rgba(247,201,72,0.4);box-shadow:0 0 8px rgba(247,201,72,0.25)}
 .nr-result-card{background:rgba(255,255,255,0.04);border:2px solid var(--ctp-mauve);border-radius:12px;padding:24px 20px;margin:0 0 16px;animation:nrSlideUp .4s ease both;position:relative;overflow:hidden}
 .nr-result-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,107,107,0.05),rgba(203,139,250,0.08));pointer-events:none}
 .nr-result-number{font-size:64px;font-weight:900;font-family:monospace;letter-spacing:6px;margin-bottom:16px}
@@ -1539,4 +1594,6 @@ input[type="range"].ev-slider::-moz-range-thumb{background:var(--ctp-peach)}
 /* Animated sprite pulse */
 @keyframes sprite-idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 .sprite-animated{animation:sprite-idle 1.2s ease-in-out infinite}
+
+/* PokéClicker styles are injected by clicker.js */
 

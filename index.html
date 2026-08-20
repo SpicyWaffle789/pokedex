@@ -172,6 +172,12 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
       <p>Create custom Pokémon wallpapers with your favorite Pokémon</p>
       <div class="arrow">→</div>
     </div>
+    <div class="home-card" style="background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,68,68,0.1));border-color:rgba(255,215,0,0.4)" onclick="switchTab('clicker')">
+      <div class="icon"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pikachu" width="48" height="48" style="image-rendering:pixelated;filter:drop-shadow(0 2px 8px rgba(247,201,72,0.4))"></div>
+      <h3>⚡ PokéClicker</h3>
+      <p>Click the Pokéball to earn coins — buy upgrades and become the ultimate clicker!</p>
+      <div class="arrow">→</div>
+    </div>
   </div>
 </div>
 <div id="pokePage">
@@ -233,6 +239,7 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
       <button class="gs-btn" data-game="typequiz" onclick="selectGame('typequiz')">★ Type Quiz</button>
       <button class="gs-btn" data-game="numberroll" onclick="selectGame('numberroll')">♔ Number Roll</button>
       <button class="gs-btn" data-game="achievements" onclick="selectGame('achievements')">♕ Achievements</button>
+      <button class="gs-btn" data-game="clicker" onclick="selectGame('clicker')">⚡ Clicker</button>
     </div>
     <div id="gameContent">
       <div id="gameWordle">
@@ -274,6 +281,49 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
         <div class="mg-box"></div>
       </div>
       <div id="gameAchievements" style="display:none"><div class="mg-box" id="achContent"></div></div>
+      <div id="gameClicker" style="display:none">
+        <div class="ck-wrap">
+          <div class="ck-left">
+            <div class="ck-stats-bar">
+              <span>⚡ <span id="ckCoins">0</span></span>
+              <span>Per Click: <span id="ckPerClick">1</span></span>
+              <span>Per Second: <span id="ckPPS">0</span></span>
+              <span id="ckShinyWrap" style="display:none">★ Shiny: <span id="ckShiny">0</span></span>
+            </div>
+            <div class="ck-pokeball-wrap" id="ckPokeball">
+              <div class="ck-pokeball"><svg viewBox="0 0 200 200"><defs><linearGradient id="ckRG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ff4444"/><stop offset="100%" style="stop-color:#cc0000"/></linearGradient><linearGradient id="ckWG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#fff"/><stop offset="100%" style="stop-color:#ddd"/></linearGradient><radialGradient id="ckSH" cx="35%" cy="35%"><stop offset="0%" style="stop-color:rgba(255,255,255,0.4)"/><stop offset="100%" style="stop-color:rgba(255,255,255,0)"/></radialGradient></defs><circle cx="100" cy="100" r="95" fill="url(#ckRG)" stroke="var(--border)" stroke-width="5"/><clipPath id="ckBC"><rect x="0" y="100" width="200" height="100"/></clipPath><circle cx="100" cy="100" r="95" fill="url(#ckWG)" clip-path="url(#ckBC)" stroke="var(--border)" stroke-width="5"/><rect x="0" y="92" width="200" height="16" fill="var(--text-dim)"/><circle cx="100" cy="100" r="28" fill="var(--surface-raise)" stroke="var(--border)" stroke-width="4"/><circle cx="100" cy="100" r="18" fill="var(--surface-hover)" stroke="var(--border)" stroke-width="3"/><circle cx="100" cy="100" r="10" fill="var(--surface-raise)"/><circle cx="100" cy="100" r="95" fill="url(#ckSH)"/></svg></div>
+              <div class="ck-click-mult" id="ckMultLabel" style="display:none">×2</div>
+            </div>
+            <div class="ck-display" id="ckDisplay">0</div>
+            <div class="ck-sub">Click the Pokéball!</div>
+            <div class="ck-prestige-bar" id="ckPrestigeBar" style="display:none">
+              <span>★ <span id="ckPrestigeStars">0</span> Shiny Stars</span>
+              <span>Multiplier: ×<span id="ckPrestigeMult">1</span></span>
+              <button class="ck-btn ck-btn-prestige" onclick="ckPrestige()">★ Prestige Reset</button>
+              <button class="ck-btn ck-btn-stats" onclick="ckToggleStats()">📊 Stats</button>
+            </div>
+          </div>
+          <div class="ck-mid">
+            <div class="ck-tabs">
+              <button class="ck-tab active" onclick="ckTab('buildings',this)">🏪 Buildings</button>
+              <button class="ck-tab" onclick="ckTab('upgrades',this)">⬆ Upgrades</button>
+              <button class="ck-tab" onclick="ckTab('achievements',this)">🏆 Awards</button>
+            </div>
+            <div class="ck-panel" id="ckPanel"></div>
+          </div>
+          <div class="ck-right" id="ckRightPanel" style="display:none">
+            <div class="ck-news" id="ckNews"></div>
+          </div>
+        </div>
+        <div id="ckGoldenWrap"></div>
+        <div class="ck-stats-overlay" id="ckStatsOverlay" style="display:none">
+          <div class="ck-stats-modal">
+            <h3>📊 Statistics</h3>
+            <div id="ckStatsContent"></div>
+            <button class="ck-btn" onclick="ckToggleStats()">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -733,7 +783,10 @@ function ico(name,cls){return '<svg class="ico'+(cls?' '+cls:'')+'" width="1em" 
   </div>
 </div>
 <script src="offline-data.js"></script>
+<script src="rngdle-data.js"></script>
 <script src="script.js"></script>
+<script src="clicker.js"></script>
+<script src="clicker-extra.js"></script>
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 </script>

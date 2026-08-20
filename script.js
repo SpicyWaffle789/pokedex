@@ -353,8 +353,8 @@ document.addEventListener('keydown',e=>{
 let allSets=[],setCardsCache={}
 
 function switchTab(tab){
-  const gameNames=['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements']
-  if(gameNames.includes(tab)){currentTab='games';currentGame=tab}
+  const gameNames=['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements','clicker']
+  if(gameNames.includes(tab)){currentTab='games';currentGame=tab;setTimeout(()=>selectGame(tab),10)}
   else currentTab=tab
   tab=currentTab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
@@ -965,7 +965,7 @@ function selectTool(name){
 function selectGame(name){
   currentGame=name
   document.querySelectorAll('.gs-btn').forEach(b=>b.classList.toggle('active',b.dataset.game===name))
-  ;['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements'].forEach(g=>{
+  ;  ['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements','clicker'].forEach(g=>{
     const id='game'+g.charAt(0).toUpperCase()+g.slice(1)
     const el=document.getElementById(id)
     if(el)el.style.display=g===name?'block':'none'
@@ -978,6 +978,7 @@ function selectGame(name){
   if(name==='typequiz'){mg5={score:0,total:0,used:[],answer:1};initMg5()}
   if(name==='numberroll'){nrStarted=false;initNr()}
   if(name==='achievements')initAchievements()
+  if(name==='clicker')initClicker()
 }
 
 // ===== TEAM BUILDER =====
@@ -2699,810 +2700,52 @@ function chLoad(){
 }
 function chDeleteSave(){localStorage.removeItem(SAVE_KEY)}
 
-// ===== NUMBER ROLL (RNGdle-style) =====
-let nrState={ep:0,rolls:0,badgeCount:0,badges:{},collection:new Set(),lastBadges:[],pastRolls:[],lastEpGain:0,lastBaseEp:0,bestEp:0,streak:0,lastRollDate:null,rarityCounts:{trash:0,common:0,uncommon:0,rare:0,epic:0,anomaly:0,mythic:0}}
+// ===== NUMBER ROLL (RNGdle) =====
+let nrState={ep:0,rolls:0,badgeCount:0,badges:{},collection:new Set(),lastResult:null,pastRolls:[],lastEpGain:0,bestEp:0,streak:0,lastRollDate:null,rarityCounts:{trash:0,common:0,uncommon:0,rare:0,epic:0,anomaly:0,mythic:0}}
 let nrStarted=false
-const NR_BADGES=[
-  // === DIGIT PRESENCE (8) ===
-  {id:'has1',name:'Ones',desc:'Contains digit 1',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>/1/.test(n+'')},
-  {id:'has2',name:'Twos',desc:'Contains digit 2',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>/2/.test(n+'')},
-  {id:'has3',name:'Threes',desc:'Contains digit 3',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>/3/.test(n+'')},
-  {id:'has4',name:'Fours',desc:'Contains digit 4',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>/4/.test(n+'')},
-  {id:'has5',name:'Fives',desc:'Contains digit 5',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>/5/.test(n+'')},
-  {id:'has6',name:'Sixes',desc:'Contains digit 6',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>/6/.test(n+'')},
-  {id:'has8',name:'Eights',desc:'Contains digit 8',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>/8/.test(n+'')},
-  {id:'has9',name:'Nines',desc:'Contains digit 9',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>/9/.test(n+'')},
-  // === ESSENTIAL (24) ===
-  {id:'has7',name:'Lucky 7',desc:'Contains digit 7',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>/7/.test(n+'')},
-  {id:'has0',name:'Zero',desc:'Contains digit 0',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>/0/.test(n+'')},
-  {id:'even',name:'Even Steven',desc:'Number is even',rarity:'Common',ep:500,emoji:'✌️',check:n=>n%2===0},
-  {id:'odd',name:'Oddball',desc:'Number is odd',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>n%2===1},
-  {id:'double',name:'Double Up',desc:'Adjacent repeated digit',rarity:'Common',ep:500,emoji:'🔁',check:n=>/(\d)\1/.test(n+'')},
-  {id:'has69',name:'Nice',desc:'Contains 69',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>/69/.test(n+'')},
-  {id:'has420',name:'Blaze It',desc:'Contains 420',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg>',check:n=>/420/.test(n+'')},
-  {id:'sum7',name:'Sum of 7',desc:'Digits add up to 7',rarity:'Uncommon',ep:2000,emoji:'7️⃣',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t===7}},
-  {id:'under100',name:'Small Fry',desc:'Under 100',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-droplet"/></svg>',check:n=>n<100},
-  {id:'has777',name:'Jackpot',desc:'Contains 777',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dice"/></svg>',check:n=>/777/.test(n+'')},
-  {id:'has1337',name:'Elite',desc:'Contains 1337',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/1337/.test(n+'')},
-  {id:'palindrome',name:'Palindrome',desc:'Same forwards & backwards',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';return s===s.split('').reverse().join('')}},
-  {id:'prime',name:'Prime',desc:'Number is prime',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{if(n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true}},
-  {id:'square',name:'Perfect Square',desc:'Number is a perfect square',rarity:'Rare',ep:10000,emoji:'■',check:n=>{const r=Math.round(Math.sqrt(n));return r*r===n}},
-  {id:'power2',name:'Power of Two',desc:'Number is a power of 2',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg>',check:n=>n>0&&(n&n-1)===0},
-  {id:'allsame',name:'All Same',desc:'All digits identical',rarity:'Epic',ep:50000,emoji:'🃏',check:n=>/^(\d)\1+$/.test(n+'')},
-  {id:'ascending',name:'Ascending',desc:'Strictly increasing digits',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]<=+s[i-1])return false;return s.length>1}},
-  {id:'descending',name:'Descending',desc:'Strictly decreasing digits',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]>=+s[i-1])return false;return s.length>1}},
-  {id:'fibonacci',name:'Fibonacci',desc:'In Fibonacci sequence',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>{if(n<2)return true;let a=0,b=1;while(b<n)[a,b]=[b,a+b];return b===n}},
-  {id:'exact69',name:'Exact 69',desc:'Exactly 69',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n===69},
-  {id:'exact420',name:'Exact 420',desc:'Exactly 420',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-leaf"/></svg>',check:n=>n===420},
-  {id:'exact666',name:'Beast',desc:'Exactly 666',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>n===666},
-  {id:'exact1337',name:'Leet',desc:'Exactly 1337',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>n===1337},
-  {id:'sixofakind',name:'Six of a Kind',desc:'000000–999999',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>/^(\d)\1{5}$/.test(n.toString().padStart(6,'0'))},
-  // === NUMBER LENGTH (5) ===
-  {id:'len1',name:'Single Digit',desc:'0–9',rarity:'Epic',ep:50000,emoji:'1️⃣',check:n=>n<10},
-  {id:'len2',name:'Two Digits',desc:'10–99',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n>9&&n<100},
-  {id:'len3',name:'Three Digits',desc:'100–999',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n>99&&n<1000},
-  {id:'len4',name:'Four Digits',desc:'1,000–9,999',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n>999&&n<10000},
-  {id:'len5',name:'Five Digits',desc:'10,000–99,999',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n>9999&&n<100000},
-  // === FIRST DIGIT (9) ===
-  {id:'fst1',name:'Starts with 1',desc:'First digit is 1',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^1/.test(n+'')},
-  {id:'fst2',name:'Starts with 2',desc:'First digit is 2',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^2/.test(n+'')},
-  {id:'fst3',name:'Starts with 3',desc:'First digit is 3',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^3/.test(n+'')},
-  {id:'fst4',name:'Starts with 4',desc:'First digit is 4',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^4/.test(n+'')},
-  {id:'fst5',name:'Starts with 5',desc:'First digit is 5',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^5/.test(n+'')},
-  {id:'fst6',name:'Starts with 6',desc:'First digit is 6',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^6/.test(n+'')},
-  {id:'fst7',name:'Starts with 7',desc:'First digit is 7',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^7/.test(n+'')},
-  {id:'fst8',name:'Starts with 8',desc:'First digit is 8',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^8/.test(n+'')},
-  {id:'fst9',name:'Starts with 9',desc:'First digit is 9',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>/^9/.test(n+'')},
-  // === LAST DIGIT (10) ===
-  {id:'lst0',name:'Ends with 0',desc:'Last digit is 0',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>n%10===0},
-  {id:'lst1',name:'Ends with 1',desc:'Last digit is 1',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>n%10===1},
-  {id:'lst2',name:'Ends with 2',desc:'Last digit is 2',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>n%10===2},
-  {id:'lst3',name:'Ends with 3',desc:'Last digit is 3',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>n%10===3},
-  {id:'lst4',name:'Ends with 4',desc:'Last digit is 4',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>n%10===4},
-  {id:'lst5',name:'Ends with 5',desc:'Last digit is 5',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>n%10===5},
-  {id:'lst6',name:'Ends with 6',desc:'Last digit is 6',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>n%10===6},
-  {id:'lst7',name:'Ends with 7',desc:'Last digit is 7',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>n%10===7},
-  {id:'lst8',name:'Ends with 8',desc:'Last digit is 8',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>n%10===8},
-  {id:'lst9',name:'Ends with 9',desc:'Last digit is 9',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>n%10===9},
-  // === ASCENDING PAIRS (9) ===
-  {id:'pr01',name:'0-1 Pair',desc:'Contains 01',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/01/.test(n+'')},
-  {id:'pr12',name:'1-2 Pair',desc:'Contains 12',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/12/.test(n+'')},
-  {id:'pr23',name:'2-3 Pair',desc:'Contains 23',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/23/.test(n+'')},
-  {id:'pr34',name:'3-4 Pair',desc:'Contains 34',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/34/.test(n+'')},
-  {id:'pr45',name:'4-5 Pair',desc:'Contains 45',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/45/.test(n+'')},
-  {id:'pr56',name:'5-6 Pair',desc:'Contains 56',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/56/.test(n+'')},
-  {id:'pr67',name:'6-7 Pair',desc:'Contains 67',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/67/.test(n+'')},
-  {id:'pr78',name:'7-8 Pair',desc:'Contains 78',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/78/.test(n+'')},
-  {id:'pr89',name:'8-9 Pair',desc:'Contains 89',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/89/.test(n+'')},
-  // === DESCENDING PAIRS (9) ===
-  {id:'pr10',name:'1-0 Pair',desc:'Contains 10',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/10/.test(n+'')},
-  {id:'pr21',name:'2-1 Pair',desc:'Contains 21',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/21/.test(n+'')},
-  {id:'pr32',name:'3-2 Pair',desc:'Contains 32',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/32/.test(n+'')},
-  {id:'pr43',name:'4-3 Pair',desc:'Contains 43',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/43/.test(n+'')},
-  {id:'pr54',name:'5-4 Pair',desc:'Contains 54',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/54/.test(n+'')},
-  {id:'pr65',name:'6-5 Pair',desc:'Contains 65',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/65/.test(n+'')},
-  {id:'pr76',name:'7-6 Pair',desc:'Contains 76',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/76/.test(n+'')},
-  {id:'pr87',name:'8-7 Pair',desc:'Contains 87',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/87/.test(n+'')},
-  {id:'pr98',name:'9-8 Pair',desc:'Contains 98',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/98/.test(n+'')},
-  // === THREE CONSECUTIVE (14) ===
-  {id:'tr123',name:'1-2-3',desc:'Contains 123',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/123/.test(n+'')},
-  {id:'tr234',name:'2-3-4',desc:'Contains 234',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/234/.test(n+'')},
-  {id:'tr345',name:'3-4-5',desc:'Contains 345',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/345/.test(n+'')},
-  {id:'tr456',name:'4-5-6',desc:'Contains 456',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/456/.test(n+'')},
-  {id:'tr567',name:'5-6-7',desc:'Contains 567',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/567/.test(n+'')},
-  {id:'tr678',name:'6-7-8',desc:'Contains 678',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/678/.test(n+'')},
-  {id:'tr789',name:'7-8-9',desc:'Contains 789',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/789/.test(n+'')},
-  {id:'tr321',name:'3-2-1',desc:'Contains 321',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/321/.test(n+'')},
-  {id:'tr432',name:'4-3-2',desc:'Contains 432',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/432/.test(n+'')},
-  {id:'tr543',name:'5-4-3',desc:'Contains 543',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/543/.test(n+'')},
-  {id:'tr654',name:'6-5-4',desc:'Contains 654',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/654/.test(n+'')},
-  {id:'tr765',name:'7-6-5',desc:'Contains 765',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/765/.test(n+'')},
-  {id:'tr876',name:'8-7-6',desc:'Contains 876',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/876/.test(n+'')},
-  {id:'tr987',name:'9-8-7',desc:'Contains 987',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/987/.test(n+'')},
-  // === FOUR CONSECUTIVE (12) ===
-  {id:'qr1234',name:'1-2-3-4',desc:'Contains 1234',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/1234/.test(n+'')},
-  {id:'qr2345',name:'2-3-4-5',desc:'Contains 2345',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/2345/.test(n+'')},
-  {id:'qr3456',name:'3-4-5-6',desc:'Contains 3456',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/3456/.test(n+'')},
-  {id:'qr4567',name:'4-5-6-7',desc:'Contains 4567',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/4567/.test(n+'')},
-  {id:'qr5678',name:'5-6-7-8',desc:'Contains 5678',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/5678/.test(n+'')},
-  {id:'qr6789',name:'6-7-8-9',desc:'Contains 6789',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/6789/.test(n+'')},
-  {id:'qr4321',name:'4-3-2-1',desc:'Contains 4321',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/4321/.test(n+'')},
-  {id:'qr5432',name:'5-4-3-2',desc:'Contains 5432',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/5432/.test(n+'')},
-  {id:'qr6543',name:'6-5-4-3',desc:'Contains 6543',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/6543/.test(n+'')},
-  {id:'qr7654',name:'7-6-5-4',desc:'Contains 7654',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/7654/.test(n+'')},
-  {id:'qr8765',name:'8-7-6-5',desc:'Contains 8765',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/8765/.test(n+'')},
-  {id:'qr9876',name:'9-8-7-6',desc:'Contains 9876',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/9876/.test(n+'')},
-  // === FIVE CONSECUTIVE (10) ===
-  {id:'qv12345',name:'1-2-3-4-5',desc:'Contains 12345',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/12345/.test(n+'')},
-  {id:'qv23456',name:'2-3-4-5-6',desc:'Contains 23456',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/23456/.test(n+'')},
-  {id:'qv34567',name:'3-4-5-6-7',desc:'Contains 34567',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/34567/.test(n+'')},
-  {id:'qv45678',name:'4-5-6-7-8',desc:'Contains 45678',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/45678/.test(n+'')},
-  {id:'qv56789',name:'5-6-7-8-9',desc:'Contains 56789',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/56789/.test(n+'')},
-  {id:'qv54321',name:'5-4-3-2-1',desc:'Contains 54321',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/54321/.test(n+'')},
-  {id:'qv65432',name:'6-5-4-3-2',desc:'Contains 65432',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/65432/.test(n+'')},
-  {id:'qv76543',name:'7-6-5-4-3',desc:'Contains 76543',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/76543/.test(n+'')},
-  {id:'qv87654',name:'8-7-6-5-4',desc:'Contains 87654',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/87654/.test(n+'')},
-  {id:'qv98765',name:'9-8-7-6-5',desc:'Contains 98765',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/98765/.test(n+'')},
-  // === SIX CONSECUTIVE (8) ===
-  {id:'sx123456',name:'1-2-3-4-5-6',desc:'Contains 123456',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/123456/.test(n+'')},
-  {id:'sx234567',name:'2-3-4-5-6-7',desc:'Contains 234567',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/234567/.test(n+'')},
-  {id:'sx345678',name:'3-4-5-6-7-8',desc:'Contains 345678',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/345678/.test(n+'')},
-  {id:'sx456789',name:'4-5-6-7-8-9',desc:'Contains 456789',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/456789/.test(n+'')},
-  {id:'sx654321',name:'6-5-4-3-2-1',desc:'Contains 654321',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/654321/.test(n+'')},
-  {id:'sx765432',name:'7-6-5-4-3-2',desc:'Contains 765432',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/765432/.test(n+'')},
-  {id:'sx876543',name:'8-7-6-5-4-3',desc:'Contains 876543',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/876543/.test(n+'')},
-  {id:'sx987654',name:'9-8-7-6-5-4',desc:'Contains 987654',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/987654/.test(n+'')},
-  // === DIVISIBILITY (22) ===
-  {id:'dv3',name:'Divisible by 3',desc:'Number is divisible by 3',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>n%3===0},
-  {id:'dv4',name:'Divisible by 4',desc:'Number is divisible by 4',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>n%4===0},
-  {id:'dv5',name:'Divisible by 5',desc:'Number is divisible by 5',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>n%5===0},
-  {id:'dv6',name:'Divisible by 6',desc:'Number is divisible by 6',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>n%6===0},
-  {id:'dv7',name:'Divisible by 7',desc:'Number is divisible by 7',rarity:'Uncommon',ep:2000,emoji:'7️⃣',check:n=>n%7===0},
-  {id:'dv8',name:'Divisible by 8',desc:'Number is divisible by 8',rarity:'Uncommon',ep:2000,emoji:'8️⃣',check:n=>n%8===0},
-  {id:'dv9',name:'Divisible by 9',desc:'Number is divisible by 9',rarity:'Uncommon',ep:2000,emoji:'9️⃣',check:n=>n%9===0},
-  {id:'dv10',name:'Divisible by 10',desc:'Number is divisible by 10',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n%10===0},
-  {id:'dv11',name:'Divisible by 11',desc:'Number is divisible by 11',rarity:'Uncommon',ep:2000,emoji:'1️⃣1️⃣',check:n=>n%11===0},
-  {id:'dv12',name:'Divisible by 12',desc:'Number is divisible by 12',rarity:'Uncommon',ep:2000,emoji:'1️⃣2️⃣',check:n=>n%12===0},
-  {id:'dv13',name:'Divisible by 13',desc:'Number is divisible by 13',rarity:'Uncommon',ep:2000,emoji:'1️⃣3️⃣',check:n=>n%13===0},
-  {id:'dv14',name:'Divisible by 14',desc:'Number is divisible by 14',rarity:'Uncommon',ep:2000,emoji:'1️⃣4️⃣',check:n=>n%14===0},
-  {id:'dv15',name:'Divisible by 15',desc:'Number is divisible by 15',rarity:'Uncommon',ep:2000,emoji:'1️⃣5️⃣',check:n=>n%15===0},
-  {id:'dv16',name:'Divisible by 16',desc:'Number is divisible by 16',rarity:'Rare',ep:10000,emoji:'1️⃣6️⃣',check:n=>n%16===0},
-  {id:'dv17',name:'Divisible by 17',desc:'Number is divisible by 17',rarity:'Rare',ep:10000,emoji:'1️⃣7️⃣',check:n=>n%17===0},
-  {id:'dv18',name:'Divisible by 18',desc:'Number is divisible by 18',rarity:'Rare',ep:10000,emoji:'1️⃣8️⃣',check:n=>n%18===0},
-  {id:'dv19',name:'Divisible by 19',desc:'Number is divisible by 19',rarity:'Rare',ep:10000,emoji:'1️⃣9️⃣',check:n=>n%19===0},
-  {id:'dv20',name:'Divisible by 20',desc:'Number is divisible by 20',rarity:'Rare',ep:10000,emoji:'2️⃣0️⃣',check:n=>n%20===0},
-  {id:'dv25',name:'Divisible by 25',desc:'Number is divisible by 25',rarity:'Rare',ep:10000,emoji:'2️⃣5️⃣',check:n=>n%25===0},
-  {id:'dv50',name:'Divisible by 50',desc:'Number is divisible by 50',rarity:'Rare',ep:10000,emoji:'5️⃣0️⃣',check:n=>n%50===0},
-  {id:'dv100',name:'Divisible by 100',desc:'Number is divisible by 100',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n%100===0},
-  {id:'dv1000',name:'Divisible by 1000',desc:'Number is divisible by 1000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>n%1000===0},
-  // === SUM RANGES (7) ===
-  {id:'sm1_5',name:'Tiny Sum',desc:'Digit sum 1–5',rarity:'Common',ep:500,emoji:'⬇️',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>0&&t<6}},
-  {id:'sm6_10',name:'Small Sum',desc:'Digit sum 6–10',rarity:'Common',ep:500,emoji:'🔽',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>5&&t<11}},
-  {id:'sm11_15',name:'Medium Sum',desc:'Digit sum 11–15',rarity:'Common',ep:500,emoji:'⏸️',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>10&&t<16}},
-  {id:'sm16_20',name:'Large Sum',desc:'Digit sum 16–20',rarity:'Common',ep:500,emoji:'🔼',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>15&&t<21}},
-  {id:'sm21_25',name:'Big Sum',desc:'Digit sum 21–25',rarity:'Uncommon',ep:2000,emoji:'⬆️',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>20&&t<26}},
-  {id:'sm26_30',name:'Huge Sum',desc:'Digit sum 26–30',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>25&&t<31}},
-  {id:'sm31_54',name:'Max Sum',desc:'Digit sum 31–54',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>30}},
-  // === EXACT NUMBERS (25) ===
-  {id:'ex7',name:'Exactly Seven',desc:'Number is exactly 7',rarity:'Epic',ep:50000,emoji:'7️⃣',check:n=>n===7},
-  {id:'ex42',name:'Answer to Life',desc:'Number is exactly 42',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-globe"/></svg>',check:n=>n===42},
-  {id:'ex99',name:'99 Problems',desc:'Number is exactly 99',rarity:'Epic',ep:50000,emoji:'🎵',check:n=>n===99},
-  {id:'ex100',name:'Century',desc:'Number is exactly 100',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg>',check:n=>n===100},
-  {id:'ex111',name:'Triple Ones',desc:'Number is exactly 111',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-medal"/></svg>',check:n=>n===111},
-  {id:'ex123',name:'1-2-3',desc:'Number is exactly 123',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n===123},
-  {id:'ex222',name:'Triple Twos',desc:'Number is exactly 222',rarity:'Epic',ep:50000,emoji:'2️⃣',check:n=>n===222},
-  {id:'ex333',name:'Triple Threes',desc:'Number is exactly 333',rarity:'Epic',ep:50000,emoji:'3️⃣',check:n=>n===333},
-  {id:'ex444',name:'Triple Fours',desc:'Number is exactly 444',rarity:'Epic',ep:50000,emoji:'4️⃣',check:n=>n===444},
-  {id:'ex555',name:'Triple Fives',desc:'Number is exactly 555',rarity:'Epic',ep:50000,emoji:'5️⃣',check:n=>n===555},
-  {id:'ex777',name:'Triple Sevens',desc:'Number is exactly 777',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dice"/></svg>',check:n=>n===777},
-  {id:'ex888',name:'Triple Eights',desc:'Number is exactly 888',rarity:'Epic',ep:50000,emoji:'8️⃣',check:n=>n===888},
-  {id:'ex999',name:'Triple Nines',desc:'Number is exactly 999',rarity:'Epic',ep:50000,emoji:'9️⃣',check:n=>n===999},
-  {id:'ex1000',name:'Grand',desc:'Number is exactly 1000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>n===1000},
-  {id:'ex1111',name:'Four Ones',desc:'Number is exactly 1111',rarity:'Epic',ep:50000,emoji:'1️⃣',check:n=>n===1111},
-  {id:'ex1234',name:'Staircase',desc:'Number is exactly 1234',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===1234},
-  {id:'ex4321',name:'Reverse Staircase',desc:'Number is exactly 4321',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===4321},
-  {id:'ex7777',name:'Four Sevens',desc:'Number is exactly 7777',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dice"/></svg>',check:n=>n===7777},
-  {id:'ex9999',name:'Four Nines',desc:'Number is exactly 9999',rarity:'Epic',ep:50000,emoji:'9️⃣',check:n=>n===9999},
-  {id:'ex10000',name:'Ten Grand',desc:'Number is exactly 10000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>n===10000},
-  {id:'ex12345',name:'Full Staircase',desc:'Number is exactly 12345',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===12345},
-  {id:'ex54321',name:'Reverse Full',desc:'Number is exactly 54321',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===54321},
-  {id:'ex100000',name:'Hundred Grand',desc:'Number is exactly 100000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>n===100000},
-  {id:'ex404',name:'Not Found',desc:'Number is exactly 404',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-globe"/></svg>',check:n=>n===404},
-  {id:'ex911',name:'Emergency',desc:'Number is exactly 911',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>n===911},
-  // === MATH PROPERTIES (20) ===
-  {id:'cube',name:'Perfect Cube',desc:'Number is a perfect cube',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-snowflake"/></svg>',check:n=>{const r=Math.round(Math.cbrt(n));return r*r*r===n}},
-  {id:'triangular',name:'Triangular',desc:'Number is triangular (n(n+1)/2)',rarity:'Rare',ep:10000,emoji:'🔺',check:n=>{const d=Math.sqrt(8*n+1);return d===Math.floor(d)}},
-  {id:'factorial',name:'Factorial',desc:'Number is a factorial (1,2,6,24,120,...)',rarity:'Epic',ep:50000,emoji:'❗',check:n=>{if(n<1)return n===1;let f=1;for(let i=2;f<n;i++)f*=i;return f===n}},
-  {id:'harshad',name:'Harshad',desc:'Divisible by sum of its digits',rarity:'Uncommon',ep:2000,emoji:'🪷',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>0&&n%t===0}},
-  {id:'pow3',name:'Power of 3',desc:'Number is a power of 3',rarity:'Rare',ep:10000,emoji:'3️⃣',check:n=>{if(n<1)return false;while(n%3===0)n/=3;return n===1}},
-  {id:'pow5',name:'Power of 5',desc:'Number is a power of 5',rarity:'Rare',ep:10000,emoji:'5️⃣',check:n=>{if(n<1)return false;while(n%5===0)n/=5;return n===1}},
-  {id:'pow7',name:'Power of 7',desc:'Number is a power of 7',rarity:'Rare',ep:10000,emoji:'7️⃣',check:n=>{if(n<1)return false;while(n%7===0)n/=7;return n===1}},
-  {id:'pow10',name:'Power of 10',desc:'Number is a power of 10',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const s=n+'';return /^10*$/.test(s)}},
-  {id:'mersenne',name:'Mersenne',desc:'One less than a power of 2 (2ⁿ–1)',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{if(n<1)return false;return (n&(n+1))===0}},
-  {id:'repunit',name:'Repunit',desc:'Number is all 1s (1, 11, 111, ...)',rarity:'Epic',ep:50000,emoji:'1️⃣',check:n=>/^1+$/.test(n+'')},
-  {id:'evil',name:'Evil Number',desc:'Binary has an even number of 1s',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>{let c=0;const s=n.toString(2);for(let i=0;i<s.length;i++)if(s[i]==='1')c++;return c%2===0&&n>0}},
-  {id:'odious',name:'Odious Number',desc:'Binary has an odd number of 1s',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>{let c=0;const s=n.toString(2);for(let i=0;i<s.length;i++)if(s[i]==='1')c++;return c%2===1}},
-  {id:'binarypal',name:'Binary Palindrome',desc:'Binary representation is a palindrome',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const b=n.toString(2);return b===b.split('').reverse().join('')&&n>0}},
-  {id:'automorphic',name:'Automorphic',desc:'Square ends with the number itself',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const sq=n*n+'';return sq.endsWith(n+'')}},
-  {id:'abundant',name:'Abundant',desc:'Sum of proper divisors > number',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-download"/></svg>',check:n=>{if(n<2)return false;let s=1;for(let i=2;i*i<=n;i++){if(n%i===0){s+=i;if(i*i!==n)s+=n/i}}return s>n}},
-  {id:'deficient',name:'Deficient',desc:'Sum of proper divisors < number',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-download"/></svg>',check:n=>{if(n<2)return n===1;let s=1;for(let i=2;i*i<=n;i++){if(n%i===0){s+=i;if(i*i!==n)s+=n/i}}return s<n}},
-  {id:'semiprime',name:'Semiprime',desc:'Product of exactly two primes',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg>',check:n=>{if(n<4)return false;let c=0;for(let i=2;i*i<=n&&c<3;i++){while(n%i===0){n/=i;c++}}if(n>1)c++;return c===2}},
-  {id:'perfectnum',name:'Perfect Number',desc:'Sum of proper divisors equals the number',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>{if(n<2)return false;let s=1;for(let i=2;i*i<=n;i++){if(n%i===0){s+=i;if(i*i!==n)s+=n/i}}return s===n}},
-  {id:'smith',name:'Smith Number',desc:'Digit sum equals prime factor digit sum',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-settings"/></svg>',check:n=>{function ds(x){return (x+'').split('').reduce((a,b)=>a+ +b,0)}if(n<2||/^1+$/.test(n+''))return false;let t=n,f=0,fs=0;for(let i=2;i*i<=t;i++){while(t%i===0){fs+=ds(i);t/=i;f++}}if(t>1){fs+=ds(t);f++}return f>1&&ds(n)===fs}},
-  // === POKEMON REFERENCES (15) ===
-  {id:'p25',name:'Pika Sighting',desc:'Contains 25',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>/25/.test(n+'')},
-  {id:'p150',name:'Mewtwo Sighting',desc:'Contains 150',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/150/.test(n+'')},
-  {id:'p151',name:'Mew Sighting',desc:'Contains 151',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-heart"/></svg>',check:n=>/151/.test(n+'')},
-  {id:'p248',name:'Tyranitar',desc:'Contains 248',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dragon"/></svg>',check:n=>/248/.test(n+'')},
-  {id:'p373',name:'Salamence',desc:'Contains 373',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dragon"/></svg>',check:n=>/373/.test(n+'')},
-  {id:'p384',name:'Rayquaza',desc:'Contains 384',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-globe"/></svg>',check:n=>/384/.test(n+'')},
-  {id:'p448',name:'Lucario',desc:'Contains 448',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>/448/.test(n+'')},
-  {id:'p658',name:'Greninja',desc:'Contains 658',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-droplet"/></svg>',check:n=>/658/.test(n+'')},
-  {id:'p700',name:'Sylveon',desc:'Contains 700',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/700/.test(n+'')},
-  {id:'p778',name:'Mimikyu',desc:'Contains 778',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-skull"/></svg>',check:n=>/778/.test(n+'')},
-  {id:'p887',name:'Dragapult',desc:'Contains 887',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dragon"/></svg>',check:n=>/887/.test(n+'')},
-  {id:'p1008',name:'Miraidon',desc:'Contains 1008',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>/1008/.test(n+'')},
-  // === PATTERN BADGES (16) ===
-  {id:'ababa',name:'A-B-A-B-A',desc:'5-digit alternating pattern (e.g. 12121)',rarity:'Rare',ep:10000,emoji:'🔁',check:n=>{const s=n+'';return s.length===5&&s[0]===s[2]&&s[2]===s[4]&&s[1]===s[3]&&s[0]!==s[1]}},
-  {id:'ababab',name:'A-B-A-B-A-B',desc:'6-digit alternating pattern (e.g. 121212)',rarity:'Rare',ep:10000,emoji:'🔁',check:n=>{const s=n+'';return s.length===6&&s[0]===s[2]&&s[2]===s[4]&&s[1]===s[3]&&s[3]===s[5]&&s[0]!==s[1]}},
-  {id:'aabbaa',name:'A-A-B-B-A-A',desc:'6-digit pattern (e.g. 112211)',rarity:'Epic',ep:50000,emoji:'🔂',check:n=>{const s=n+'';return s.length===6&&s[0]===s[1]&&s[1]===s[4]&&s[4]===s[5]&&s[2]===s[3]&&s[0]!==s[2]}},
-  {id:'abcabc',name:'A-B-C-A-B-C',desc:'6-digit pattern (e.g. 123123)',rarity:'Epic',ep:50000,emoji:'🔃',check:n=>{const s=n+'';return s.length===6&&s[0]===s[3]&&s[1]===s[4]&&s[2]===s[5]&&s[0]!==s[1]&&s[1]!==s[2]}},
-  {id:'aabbcc',name:'A-A-B-B-C-C',desc:'6-digit pattern (e.g. 112233)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const s=n+'';return s.length===6&&s[0]===s[1]&&s[2]===s[3]&&s[4]===s[5]&&s[0]!==s[2]&&s[2]!==s[4]}},
-  {id:'aabbb',name:'A-A-B-B-B',desc:'5-digit pattern (e.g. 11777)',rarity:'Rare',ep:10000,emoji:'🔳',check:n=>{const s=n+'';return s.length===5&&s[0]===s[1]&&s[2]===s[3]&&s[3]===s[4]}},
-  {id:'aaabbb',name:'A-A-A-B-B-B',desc:'6-digit pattern (e.g. 111777)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const s=n+'';return s.length===6&&s[0]===s[1]&&s[1]===s[2]&&s[3]===s[4]&&s[4]===s[5]&&s[0]!==s[3]}},
-  {id:'abcddcba',name:'Mirror Pairs',desc:'6-digit palindrome-like (e.g. 123321)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';return s.length===6&&s[0]===s[5]&&s[1]===s[4]&&s[2]===s[3]}},
-  {id:'fiveofakind',name:'Five of a Kind',desc:'5 identical digits (e.g. 77770)',rarity:'Epic',ep:50000,emoji:'🃏',check:n=>{const s=n+'';for(let d=0;d<10;d++){const r=new RegExp('^'+d+'{5}|'+d+'{5}$');if(r.test(s))return true}return false}},
-  {id:'fourconsec',name:'Four Repeat',desc:'Four consecutive identical digits',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>/(\d)\1{3}/.test(n+'')},
-  // === RANGE & BOUNDARY (14) ===
-  {id:'under10',name:'Under 10',desc:'Number is 0–9',rarity:'Epic',ep:50000,emoji:'⬇️',check:n=>n<10},
-  {id:'under50',name:'Under 50',desc:'Number is 0–49',rarity:'Rare',ep:10000,emoji:'⬇️',check:n=>n<50},
-  {id:'under500',name:'Under 500',desc:'Number is 0–499',rarity:'Uncommon',ep:2000,emoji:'⬇️',check:n=>n<500},
-  {id:'under5000',name:'Under 5K',desc:'Number is 0–4,999',rarity:'Common',ep:500,emoji:'⬇️',check:n=>n<5000},
-  {id:'over900k',name:'Over 900K',desc:'Number is over 900,000',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg>',check:n=>n>900000},
-  {id:'over990k',name:'Over 990K',desc:'Number is over 990,000',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>n>990000},
-  {id:'over999k',name:'Over 999K',desc:'Number is over 999,000',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg>',check:n=>n>999000},
-  {id:'inthemiddle',name:'500K Club',desc:'Number is 500,000–599,999',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n>499999&&n<600000},
-  {id:'round100',name:'Round 100',desc:'Multiple of 100',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n%100===0},
-  {id:'round1000',name:'Round 1000',desc:'Multiple of 1000',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>n%1000===0},
-  {id:'round10000',name:'Round 10000',desc:'Multiple of 10000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n%10000===0},
-  // === MEME & CULTURE (12) ===
-  {id:'exact88',name:'88',desc:'Exactly 88',rarity:'Epic',ep:50000,emoji:'🎱',check:n=>n===88},
-  {id:'exact101',name:'101',desc:'Exactly 101 (Dalmatians)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===101},
-  {id:'exact200',name:'200',desc:'Exactly 200',rarity:'Epic',ep:50000,emoji:'2️⃣',check:n=>n===200},
-  {id:'exact300',name:'300',desc:'Exactly 300 (Spartans)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-swords"/></svg>',check:n=>n===300},
-  {id:'exact500',name:'500',desc:'Exactly 500',rarity:'Epic',ep:50000,emoji:'5️⃣',check:n=>n===500},
-  {id:'exact616',name:'616',desc:'Exactly 616 (alternate beast)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>n===616},
-  {id:'exact800',name:'800',desc:'Exactly 800',rarity:'Epic',ep:50000,emoji:'8️⃣',check:n=>n===800},
-  {id:'exact867',name:'5309',desc:'Exactly 867 (Jenny)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>n===867},
-  {id:'exact1331',name:'1331',desc:'Exactly 1331 (11³)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n===1331},
-  {id:'exact1729',name:'1729',desc:'Exactly 1729 (Ramanujan)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n===1729},
-  {id:'exact8008',name:'8008',desc:'Exactly 8008 (BOOB)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-eye"/></svg>',check:n=>n===8008},
-  {id:'exact86753',name:'867-5309',desc:'Exactly 86753 (Jenny)',rarity:'Epic',ep:50000,emoji:'🎵',check:n=>n===86753},
-  // === ADDITIONAL DIGIT PATTERNS (14) ===
-  {id:'noeven',name:'No Even Digits',desc:'All digits are odd (0 evens)',rarity:'Uncommon',ep:2000,emoji:'🟧',check:n=>/^[13579]+$/.test(n+'')},
-  {id:'noodd',name:'No Odd Digits',desc:'All digits are even (0 odds)',rarity:'Uncommon',ep:2000,emoji:'🟩',check:n=>/^[02468]+$/.test(n+'')},
-  {id:'only01',name:'Binary Digits',desc:'Only digits 0 and 1',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/^[01]+$/.test(n+'')},
-  {id:'only012',name:'Ternary Digits',desc:'Only digits 0, 1, 2',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/^[012]+$/.test(n+'')},
-  {id:'only89',name:'High Digits',desc:'Only digits 8 and 9',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/^[89]+$/.test(n+'')},
-  {id:'nostraight',name:'No Straight',desc:'No consecutive digits (e.g. 13579)',rarity:'Common',ep:500,emoji:'🔀',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(Math.abs(+s[i]- +s[i-1])===1)return false;return true}},
-  {id:'gap2',name:'Gap of 2',desc:'Each digit differs by 2 (e.g. 13579)',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(Math.abs(+s[i]- +s[i-1])!==2)return false;return s.length>1}},
-  {id:'combo',name:'Combo Breaker',desc:'No repeated digits',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg>',check:n=>{const s=n+'';for(let i=0;i<s.length;i++)for(let j=i+1;j<s.length;j++)if(s[i]===s[j])return false;return true}},
-  {id:'twopair',name:'Two Pairs',desc:'Two different repeated digits (e.g. 11234)',rarity:'Rare',ep:10000,emoji:'🃏',check:n=>{const s=n+'';const c={};for(let i=0;i<s.length;i++)c[s[i]]=(c[s[i]]||0)+1;return Object.values(c).filter(x=>x>1).length>=2}},
-  {id:'fullhouse',name:'Full House',desc:'Three of one digit, two of another',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-building"/></svg>',check:n=>{const s=n+'';const c={};for(let i=0;i<s.length;i++)c[s[i]]=(c[s[i]]||0)+1;const v=Object.values(c);return v.includes(3)&&v.includes(2)}},
-  {id:'firstlast',name:'Bookends',desc:'First and last digit match',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-layers"/></svg>',check:n=>{const s=n+'';return s.length>1&&s[0]===s[s.length-1]}},
-  {id:'rising',name:'Rising Tide',desc:'Each digit >= previous',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]<+s[i-1])return false;return s.length>1}},
-  {id:'falling',name:'Falling Star',desc:'Each digit <= previous',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]>+s[i-1])return false;return s.length>1}},
-  {id:'pyramid',name:'Pyramid',desc:'Digits go up then down (e.g. 12321)',rarity:'Epic',ep:50000,emoji:'🔺',check:n=>{const s=n+'';let i=0;while(i<s.length-1&&+s[i]<+s[i+1])i++;while(i<s.length-1&&+s[i]>+s[i+1])i++;return i===s.length-1&&s.length>2}},
-  // === CONSTANTS (25) ===
-  {id:'c314159',name:'Pi',desc:'Contains 314159 (π)',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>/314159/.test(n+'')},
-  {id:'c141592',name:'Pi II',desc:'Contains 141592',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>/141592/.test(n+'')},
-  {id:'c271828',name:'Euler',desc:'Contains 271828 (e)',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/271828/.test(n+'')},
-  {id:'c718281',name:'Euler II',desc:'Contains 718281',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/718281/.test(n+'')},
-  {id:'c141421',name:'Root 2',desc:'Contains 141421 (√2)',rarity:'Epic',ep:50000,emoji:'√',check:n=>/141421/.test(n+'')},
-  {id:'c414213',name:'Root 2 II',desc:'Contains 414213',rarity:'Rare',ep:10000,emoji:'√',check:n=>/414213/.test(n+'')},
-  {id:'c161803',name:'Golden Ratio',desc:'Contains 161803 (φ)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/161803/.test(n+'')},
-  {id:'c618033',name:'Golden Ratio II',desc:'Contains 618033',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/618033/.test(n+'')},
-  {id:'c299792',name:'Light Speed',desc:'Contains 299792 (c)',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>/299792/.test(n+'')},
-  {id:'c662607',name:'Planck',desc:'Contains 662607',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg>',check:n=>/662607/.test(n+'')},
-  {id:'c602214',name:'Avogadro',desc:'Contains 602214',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg>',check:n=>/602214/.test(n+'')},
-  {id:'c693147',name:'ln 2',desc:'Contains 693147',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/693147/.test(n+'')},
-  {id:'c230258',name:'ln 10',desc:'Contains 230258',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/230258/.test(n+'')},
-  {id:'c577215',name:'Euler-Mascheroni',desc:'Contains 577215 (γ)',rarity:'Epic',ep:50000,emoji:'γ',check:n=>/577215/.test(n+'')},
-  {id:'c732050',name:'Root 3',desc:'Contains 732050 (√3)',rarity:'Rare',ep:10000,emoji:'√',check:n=>/732050/.test(n+'')},
-  {id:'c236067',name:'Root 5',desc:'Contains 236067 (√5)',rarity:'Rare',ep:10000,emoji:'√',check:n=>/236067/.test(n+'')},
-  {id:'c986960',name:'Pi Squared',desc:'Contains 986960 (π²)',rarity:'Rare',ep:10000,emoji:'■',check:n=>/986960/.test(n+'')},
-  {id:'c628318',name:'Tau',desc:'Contains 628318 (τ)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>/628318/.test(n+'')},
-  {id:'c466920',name:'Feigenbaum',desc:'Contains 466920 (δ)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-leaf"/></svg>',check:n=>/466920/.test(n+'')},
-  {id:'c182818',name:'Euler III',desc:'Contains 182818',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/182818/.test(n+'')},
-  {id:'c213562',name:'Root 2 III',desc:'Contains 213562',rarity:'Rare',ep:10000,emoji:'√',check:n=>/213562/.test(n+'')},
-  {id:'c159265',name:'Pi III',desc:'Contains 159265',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>/159265/.test(n+'')},
-  {id:'c592653',name:'Pi IV',desc:'Contains 592653',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>/592653/.test(n+'')},
-  {id:'c828182',name:'Euler IV',desc:'Contains 828182',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/828182/.test(n+'')},
-  {id:'c180339',name:'Golden III',desc:'Contains 180339',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/180339/.test(n+'')},
-  // === HISTORICAL YEARS (20) ===
-  {id:'y1066',name:'1066',desc:'Contains 1066',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1066/.test(n+'')},
-  {id:'y1492',name:'1492',desc:'Contains 1492',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1492/.test(n+'')},
-  {id:'y1776',name:'1776',desc:'Contains 1776',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1776/.test(n+'')},
-  {id:'y1789',name:'1789',desc:'Contains 1789',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1789/.test(n+'')},
-  {id:'y1812',name:'1812',desc:'Contains 1812',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1812/.test(n+'')},
-  {id:'y1865',name:'1865',desc:'Contains 1865',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1865/.test(n+'')},
-  {id:'y1918',name:'1918',desc:'Contains 1918',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1918/.test(n+'')},
-  {id:'y1929',name:'1929',desc:'Contains 1929',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1929/.test(n+'')},
-  {id:'y1945',name:'1945',desc:'Contains 1945',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1945/.test(n+'')},
-  {id:'y1969',name:'1969',desc:'Contains 1969',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1969/.test(n+'')},
-  {id:'y1977',name:'1977',desc:'Contains 1977',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1977/.test(n+'')},
-  {id:'y1984',name:'1984',desc:'Contains 1984',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1984/.test(n+'')},
-  {id:'y1999',name:'1999',desc:'Contains 1999',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1999/.test(n+'')},
-  {id:'y2001',name:'2001',desc:'Contains 2001',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/2001/.test(n+'')},
-  {id:'y2020',name:'2020',desc:'Contains 2020',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/2020/.test(n+'')},
-  {id:'y1770',name:'1770',desc:'Contains 1770',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1770/.test(n+'')},
-  {id:'y1863',name:'1863',desc:'Contains 1863',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1863/.test(n+'')},
-  {id:'y1941',name:'1941',desc:'Contains 1941',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1941/.test(n+'')},
-  {id:'y1989',name:'1989',desc:'Contains 1989',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/1989/.test(n+'')},
-  {id:'y2012',name:'2012',desc:'Contains 2012',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>/2012/.test(n+'')},
-  // === FAMOUS REFERENCES (20) ===
-  {id:'r90210',name:'90210',desc:'Contains 90210',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/90210/.test(n+'')},
-  {id:'r86753',name:'Jenny',desc:'Contains 86753',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/86753/.test(n+'')},
-  {id:'r80085',name:'80085',desc:'Contains 80085',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/80085/.test(n+'')},
-  {id:'r1134',name:'1134',desc:'Contains 1134',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/1134/.test(n+'')},
-  {id:'r501',name:'501',desc:'Contains 501',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/501/.test(n+'')},
-  {id:'r911',name:'911',desc:'Contains 911',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/911/.test(n+'')},
-  {id:'r711',name:'711',desc:'Contains 711',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/711/.test(n+'')},
-  {id:'r1313',name:'1313',desc:'Contains 1313',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/1313/.test(n+'')},
-  {id:'r212',name:'212',desc:'Contains 212',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/212/.test(n+'')},
-  {id:'r305',name:'305',desc:'Contains 305',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/305/.test(n+'')},
-  {id:'r808',name:'808',desc:'Contains 808',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/808/.test(n+'')},
-  {id:'r303',name:'303',desc:'Contains 303',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/303/.test(n+'')},
-  {id:'r360',name:'360',desc:'Contains 360',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/360/.test(n+'')},
-  {id:'r42069',name:'42069',desc:'Contains 42069',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/42069/.test(n+'')},
-  {id:'r66666',name:'66666',desc:'Contains 66666',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/66666/.test(n+'')},
-  {id:'r77777',name:'77777',desc:'Contains 77777',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/77777/.test(n+'')},
-  {id:'r88888',name:'88888',desc:'Contains 88888',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/88888/.test(n+'')},
-  {id:'r99999',name:'99999',desc:'Contains 99999',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/99999/.test(n+'')},
-  {id:'r11111',name:'11111',desc:'Contains 11111',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/11111/.test(n+'')},
-  {id:'r786',name:'786',desc:'Contains 786',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/786/.test(n+'')},
-  // === MORE EXACT NUMBERS (20) ===
-  {id:'ex8',name:'Exactly 8',desc:'Number is 8',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===8},
-  {id:'ex10',name:'Exactly 10',desc:'Number is 10',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===10},
-  {id:'ex12',name:'Exactly 12',desc:'Number is 12',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===12},
-  {id:'ex20',name:'Exactly 20',desc:'Number is 20',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===20},
-  {id:'ex21',name:'Exactly 21',desc:'Number is 21',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===21},
-  {id:'ex50',name:'Exactly 50',desc:'Number is 50',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===50},
-  {id:'ex77',name:'Exactly 77',desc:'Number is 77',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===77},
-  {id:'ex108',name:'Exactly 108',desc:'Number is 108',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===108},
-  {id:'ex200',name:'Exactly 200',desc:'Number is 200',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===200},
-  {id:'ex500',name:'Exactly 500',desc:'Number is 500',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===500},
-  {id:'ex11111',name:'Five Ones',desc:'Number is 11111',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===11111},
-  {id:'ex22222',name:'Five Twos',desc:'Number is 22222',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===22222},
-  {id:'ex33333',name:'Five Threes',desc:'Number is 33333',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===33333},
-  {id:'ex44444',name:'Five Fours',desc:'Number is 44444',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===44444},
-  {id:'ex55555',name:'Five Fives',desc:'Number is 55555',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===55555},
-  {id:'ex66666',name:'Five Sixes',desc:'Number is 66666',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===66666},
-  {id:'ex77777',name:'Five Sevens',desc:'Number is 77777',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===77777},
-  {id:'ex88888',name:'Five Eights',desc:'Number is 88888',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===88888},
-  {id:'ex99999',name:'Five Nines',desc:'Number is 99999',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===99999},
-  {id:'ex80808',name:'Exactly 80808',desc:'Number is 80808',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n===80808},
-  // === MORE MATH (15) ===
-  {id:'mh_happy',name:'Happy',desc:'Sum of squares of digits reaches 1',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>{const s=new Set();while(n!==1&&!s.has(n)){s.add(n);n=n.toString().split('').reduce((a,b)=>a+ +b*+b,0)}return n===1}},
-  {id:'mh_emirp',name:'Emirp',desc:'Prime reversed is a different prime',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{function p(x){if(x<2)return false;for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true}const r=+(n+'').split('').reverse().join('');return p(n)&&r!==n&&p(r)}},
-  {id:'mh_sophie',name:'Sophie Germain',desc:'Prime where 2p+1 is also prime',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-leaf"/></svg>',check:n=>{function p(x){if(x<2)return false;for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true}return p(n)&&p(2*n+1)}},
-  {id:'mh_zeroless',name:'Zero-Free',desc:'No digit 0 in the number',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>!/0/.test(n+'')},
-  {id:'mh_oneless',name:'One-Free',desc:'No digit 1 in the number',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>!/1/.test(n+'')},
-  {id:'mh_ninefree',name:'Nine-Free',desc:'No digit 9 in the number',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>!/9/.test(n+'')},
-  {id:'mh_digsumprime',name:'Prime Digit Sum',desc:'Sum of digits is prime',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let s=0;for(const c of n+'')s+=+c;if(s<2)return false;for(let i=2;i*i<=s;i++)if(s%i===0)return false;return true}},
-  {id:'mh_digproduct',name:'High Product',desc:'Product of digits > 1000',rarity:'Rare',ep:10000,emoji:'✖️',check:n=>{let p=1;for(const c of n+'')p*=+c;return p>1000}},
-  {id:'mh_digprod0',name:'Zero Product',desc:'Product of digits is 0',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.includes('0')}},
-  {id:'mh_sumpal',name:'Sum Palindrome',desc:'Sum of digits is a palindrome',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];const ts=t+'';return ts===ts.split('').reverse().join('')}},
-  {id:'mh_balprime',name:'Balanced Prime',desc:'Prime with equal prime neighbors',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>{function p(x){if(x<2)return false;for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true}return p(n)&&p(n-6)&&p(n+6)}},
-  {id:'mh_woodall',name:'Woodall',desc:'n = k*2^k-1 form',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-tree"/></svg>',check:n=>{for(let k=1;k<20;k++)if(k*Math.pow(2,k)-1===n)return true;return false}},
-  {id:'mh_cullen',name:'Cullen',desc:'n = k*2^k+1 form',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg>',check:n=>{for(let k=1;k<20;k++)if(k*Math.pow(2,k)+1===n)return true;return false}},
-  {id:'mh_digitalroot9',name:'Digital Root 9',desc:'Sum of digits until single digit = 9',rarity:'Uncommon',ep:2000,emoji:'9️⃣',check:n=>{while(n>9){let s=0;for(const c of n+'')s+=+c;n=s}return n===9}},
-  {id:'mh_digitalroot3',name:'Digital Root 3',desc:'Sum of digits until single digit = 3',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{while(n>9){let s=0;for(const c of n+'')s+=+c;n=s}return n===3}},
-  // === MORE DIGIT PATTERNS (20) ===
-  {id:'dp_pal3in',name:'3-Pal Inside',desc:'Contains a 3-digit palindrome',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>/(.)(.)\1/.test(n+'')},
-  {id:'dp_pal4in',name:'4-Pal Inside',desc:'Contains a 4-digit palindrome',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>/(.)(.)\2\1/.test(n+'')},
-  {id:'dp_con3ev',name:'3 Evens Run',desc:'3 consecutive even digits',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>/[02468]{3}/.test(n+'')},
-  {id:'dp_con3od',name:'3 Odds Run',desc:'3 consecutive odd digits',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>/[13579]{3}/.test(n+'')},
-  {id:'dp_ladder',name:'Ladder',desc:'Digits alternate up-down-up',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>{const s=n+'';for(let i=2;i<s.length;i++){const a=s[i-2],b=s[i-1],c=s[i];if(!(a<b&&b>c||a>b&&b<c)){if(i>2)return false}}return s.length>2}},
-  {id:'dp_rep3',name:'Triple Repeat',desc:'3 same digits anywhere',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>/(.)\1\1/.test(n+'')},
-  {id:'dp_alow',name:'Low Life',desc:'All digits 0-3',rarity:'Uncommon',ep:2000,emoji:'🔽',check:n=>/^[0-3]+$/.test(n+'')},
-  {id:'dp_amid',name:'Mid Range',desc:'All digits 3-6',rarity:'Common',ep:500,emoji:'🔵',check:n=>/^[3-6]+$/.test(n+'')},
-  {id:'dp_ahi',name:'High Roller',desc:'All digits 7-9',rarity:'Rare',ep:10000,emoji:'🔼',check:n=>/^[7-9]+$/.test(n+'')},
-  {id:'dp_bal',name:'Balanced',desc:'First 3 sum = last 3 sum',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>{const s=(n+'').padStart(6,'0');let a=0,b=0;for(let i=0;i<3;i++)a+=+s[i];for(let i=3;i<6;i++)b+=+s[i];return a===b}},
-  {id:'dp_extreme',name:'Extreme Ends',desc:'First & last digit differ by 5+',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>️',check:n=>{const s=n+'';return s.length>1&&Math.abs(+s[0]- +s[s.length-1])>=5}},
-  {id:'dp_capped',name:'Capped',desc:'Both ends same, middle different',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>{const s=n+'';return s.length>2&&s[0]===s[s.length-1]&&s[0]!==s[1]&&s[0]!==s[s.length-2]}},
-  {id:'dp_zigzag',name:'Zigzag',desc:'Contains peak-valley pattern',rarity:'Rare',ep:10000,emoji:'〰️',check:n=>{const s=n+'';return [...s].slice(0,-2).some((_,i)=>+s[i]<+s[i+1]&&+s[i+1]>+s[i+2])}},
-  {id:'dp_inc2',name:'+2 Steps',desc:'Contains adjacent digits differing by 2',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';return [...s].slice(0,-1).some((_,i)=>+s[i+1]- +s[i]===2)}},
-  {id:'dp_dec2',name:'-2 Steps',desc:'Contains adjacent digits differing by -2',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';return [...s].slice(0,-1).some((_,i)=>+s[i]- +s[i+1]===2)}},
-  {id:'dp_center',name:'Center Mass',desc:'Middle digit is average of ends',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>{const s=n+'';return s.length>2&&(+s[0]+ +s[s.length-1])/2===+s[Math.floor(s.length/2)]}},
-  {id:'dp_leapfrog',name:'Leapfrog',desc:'Same digit every 2 positions (x.x.x)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-droplet"/></svg>',check:n=>{const s=n+'';for(let i=0;i<s.length-2;i++)for(let g=1;g<3;g++)if(i+2*g<s.length&&s[i]===s[i+g]&&s[i+g]===s[i+2*g])return true;return false}},
-  {id:'dp_bookend',name:'Bookends',desc:'First 2 = last 2 reversed',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-layers"/></svg>',check:n=>{const s=n+'';return s.length>3&&s[0]===s[s.length-1]&&s[1]===s[s.length-2]}},
-  {id:'dp_wave',name:'Wave',desc:'Digits go high-low-high-low',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-waves"/></svg>',check:n=>{const s=n+'';if(s.length<4)return false;for(let i=0;i<s.length-1;i++){if(i%2===0&&+s[i]<=+s[i+1])return false;if(i%2===1&&+s[i]>=+s[i+1])return false}return true}},
-  {id:'dp_mirror',name:'Mirror Half',desc:'First 3 mirror last 3 (abc-cba)',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';return s.length===6&&s[0]===s[5]&&s[1]===s[4]&&s[2]===s[3]}},
-  // === MORE DIVISIBILITY (10) ===
-  {id:'dv21',name:'Divisible by 21',desc:'Multiple of 21',rarity:'Uncommon',ep:2000,emoji:'2️⃣1️⃣',check:n=>n%21===0},
-  {id:'dv22',name:'Divisible by 22',desc:'Multiple of 22',rarity:'Uncommon',ep:2000,emoji:'2️⃣2️⃣',check:n=>n%22===0},
-  {id:'dv23',name:'Divisible by 23',desc:'Multiple of 23',rarity:'Uncommon',ep:2000,emoji:'2️⃣3️⃣',check:n=>n%23===0},
-  {id:'dv24',name:'Divisible by 24',desc:'Multiple of 24',rarity:'Uncommon',ep:2000,emoji:'2️⃣4️⃣',check:n=>n%24===0},
-  {id:'dv26',name:'Divisible by 26',desc:'Multiple of 26',rarity:'Rare',ep:10000,emoji:'2️⃣6️⃣',check:n=>n%26===0},
-  {id:'dv27',name:'Divisible by 27',desc:'Multiple of 27',rarity:'Rare',ep:10000,emoji:'2️⃣7️⃣',check:n=>n%27===0},
-  {id:'dv28',name:'Divisible by 28',desc:'Multiple of 28',rarity:'Rare',ep:10000,emoji:'2️⃣8️⃣',check:n=>n%28===0},
-  {id:'dv30',name:'Divisible by 30',desc:'Multiple of 30',rarity:'Uncommon',ep:2000,emoji:'3️⃣0️⃣',check:n=>n%30===0},
-  {id:'dv32',name:'Divisible by 32',desc:'Multiple of 32',rarity:'Rare',ep:10000,emoji:'3️⃣2️⃣',check:n=>n%32===0},
-  {id:'dv36',name:'Divisible by 36',desc:'Multiple of 36',rarity:'Uncommon',ep:2000,emoji:'3️⃣6️⃣',check:n=>n%36===0},
-  // === MORE RANGES (10) ===
-  {id:'rg_under1',name:'Under 1',desc:'Number is 0',rarity:'Mythic',ep:350000,emoji:'⬇️',check:n=>n===0},
-  {id:'rg_over100',name:'Over 100',desc:'Number is over 100',rarity:'Common',ep:500,emoji:'⬆️',check:n=>n>100},
-  {id:'rg_over1000',name:'Over 1000',desc:'Number is over 1,000',rarity:'Common',ep:500,emoji:'⬆️',check:n=>n>1000},
-  {id:'rg_over10000',name:'Over 10K',desc:'Number is over 10,000',rarity:'Common',ep:500,emoji:'⬆️',check:n=>n>10000},
-  {id:'rg_over100000',name:'Over 100K',desc:'Number is over 100,000',rarity:'Uncommon',ep:2000,emoji:'⬆️',check:n=>n>100000},
-  {id:'rg_over500000',name:'Over 500K',desc:'Number is over 500,000',rarity:'Uncommon',ep:2000,emoji:'⬆️',check:n=>n>500000},
-  {id:'rg_under50000',name:'Under 50K',desc:'Number is under 50,000',rarity:'Common',ep:500,emoji:'⬇️',check:n=>n<50000},
-  {id:'rg_99900',name:'Near Max',desc:'Number is over 999,000',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg>',check:n=>n>999000},
-  {id:'rg_555000',name:'Mid Range',desc:'Number is 500,000-599,999',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>n>=500000&&n<600000},
-  {id:'rg_100to999',name:'Three Digit Range',desc:'Number is 100-999',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n>99&&n<1000},
-  // === SEQUENCE CONTAINS (15) ===
-  {id:'sq_2468',name:'Even Steps',desc:'Contains 2468',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/2468/.test(n+'')},
-  {id:'sq_1357',name:'Odd Steps',desc:'Contains 1357',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/1357/.test(n+'')},
-  {id:'sq_12321',name:'Mini Pyramid',desc:'Contains 12321',rarity:'Epic',ep:50000,emoji:'🔺',check:n=>/12321/.test(n+'')},
-  {id:'sq_111222',name:'One-Two',desc:'Contains 111222',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/111222/.test(n+'')},
-  {id:'sq_121212',name:'Triple Alt',desc:'Contains 121212',rarity:'Epic',ep:50000,emoji:'🔁',check:n=>/121212/.test(n+'')},
-  {id:'sq_112233',name:'Pair Steps',desc:'Contains 112233',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/112233/.test(n+'')},
-  {id:'sq_123123',name:'Double Trip',desc:'Contains 123123',rarity:'Epic',ep:50000,emoji:'🔃',check:n=>/123123/.test(n+'')},
-  {id:'sq_101010',name:'Tron',desc:'Contains 101010',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/101010/.test(n+'')},
-  {id:'sq_110110',name:'Binary Pair',desc:'Contains 110110',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/110110/.test(n+'')},
-  {id:'sq_6969',name:'Double Nice',desc:'Contains 6969',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>/6969/.test(n+'')},
-  {id:'sq_13337',name:'Elite Plus',desc:'Contains 13337',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/13337/.test(n+'')},
-  {id:'sq_2580',name:'ATM PIN',desc:'Contains 2580',rarity:'Rare',ep:10000,emoji:'🏧',check:n=>/2580/.test(n+'')},
-  {id:'sq_11235',name:'Fib Start',desc:'Contains 11235',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/11235/.test(n+'')},
-  {id:'sq_235711',name:'Prime Run',desc:'Contains 2357',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/2357/.test(n+'')},
-  {id:'sq_97531',name:'Odd Descend',desc:'Contains 97531',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>/97531/.test(n+'')},
-  // === NEAR MISSES (10) ===
-  {id:'nr_69',name:'Near 69',desc:'Within 1 of 69',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>Math.abs(n-69)<=1},
-  {id:'nr_100',name:'Near 100',desc:'Within 1 of 100',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>Math.abs(n-100)<=1},
-  {id:'nr_420',name:'Near 420',desc:'Within 1 of 420',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg>',check:n=>Math.abs(n-420)<=1},
-  {id:'nr_666',name:'Near 666',desc:'Within 1 of 666',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg>',check:n=>Math.abs(n-666)<=1},
-  {id:'nr_777',name:'Near 777',desc:'Within 1 of 777',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-dice"/></svg>',check:n=>Math.abs(n-777)<=1},
-  {id:'nr_1000',name:'Near 1000',desc:'Within 1 of 1000',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>Math.abs(n-1000)<=1},
-  {id:'nr_1337',name:'Near 1337',desc:'Within 1 of 1337',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>Math.abs(n-1337)<=1},
-  {id:'nr_10000',name:'Near 10K',desc:'Within 1 of 10000',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>Math.abs(n-10000)<=1},
-  {id:'nr_99999',name:'Near Max 5',desc:'Within 1 of 99999',rarity:'Rare',ep:10000,emoji:'9️⃣',check:n=>Math.abs(n-99999)<=1},
-  {id:'nr_500000',name:'Near Half Mil',desc:'Within 1 of 500000',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-target"/></svg>',check:n=>Math.abs(n-500000)<=1},
-  // === BINARY & MORE (15) ===
-  {id:'bn_alt01',name:'Binary Alt',desc:'Binary has alternating 0s and 1s',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const b=n.toString(2);return /^(10)+1?$|^(01)+0?$/.test(b)}},
-  {id:'bn_repunit',name:'Binary Repunit',desc:'Binary is all 1s (111...)',rarity:'Epic',ep:50000,emoji:'1️⃣',check:n=>{const b=n.toString(2);return /^1+$/.test(b)}},
-  {id:'bn_palbin',name:'Binary Palindrome',desc:'Binary reads same backwards',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const b=n.toString(2);return b===b.split('').reverse().join('')&&n>1}},
-  {id:'bn_minweight',name:'Light Binary',desc:'Binary has only 1-3 ones',rarity:'Uncommon',ep:2000,emoji:'⬆️',check:n=>{const b=n.toString(2);let c=0;for(let i=0;i<b.length;i++)if(b[i]==='1')c++;return c>0&&c<4}},
-  {id:'bn_heavy',name:'Heavy Binary',desc:'Binary has 10+ ones',rarity:'Rare',ep:10000,emoji:'⬇️',check:n=>{const b=n.toString(2);let c=0;for(let i=0;i<b.length;i++)if(b[i]==='1')c++;return c>9}},
-  {id:'bn_square',name:'Binary Square',desc:'Binary length is perfect square',rarity:'Rare',ep:10000,emoji:'■',check:n=>{const l=n.toString(2).length;const r=Math.round(Math.sqrt(l));return r*r===l}},
-  {id:'mp_pow6',name:'Power of 6',desc:'Number is 6^n',rarity:'Epic',ep:50000,emoji:'6️⃣',check:n=>{if(n<1)return false;while(n%6===0)n/=6;return n===1}},
-  {id:'mp_pow11',name:'Power of 11',desc:'Number is 11^n',rarity:'Epic',ep:50000,emoji:'1️⃣1️⃣',check:n=>{if(n<1)return false;while(n%11===0)n/=11;return n===1}},
-  {id:'mp_mul111',name:'Multiple of 111',desc:'Divisible by 111',rarity:'Rare',ep:10000,emoji:'1️⃣',check:n=>n%111===0},
-  {id:'mp_mul1001',name:'Multiple of 1001',desc:'Divisible by 1001',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>n%1001===0},
-  {id:'mp_mul11111',name:'Multiple of 11111',desc:'Divisible by 11111',rarity:'Epic',ep:50000,emoji:'1️⃣',check:n=>n%11111===0},
-  {id:'mp_allunique5',name:'Unique 5',desc:'5-digit number with all different digits',rarity:'Rare',ep:10000,emoji:'🃏',check:n=>{const s=n+'';return s.length===5&&new Set(s.split('')).size===5}},
-  {id:'mp_allunique6',name:'Unique 6',desc:'6-digit number with all different digits',rarity:'Epic',ep:50000,emoji:'🃏',check:n=>{const s=n+'';return s.length===6&&new Set(s.split('')).size===6}},
-  {id:'mp_repdigitnear',name:'Near Repdigit',desc:'5 identical digits out of 6',rarity:'Epic',ep:50000,emoji:'🃏',check:n=>{const s=n+'';const c={};for(let i=0;i<s.length;i++)c[s[i]]=(c[s[i]]||0)+1;return Object.values(c).some(v=>v>4)}},
-  {id:'mp_sameness',name:'Same Difference',desc:'First 2 = last 2',rarity:'Rare',ep:10000,emoji:'🔁',check:n=>{const s=n+'';return s.length>3&&s.slice(0,2)===s.slice(-2)}},
-  // === SPECIAL (20) ===
-  {id:'sp_birthday',name:'Birthday',desc:'Number matches MM/DD (e.g. 1225)',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>{const s=(n+'').padStart(6,'0');const m=+s.slice(0,2);const d=+s.slice(2,4);return m>0&&m<13&&d>0&&d<32}},
-  {id:'sp_computer',name:'Computer',desc:'Contains 8008 or 1337',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/8008|1337/.test(n+'')},
-  {id:'sp_mirrorpair',name:'Mirror Pair',desc:'First 3 digits reversed = last 3',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';return s.length===6&&s.slice(0,3)===s.slice(3).split('').reverse().join('')}},
-  {id:'sp_allcons',name:'All Consonants',desc:'No even digits (13579 only)',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/^[13579]+$/.test(n+'')},
-  {id:'sp_allvowel',name:'All Vowels',desc:'Only even digits (02468 only)',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/^[02468]+$/.test(n+'')},
-  {id:'sp_twin',name:'Twin Digits',desc:'Contains twin like 11 22 33',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-user"/></svg>',check:n=>/(\d)\1\s*(\d)\2/.test(n+'')},
-  {id:'sp_doubledouble',name:'Double Double',desc:'Two different doubles (e.g. 1122)',rarity:'Uncommon',ep:2000,emoji:'🔁',check:n=>{const s=n+'';const c={};for(let i=0;i<s.length-1;i++)if(s[i]===s[i+1])c[s[i]]=true;return Object.keys(c).length>1}},
-  {id:'sp_king',name:'King\'s Number',desc:'All digits are 0 or 2 or 4',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>/^[024]+$/.test(n+'')},
-  {id:'sp_queen',name:'Queen\'s Number',desc:'All digits are 1 or 3 or 5',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>/^[135]+$/.test(n+'')},
-  {id:'sp_joker',name:'Joker Number',desc:'Contains 3 different doubles',rarity:'Epic',ep:50000,emoji:'🃏',check:n=>{const s=n+'';const seen=new Set();for(let i=0;i<s.length-1;i++)if(s[i]===s[i+1])seen.add(s[i]);return seen.size>2}},
-  {id:'sp_century',name:'Century',desc:'Ends with 00',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n%100===0},
-  {id:'sp_millennium',name:'Millennium',desc:'Ends with 000',rarity:'Uncommon',ep:2000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>n%1000===0},
-  {id:'sp_stairs',name:'Stairs',desc:'Digits go +1+2+3 pattern',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]!==+s[i-1]+i)return false;return s.length>1}},
-  {id:'sp_doublestairs',name:'Double Stairs',desc:'Digits go +2+4+6 pattern',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]!==+s[i-1]+i*2)return false;return s.length>1}},
-  {id:'sp_sawtooth',name:'Sawtooth',desc:'Digits go up-0-up-0 pattern',rarity:'Epic',ep:50000,emoji:'〰️',check:n=>{const s=n+'';const p=[];for(let i=0;i<s.length;i++)p.push(+s[i]);for(let i=2;i<p.length;i+=2)if(p[i]<=p[i-2])return false;return p.length>2}},
-  {id:'sp_tetris',name:'Tetris',desc:'Contains 4 consecutive same digits',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-mountain"/></svg>',check:n=>/(\d)\1\1\1/.test(n+'')},
-  {id:'sp_straightflush',name:'Straight Flush',desc:'5 consecutive ascending or descending',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg>',check:n=>{const s=n+'';let up=true,down=true;for(let i=1;i<s.length;i++){if(+s[i]!==+s[i-1]+1)up=false;if(+s[i]!==+s[i-1]-1)down=false}return up||down}},
-  {id:'sp_identity',name:'Identity',desc:'Number equals its reverse',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg>',check:n=>{const s=n+'';return s===s.split('').reverse().join('')}},
-  {id:'sp_incremental',name:'Incremental',desc:'Each digit is previous+2',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]!==+s[i-1]+2)return false;return s.length>1}},
-  {id:'sp_decremental',name:'Decremental',desc:'Each digit is previous-2',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-bar-chart"/></svg>',check:n=>{const s=n+'';for(let i=1;i<s.length;i++)if(+s[i]!==+s[i-1]-2)return false;return s.length>1}},
-  // === ULTRA RARE & MYTHIC (20) ===
-  {id:'ur_palprime6',name:'Palindrome Prime',desc:'6-digit palindrome that is also prime',rarity:'Mythic',ep:400000,emoji:'🪞',check:n=>{const s=n+'';if(s.length!==6||s!==s.split('').reverse().join(''))return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true}},
-  {id:'ur_allprime6',name:'Prime Digits',desc:'All 6 digits are prime (2,3,5,7)',rarity:'Mythic',ep:400000,emoji:'🔢',check:n=>{const s=n+'';return s.length===6&&/^[2357]{6}$/.test(s)}},
-  {id:'ur_alldigit6',name:'Same Digit',desc:'All 6 digits are the same',rarity:'Mythic',ep:400000,emoji:'🃏',check:n=>/^(\d)\1{5}$/.test(n+'')},
-  {id:'ur_maxroll',name:'Max Roll',desc:'Exactly 999999',rarity:'Anomaly',ep:500000,emoji:'♔',check:n=>n===999999},
-  {id:'ur_palindrome6',name:'6-Digit Palindrome',desc:'6-digit number that reads same both ways',rarity:'Mythic',ep:400000,emoji:'🪞',check:n=>{const s=n+'';return s.length===6&&s===s.split('').reverse().join('')}},
-  {id:'ur_allodd6',name:'All Odds',desc:'6-digit number with all odd digits',rarity:'Mythic',ep:400000,emoji:'★',check:n=>{const s=n+'';return s.length===6&&/^[13579]{6}$/.test(s)}},
-  {id:'ur_alleven6',name:'All Evens',desc:'6-digit number with all even digits',rarity:'Mythic',ep:400000,emoji:'★',check:n=>{const s=n+'';return s.length===6&&/^[02468]{6}$/.test(s)}},
-  {id:'ur_sum54',name:'Maximum Sum',desc:'Digit sum is exactly 54 (all 9s)',rarity:'Anomaly',ep:500000,emoji:'☆',check:n=>{const s=n+'';let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t===54}},
-  {id:'ur_twinpal',name:'Twin Palindromes',desc:'Number is a palindrome AND digit sum is a palindrome',rarity:'Mythic',ep:400000,emoji:'🪞',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;let t=0;for(let i=0;i<s.length;i++)t+=+s[i];const ts=t+'';return ts===ts.split('').reverse().join('')}},
-  {id:'ur_squarerevprime',name:'Reversible Prime Square',desc:'Square of a prime whose reverse is also prime',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{function p(x){if(x<2)return false;for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true}const r=Math.round(Math.sqrt(n));if(r*r!==n||!p(r))return false;const rev=+(r+'').split('').reverse().join('');return p(rev)}},
-  {id:'ur_cuberevprime',name:'Reversible Prime Cube',desc:'Cube of a prime whose reverse is also prime',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{function p(x){if(x<2)return false;for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true}const r=Math.round(Math.cbrt(n));if(r*r*r!==n||!p(r))return false;const rev=+(r+'').split('').reverse().join('');return p(rev)}},
-  {id:'ur_perfectsquarepal',name:'Square Palindrome',desc:'Number is a perfect square AND a palindrome',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{const r=Math.round(Math.sqrt(n));if(r*r!==n)return false;const s=n+'';return s===s.split('').reverse().join('')}},
-  {id:'ur_allprimes',name:'Prime Digits Any',desc:'Every digit is prime (2,3,5,7) — any length',rarity:'Mythic',ep:400000,emoji:'🔢',check:n=>n>0&&/^[2357]+$/.test(n+'')},
-  {id:'ur_triplepal',name:'Triple Palindrome',desc:'Number, digit sum, AND digit product are all palindromes',rarity:'Anomaly',ep:500000,emoji:'🪞',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;let sum=0,prod=1;for(const c of s){sum+=+c;prod*=+c}const ss=sum+'';if(ss!==ss.split('').reverse().join(''))return false;const sp=prod+'';return sp===sp.split('').reverse().join('')}},
-  {id:'ur_happypal',name:'Happy Palindrome',desc:'Number is both happy AND a palindrome',rarity:'Mythic',ep:400000,emoji:'😊',check:n=>{const vis=new Set();let x=n;while(x!==1&&!vis.has(x)){vis.add(x);x=(x+'').split('').reduce((a,b)=>a+ +b*+b,0)}if(x!==1)return false;const s=n+'';return s===s.split('').reverse().join('')}},
-  {id:'ur_semiprimepal',name:'Semiprime Palindrome',desc:'Palindrome that is product of exactly 2 primes',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;if(n<4)return false;let c=0;for(let i=2;i*i<=n&&c<3;i++){while(n%i===0){n/=i;c++}}if(n>1)c++;return c===2}},
-  {id:'ur_abundantpal',name:'Abundant Palindrome',desc:'Number is both abundant AND a palindrome',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;if(n<2)return false;let div=1;for(let i=2;i*i<=n;i++){if(n%i===0){div+=i;if(i*i!==n)div+=n/i}}return div>n}},
-  {id:'ur_harshadpal',name:'Harshad Palindrome',desc:'Number is both Harshad AND a palindrome',rarity:'Mythic',ep:400000,emoji:'💎',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;let t=0;for(let i=0;i<s.length;i++)t+=+s[i];return t>0&&n%t===0}},
-  {id:'ur_repunit6',name:'Repunit 6',desc:'Exactly 111111',rarity:'Anomaly',ep:500000,emoji:'1️⃣',check:n=>n===111111},
-
-// === AUTO-GENERATED COMMON BADGES (300) ===
-// === STARTS WITH (90) ===
-{id:'sw10',name:'Starts 10',desc:'First 2 digits are 10',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/^10/.test(n+'')},
-{id:'sw11',name:'Starts 11',desc:'First 2 digits are 11',rarity:'Common',ep:500,emoji:'1️⃣1️⃣',check:n=>/^11/.test(n+'')},
-{id:'sw12',name:'Starts 12',desc:'First 2 digits are 12',rarity:'Common',ep:500,emoji:'1️⃣2️⃣',check:n=>/^12/.test(n+'')},
-{id:'sw13',name:'Starts 13',desc:'First 2 digits are 13',rarity:'Common',ep:500,emoji:'1️⃣3️⃣',check:n=>/^13/.test(n+'')},
-{id:'sw14',name:'Starts 14',desc:'First 2 digits are 14',rarity:'Common',ep:500,emoji:'1️⃣4️⃣',check:n=>/^14/.test(n+'')},
-{id:'sw15',name:'Starts 15',desc:'First 2 digits are 15',rarity:'Common',ep:500,emoji:'1️⃣5️⃣',check:n=>/^15/.test(n+'')},
-{id:'sw16',name:'Starts 16',desc:'First 2 digits are 16',rarity:'Common',ep:500,emoji:'1️⃣6️⃣',check:n=>/^16/.test(n+'')},
-{id:'sw17',name:'Starts 17',desc:'First 2 digits are 17',rarity:'Common',ep:500,emoji:'1️⃣7️⃣',check:n=>/^17/.test(n+'')},
-{id:'sw18',name:'Starts 18',desc:'First 2 digits are 18',rarity:'Common',ep:500,emoji:'1️⃣8️⃣',check:n=>/^18/.test(n+'')},
-{id:'sw19',name:'Starts 19',desc:'First 2 digits are 19',rarity:'Common',ep:500,emoji:'1️⃣9️⃣',check:n=>/^19/.test(n+'')},
-{id:'sw20',name:'Starts 20',desc:'First 2 digits are 20',rarity:'Common',ep:500,emoji:'2️⃣0️⃣',check:n=>/^20/.test(n+'')},
-{id:'sw21',name:'Starts 21',desc:'First 2 digits are 21',rarity:'Common',ep:500,emoji:'2️⃣1️⃣',check:n=>/^21/.test(n+'')},
-{id:'sw22',name:'Starts 22',desc:'First 2 digits are 22',rarity:'Common',ep:500,emoji:'2️⃣2️⃣',check:n=>/^22/.test(n+'')},
-{id:'sw23',name:'Starts 23',desc:'First 2 digits are 23',rarity:'Common',ep:500,emoji:'2️⃣3️⃣',check:n=>/^23/.test(n+'')},
-{id:'sw24',name:'Starts 24',desc:'First 2 digits are 24',rarity:'Common',ep:500,emoji:'2️⃣4️⃣',check:n=>/^24/.test(n+'')},
-{id:'sw25',name:'Starts 25',desc:'First 2 digits are 25',rarity:'Common',ep:500,emoji:'2️⃣5️⃣',check:n=>/^25/.test(n+'')},
-{id:'sw26',name:'Starts 26',desc:'First 2 digits are 26',rarity:'Common',ep:500,emoji:'2️⃣6️⃣',check:n=>/^26/.test(n+'')},
-{id:'sw27',name:'Starts 27',desc:'First 2 digits are 27',rarity:'Common',ep:500,emoji:'2️⃣7️⃣',check:n=>/^27/.test(n+'')},
-{id:'sw28',name:'Starts 28',desc:'First 2 digits are 28',rarity:'Common',ep:500,emoji:'2️⃣8️⃣',check:n=>/^28/.test(n+'')},
-{id:'sw29',name:'Starts 29',desc:'First 2 digits are 29',rarity:'Common',ep:500,emoji:'2️⃣9️⃣',check:n=>/^29/.test(n+'')},
-{id:'sw30',name:'Starts 30',desc:'First 2 digits are 30',rarity:'Common',ep:500,emoji:'3️⃣0️⃣',check:n=>/^30/.test(n+'')},
-{id:'sw31',name:'Starts 31',desc:'First 2 digits are 31',rarity:'Common',ep:500,emoji:'3️⃣1️⃣',check:n=>/^31/.test(n+'')},
-{id:'sw32',name:'Starts 32',desc:'First 2 digits are 32',rarity:'Common',ep:500,emoji:'3️⃣2️⃣',check:n=>/^32/.test(n+'')},
-{id:'sw33',name:'Starts 33',desc:'First 2 digits are 33',rarity:'Common',ep:500,emoji:'3️⃣3️⃣',check:n=>/^33/.test(n+'')},
-{id:'sw34',name:'Starts 34',desc:'First 2 digits are 34',rarity:'Common',ep:500,emoji:'3️⃣4️⃣',check:n=>/^34/.test(n+'')},
-{id:'sw35',name:'Starts 35',desc:'First 2 digits are 35',rarity:'Common',ep:500,emoji:'3️⃣5️⃣',check:n=>/^35/.test(n+'')},
-{id:'sw36',name:'Starts 36',desc:'First 2 digits are 36',rarity:'Common',ep:500,emoji:'3️⃣6️⃣',check:n=>/^36/.test(n+'')},
-{id:'sw37',name:'Starts 37',desc:'First 2 digits are 37',rarity:'Common',ep:500,emoji:'3️⃣7️⃣',check:n=>/^37/.test(n+'')},
-{id:'sw38',name:'Starts 38',desc:'First 2 digits are 38',rarity:'Common',ep:500,emoji:'3️⃣8️⃣',check:n=>/^38/.test(n+'')},
-{id:'sw39',name:'Starts 39',desc:'First 2 digits are 39',rarity:'Common',ep:500,emoji:'3️⃣9️⃣',check:n=>/^39/.test(n+'')},
-{id:'sw40',name:'Starts 40',desc:'First 2 digits are 40',rarity:'Common',ep:500,emoji:'4️⃣0️⃣',check:n=>/^40/.test(n+'')},
-{id:'sw41',name:'Starts 41',desc:'First 2 digits are 41',rarity:'Common',ep:500,emoji:'4️⃣1️⃣',check:n=>/^41/.test(n+'')},
-{id:'sw42',name:'Starts 42',desc:'First 2 digits are 42',rarity:'Common',ep:500,emoji:'4️⃣2️⃣',check:n=>/^42/.test(n+'')},
-{id:'sw43',name:'Starts 43',desc:'First 2 digits are 43',rarity:'Common',ep:500,emoji:'4️⃣3️⃣',check:n=>/^43/.test(n+'')},
-{id:'sw44',name:'Starts 44',desc:'First 2 digits are 44',rarity:'Common',ep:500,emoji:'4️⃣4️⃣',check:n=>/^44/.test(n+'')},
-{id:'sw45',name:'Starts 45',desc:'First 2 digits are 45',rarity:'Common',ep:500,emoji:'4️⃣5️⃣',check:n=>/^45/.test(n+'')},
-{id:'sw46',name:'Starts 46',desc:'First 2 digits are 46',rarity:'Common',ep:500,emoji:'4️⃣6️⃣',check:n=>/^46/.test(n+'')},
-{id:'sw47',name:'Starts 47',desc:'First 2 digits are 47',rarity:'Common',ep:500,emoji:'4️⃣7️⃣',check:n=>/^47/.test(n+'')},
-{id:'sw48',name:'Starts 48',desc:'First 2 digits are 48',rarity:'Common',ep:500,emoji:'4️⃣8️⃣',check:n=>/^48/.test(n+'')},
-{id:'sw49',name:'Starts 49',desc:'First 2 digits are 49',rarity:'Common',ep:500,emoji:'4️⃣9️⃣',check:n=>/^49/.test(n+'')},
-{id:'sw50',name:'Starts 50',desc:'First 2 digits are 50',rarity:'Common',ep:500,emoji:'5️⃣0️⃣',check:n=>/^50/.test(n+'')},
-{id:'sw51',name:'Starts 51',desc:'First 2 digits are 51',rarity:'Common',ep:500,emoji:'5️⃣1️⃣',check:n=>/^51/.test(n+'')},
-{id:'sw52',name:'Starts 52',desc:'First 2 digits are 52',rarity:'Common',ep:500,emoji:'5️⃣2️⃣',check:n=>/^52/.test(n+'')},
-{id:'sw53',name:'Starts 53',desc:'First 2 digits are 53',rarity:'Common',ep:500,emoji:'5️⃣3️⃣',check:n=>/^53/.test(n+'')},
-{id:'sw54',name:'Starts 54',desc:'First 2 digits are 54',rarity:'Common',ep:500,emoji:'5️⃣4️⃣',check:n=>/^54/.test(n+'')},
-{id:'sw55',name:'Starts 55',desc:'First 2 digits are 55',rarity:'Common',ep:500,emoji:'5️⃣5️⃣',check:n=>/^55/.test(n+'')},
-{id:'sw56',name:'Starts 56',desc:'First 2 digits are 56',rarity:'Common',ep:500,emoji:'5️⃣6️⃣',check:n=>/^56/.test(n+'')},
-{id:'sw57',name:'Starts 57',desc:'First 2 digits are 57',rarity:'Common',ep:500,emoji:'5️⃣7️⃣',check:n=>/^57/.test(n+'')},
-{id:'sw58',name:'Starts 58',desc:'First 2 digits are 58',rarity:'Common',ep:500,emoji:'5️⃣8️⃣',check:n=>/^58/.test(n+'')},
-{id:'sw59',name:'Starts 59',desc:'First 2 digits are 59',rarity:'Common',ep:500,emoji:'5️⃣9️⃣',check:n=>/^59/.test(n+'')},
-{id:'sw60',name:'Starts 60',desc:'First 2 digits are 60',rarity:'Common',ep:500,emoji:'6️⃣0️⃣',check:n=>/^60/.test(n+'')},
-{id:'sw61',name:'Starts 61',desc:'First 2 digits are 61',rarity:'Common',ep:500,emoji:'6️⃣1️⃣',check:n=>/^61/.test(n+'')},
-{id:'sw62',name:'Starts 62',desc:'First 2 digits are 62',rarity:'Common',ep:500,emoji:'6️⃣2️⃣',check:n=>/^62/.test(n+'')},
-{id:'sw63',name:'Starts 63',desc:'First 2 digits are 63',rarity:'Common',ep:500,emoji:'6️⃣3️⃣',check:n=>/^63/.test(n+'')},
-{id:'sw64',name:'Starts 64',desc:'First 2 digits are 64',rarity:'Common',ep:500,emoji:'6️⃣4️⃣',check:n=>/^64/.test(n+'')},
-{id:'sw65',name:'Starts 65',desc:'First 2 digits are 65',rarity:'Common',ep:500,emoji:'6️⃣5️⃣',check:n=>/^65/.test(n+'')},
-{id:'sw66',name:'Starts 66',desc:'First 2 digits are 66',rarity:'Common',ep:500,emoji:'6️⃣6️⃣',check:n=>/^66/.test(n+'')},
-{id:'sw67',name:'Starts 67',desc:'First 2 digits are 67',rarity:'Common',ep:500,emoji:'6️⃣7️⃣',check:n=>/^67/.test(n+'')},
-{id:'sw68',name:'Starts 68',desc:'First 2 digits are 68',rarity:'Common',ep:500,emoji:'6️⃣8️⃣',check:n=>/^68/.test(n+'')},
-{id:'sw69',name:'Starts 69',desc:'First 2 digits are 69',rarity:'Common',ep:500,emoji:'6️⃣9️⃣',check:n=>/^69/.test(n+'')},
-{id:'sw70',name:'Starts 70',desc:'First 2 digits are 70',rarity:'Common',ep:500,emoji:'7️⃣0️⃣',check:n=>/^70/.test(n+'')},
-{id:'sw71',name:'Starts 71',desc:'First 2 digits are 71',rarity:'Common',ep:500,emoji:'7️⃣1️⃣',check:n=>/^71/.test(n+'')},
-{id:'sw72',name:'Starts 72',desc:'First 2 digits are 72',rarity:'Common',ep:500,emoji:'7️⃣2️⃣',check:n=>/^72/.test(n+'')},
-{id:'sw73',name:'Starts 73',desc:'First 2 digits are 73',rarity:'Common',ep:500,emoji:'7️⃣3️⃣',check:n=>/^73/.test(n+'')},
-{id:'sw74',name:'Starts 74',desc:'First 2 digits are 74',rarity:'Common',ep:500,emoji:'7️⃣4️⃣',check:n=>/^74/.test(n+'')},
-{id:'sw75',name:'Starts 75',desc:'First 2 digits are 75',rarity:'Common',ep:500,emoji:'7️⃣5️⃣',check:n=>/^75/.test(n+'')},
-{id:'sw76',name:'Starts 76',desc:'First 2 digits are 76',rarity:'Common',ep:500,emoji:'7️⃣6️⃣',check:n=>/^76/.test(n+'')},
-{id:'sw77',name:'Starts 77',desc:'First 2 digits are 77',rarity:'Common',ep:500,emoji:'7️⃣7️⃣',check:n=>/^77/.test(n+'')},
-{id:'sw78',name:'Starts 78',desc:'First 2 digits are 78',rarity:'Common',ep:500,emoji:'7️⃣8️⃣',check:n=>/^78/.test(n+'')},
-{id:'sw79',name:'Starts 79',desc:'First 2 digits are 79',rarity:'Common',ep:500,emoji:'7️⃣9️⃣',check:n=>/^79/.test(n+'')},
-{id:'sw80',name:'Starts 80',desc:'First 2 digits are 80',rarity:'Common',ep:500,emoji:'8️⃣0️⃣',check:n=>/^80/.test(n+'')},
-{id:'sw81',name:'Starts 81',desc:'First 2 digits are 81',rarity:'Common',ep:500,emoji:'8️⃣1️⃣',check:n=>/^81/.test(n+'')},
-{id:'sw82',name:'Starts 82',desc:'First 2 digits are 82',rarity:'Common',ep:500,emoji:'8️⃣2️⃣',check:n=>/^82/.test(n+'')},
-{id:'sw83',name:'Starts 83',desc:'First 2 digits are 83',rarity:'Common',ep:500,emoji:'8️⃣3️⃣',check:n=>/^83/.test(n+'')},
-{id:'sw84',name:'Starts 84',desc:'First 2 digits are 84',rarity:'Common',ep:500,emoji:'8️⃣4️⃣',check:n=>/^84/.test(n+'')},
-{id:'sw85',name:'Starts 85',desc:'First 2 digits are 85',rarity:'Common',ep:500,emoji:'8️⃣5️⃣',check:n=>/^85/.test(n+'')},
-{id:'sw86',name:'Starts 86',desc:'First 2 digits are 86',rarity:'Common',ep:500,emoji:'8️⃣6️⃣',check:n=>/^86/.test(n+'')},
-{id:'sw87',name:'Starts 87',desc:'First 2 digits are 87',rarity:'Common',ep:500,emoji:'8️⃣7️⃣',check:n=>/^87/.test(n+'')},
-{id:'sw88',name:'Starts 88',desc:'First 2 digits are 88',rarity:'Common',ep:500,emoji:'8️⃣8️⃣',check:n=>/^88/.test(n+'')},
-{id:'sw89',name:'Starts 89',desc:'First 2 digits are 89',rarity:'Common',ep:500,emoji:'8️⃣9️⃣',check:n=>/^89/.test(n+'')},
-{id:'sw90',name:'Starts 90',desc:'First 2 digits are 90',rarity:'Common',ep:500,emoji:'9️⃣0️⃣',check:n=>/^90/.test(n+'')},
-{id:'sw91',name:'Starts 91',desc:'First 2 digits are 91',rarity:'Common',ep:500,emoji:'9️⃣1️⃣',check:n=>/^91/.test(n+'')},
-{id:'sw92',name:'Starts 92',desc:'First 2 digits are 92',rarity:'Common',ep:500,emoji:'9️⃣2️⃣',check:n=>/^92/.test(n+'')},
-{id:'sw93',name:'Starts 93',desc:'First 2 digits are 93',rarity:'Common',ep:500,emoji:'9️⃣3️⃣',check:n=>/^93/.test(n+'')},
-{id:'sw94',name:'Starts 94',desc:'First 2 digits are 94',rarity:'Common',ep:500,emoji:'9️⃣4️⃣',check:n=>/^94/.test(n+'')},
-{id:'sw95',name:'Starts 95',desc:'First 2 digits are 95',rarity:'Common',ep:500,emoji:'9️⃣5️⃣',check:n=>/^95/.test(n+'')},
-{id:'sw96',name:'Starts 96',desc:'First 2 digits are 96',rarity:'Common',ep:500,emoji:'9️⃣6️⃣',check:n=>/^96/.test(n+'')},
-{id:'sw97',name:'Starts 97',desc:'First 2 digits are 97',rarity:'Common',ep:500,emoji:'9️⃣7️⃣',check:n=>/^97/.test(n+'')},
-{id:'sw98',name:'Starts 98',desc:'First 2 digits are 98',rarity:'Common',ep:500,emoji:'9️⃣8️⃣',check:n=>/^98/.test(n+'')},
-{id:'sw99',name:'Starts 99',desc:'First 2 digits are 99',rarity:'Common',ep:500,emoji:'9️⃣9️⃣',check:n=>/^99/.test(n+'')},
-// === ENDS WITH (90) ===
-{id:'ew10',name:'Ends 10',desc:'Last 2 digits are 10',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='10'}},
-{id:'ew11',name:'Ends 11',desc:'Last 2 digits are 11',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='11'}},
-{id:'ew12',name:'Ends 12',desc:'Last 2 digits are 12',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='12'}},
-{id:'ew13',name:'Ends 13',desc:'Last 2 digits are 13',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='13'}},
-{id:'ew14',name:'Ends 14',desc:'Last 2 digits are 14',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='14'}},
-{id:'ew15',name:'Ends 15',desc:'Last 2 digits are 15',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='15'}},
-{id:'ew16',name:'Ends 16',desc:'Last 2 digits are 16',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='16'}},
-{id:'ew17',name:'Ends 17',desc:'Last 2 digits are 17',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='17'}},
-{id:'ew18',name:'Ends 18',desc:'Last 2 digits are 18',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='18'}},
-{id:'ew19',name:'Ends 19',desc:'Last 2 digits are 19',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='19'}},
-{id:'ew20',name:'Ends 20',desc:'Last 2 digits are 20',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='20'}},
-{id:'ew21',name:'Ends 21',desc:'Last 2 digits are 21',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='21'}},
-{id:'ew22',name:'Ends 22',desc:'Last 2 digits are 22',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='22'}},
-{id:'ew23',name:'Ends 23',desc:'Last 2 digits are 23',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='23'}},
-{id:'ew24',name:'Ends 24',desc:'Last 2 digits are 24',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='24'}},
-{id:'ew25',name:'Ends 25',desc:'Last 2 digits are 25',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='25'}},
-{id:'ew26',name:'Ends 26',desc:'Last 2 digits are 26',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='26'}},
-{id:'ew27',name:'Ends 27',desc:'Last 2 digits are 27',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='27'}},
-{id:'ew28',name:'Ends 28',desc:'Last 2 digits are 28',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='28'}},
-{id:'ew29',name:'Ends 29',desc:'Last 2 digits are 29',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='29'}},
-{id:'ew30',name:'Ends 30',desc:'Last 2 digits are 30',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='30'}},
-{id:'ew31',name:'Ends 31',desc:'Last 2 digits are 31',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='31'}},
-{id:'ew32',name:'Ends 32',desc:'Last 2 digits are 32',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='32'}},
-{id:'ew33',name:'Ends 33',desc:'Last 2 digits are 33',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='33'}},
-{id:'ew34',name:'Ends 34',desc:'Last 2 digits are 34',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='34'}},
-{id:'ew35',name:'Ends 35',desc:'Last 2 digits are 35',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='35'}},
-{id:'ew36',name:'Ends 36',desc:'Last 2 digits are 36',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='36'}},
-{id:'ew37',name:'Ends 37',desc:'Last 2 digits are 37',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='37'}},
-{id:'ew38',name:'Ends 38',desc:'Last 2 digits are 38',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='38'}},
-{id:'ew39',name:'Ends 39',desc:'Last 2 digits are 39',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='39'}},
-{id:'ew40',name:'Ends 40',desc:'Last 2 digits are 40',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='40'}},
-{id:'ew41',name:'Ends 41',desc:'Last 2 digits are 41',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='41'}},
-{id:'ew42',name:'Ends 42',desc:'Last 2 digits are 42',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='42'}},
-{id:'ew43',name:'Ends 43',desc:'Last 2 digits are 43',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='43'}},
-{id:'ew44',name:'Ends 44',desc:'Last 2 digits are 44',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='44'}},
-{id:'ew45',name:'Ends 45',desc:'Last 2 digits are 45',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='45'}},
-{id:'ew46',name:'Ends 46',desc:'Last 2 digits are 46',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='46'}},
-{id:'ew47',name:'Ends 47',desc:'Last 2 digits are 47',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='47'}},
-{id:'ew48',name:'Ends 48',desc:'Last 2 digits are 48',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='48'}},
-{id:'ew49',name:'Ends 49',desc:'Last 2 digits are 49',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='49'}},
-{id:'ew50',name:'Ends 50',desc:'Last 2 digits are 50',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='50'}},
-{id:'ew51',name:'Ends 51',desc:'Last 2 digits are 51',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='51'}},
-{id:'ew52',name:'Ends 52',desc:'Last 2 digits are 52',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='52'}},
-{id:'ew53',name:'Ends 53',desc:'Last 2 digits are 53',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='53'}},
-{id:'ew54',name:'Ends 54',desc:'Last 2 digits are 54',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='54'}},
-{id:'ew55',name:'Ends 55',desc:'Last 2 digits are 55',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='55'}},
-{id:'ew56',name:'Ends 56',desc:'Last 2 digits are 56',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='56'}},
-{id:'ew57',name:'Ends 57',desc:'Last 2 digits are 57',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='57'}},
-{id:'ew58',name:'Ends 58',desc:'Last 2 digits are 58',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='58'}},
-{id:'ew59',name:'Ends 59',desc:'Last 2 digits are 59',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='59'}},
-{id:'ew60',name:'Ends 60',desc:'Last 2 digits are 60',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='60'}},
-{id:'ew61',name:'Ends 61',desc:'Last 2 digits are 61',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='61'}},
-{id:'ew62',name:'Ends 62',desc:'Last 2 digits are 62',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='62'}},
-{id:'ew63',name:'Ends 63',desc:'Last 2 digits are 63',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='63'}},
-{id:'ew64',name:'Ends 64',desc:'Last 2 digits are 64',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='64'}},
-{id:'ew65',name:'Ends 65',desc:'Last 2 digits are 65',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='65'}},
-{id:'ew66',name:'Ends 66',desc:'Last 2 digits are 66',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='66'}},
-{id:'ew67',name:'Ends 67',desc:'Last 2 digits are 67',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='67'}},
-{id:'ew68',name:'Ends 68',desc:'Last 2 digits are 68',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='68'}},
-{id:'ew69',name:'Ends 69',desc:'Last 2 digits are 69',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='69'}},
-{id:'ew70',name:'Ends 70',desc:'Last 2 digits are 70',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='70'}},
-{id:'ew71',name:'Ends 71',desc:'Last 2 digits are 71',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='71'}},
-{id:'ew72',name:'Ends 72',desc:'Last 2 digits are 72',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='72'}},
-{id:'ew73',name:'Ends 73',desc:'Last 2 digits are 73',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='73'}},
-{id:'ew74',name:'Ends 74',desc:'Last 2 digits are 74',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='74'}},
-{id:'ew75',name:'Ends 75',desc:'Last 2 digits are 75',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='75'}},
-{id:'ew76',name:'Ends 76',desc:'Last 2 digits are 76',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='76'}},
-{id:'ew77',name:'Ends 77',desc:'Last 2 digits are 77',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='77'}},
-{id:'ew78',name:'Ends 78',desc:'Last 2 digits are 78',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='78'}},
-{id:'ew79',name:'Ends 79',desc:'Last 2 digits are 79',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='79'}},
-{id:'ew80',name:'Ends 80',desc:'Last 2 digits are 80',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='80'}},
-{id:'ew81',name:'Ends 81',desc:'Last 2 digits are 81',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='81'}},
-{id:'ew82',name:'Ends 82',desc:'Last 2 digits are 82',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='82'}},
-{id:'ew83',name:'Ends 83',desc:'Last 2 digits are 83',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='83'}},
-{id:'ew84',name:'Ends 84',desc:'Last 2 digits are 84',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='84'}},
-{id:'ew85',name:'Ends 85',desc:'Last 2 digits are 85',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='85'}},
-{id:'ew86',name:'Ends 86',desc:'Last 2 digits are 86',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='86'}},
-{id:'ew87',name:'Ends 87',desc:'Last 2 digits are 87',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='87'}},
-{id:'ew88',name:'Ends 88',desc:'Last 2 digits are 88',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='88'}},
-{id:'ew89',name:'Ends 89',desc:'Last 2 digits are 89',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='89'}},
-{id:'ew90',name:'Ends 90',desc:'Last 2 digits are 90',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='90'}},
-{id:'ew91',name:'Ends 91',desc:'Last 2 digits are 91',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='91'}},
-{id:'ew92',name:'Ends 92',desc:'Last 2 digits are 92',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='92'}},
-{id:'ew93',name:'Ends 93',desc:'Last 2 digits are 93',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='93'}},
-{id:'ew94',name:'Ends 94',desc:'Last 2 digits are 94',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='94'}},
-{id:'ew95',name:'Ends 95',desc:'Last 2 digits are 95',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='95'}},
-{id:'ew96',name:'Ends 96',desc:'Last 2 digits are 96',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='96'}},
-{id:'ew97',name:'Ends 97',desc:'Last 2 digits are 97',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='97'}},
-{id:'ew98',name:'Ends 98',desc:'Last 2 digits are 98',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='98'}},
-{id:'ew99',name:'Ends 99',desc:'Last 2 digits are 99',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{const s=n+'';return s.length>=2&&s.slice(-2)==='99'}},
-{id:'has3x0',name:'Three 0s',desc:'Contains three 0s in a row',rarity:'Uncommon',ep:2000,emoji:'0️⃣',check:n=>new RegExp('0{3}').test(n+'')},
-{id:'has3x1',name:'Three 1s',desc:'Contains three 1s in a row',rarity:'Uncommon',ep:2000,emoji:'1️⃣',check:n=>new RegExp('1{3}').test(n+'')},
-{id:'has3x2',name:'Three 2s',desc:'Contains three 2s in a row',rarity:'Uncommon',ep:2000,emoji:'2️⃣',check:n=>new RegExp('2{3}').test(n+'')},
-{id:'has3x3',name:'Three 3s',desc:'Contains three 3s in a row',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>new RegExp('3{3}').test(n+'')},
-{id:'has3x4',name:'Three 4s',desc:'Contains three 4s in a row',rarity:'Uncommon',ep:2000,emoji:'4️⃣',check:n=>new RegExp('4{3}').test(n+'')},
-{id:'has3x5',name:'Three 5s',desc:'Contains three 5s in a row',rarity:'Uncommon',ep:2000,emoji:'5️⃣',check:n=>new RegExp('5{3}').test(n+'')},
-{id:'has3x6',name:'Three 6s',desc:'Contains three 6s in a row',rarity:'Uncommon',ep:2000,emoji:'6️⃣',check:n=>new RegExp('6{3}').test(n+'')},
-{id:'has3x7',name:'Three 7s',desc:'Contains three 7s in a row',rarity:'Uncommon',ep:2000,emoji:'7️⃣',check:n=>new RegExp('7{3}').test(n+'')},
-{id:'has3x8',name:'Three 8s',desc:'Contains three 8s in a row',rarity:'Uncommon',ep:2000,emoji:'8️⃣',check:n=>new RegExp('8{3}').test(n+'')},
-{id:'has3x9',name:'Three 9s',desc:'Contains three 9s in a row',rarity:'Uncommon',ep:2000,emoji:'9️⃣',check:n=>new RegExp('9{3}').test(n+'')},
-{id:'has2x0',name:'Two 0s',desc:'Contains two 0s in a row',rarity:'Common',ep:500,emoji:'0️⃣',check:n=>new RegExp('0{2}').test(n+'')},
-{id:'has2x1',name:'Two 1s',desc:'Contains two 1s in a row',rarity:'Common',ep:500,emoji:'1️⃣',check:n=>new RegExp('1{2}').test(n+'')},
-{id:'has2x2',name:'Two 2s',desc:'Contains two 2s in a row',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>new RegExp('2{2}').test(n+'')},
-{id:'has2x3',name:'Two 3s',desc:'Contains two 3s in a row',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>new RegExp('3{2}').test(n+'')},
-{id:'has2x4',name:'Two 4s',desc:'Contains two 4s in a row',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>new RegExp('4{2}').test(n+'')},
-{id:'has2x5',name:'Two 5s',desc:'Contains two 5s in a row',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>new RegExp('5{2}').test(n+'')},
-{id:'has2x6',name:'Two 6s',desc:'Contains two 6s in a row',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>new RegExp('6{2}').test(n+'')},
-{id:'has2x7',name:'Two 7s',desc:'Contains two 7s in a row',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>new RegExp('7{2}').test(n+'')},
-{id:'has2x8',name:'Two 8s',desc:'Contains two 8s in a row',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>new RegExp('8{2}').test(n+'')},
-{id:'has2x9',name:'Two 9s',desc:'Contains two 9s in a row',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>new RegExp('9{2}').test(n+'')},
-{id:'dc02',name:'Two 0s anywhere',desc:'Contains digit 0 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='0')c++;return c>=2}},
-{id:'dc03',name:'Three 0s anywhere',desc:'Contains digit 0 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='0')c++;return c>=3}},
-{id:'dc04',name:'Four 0s anywhere',desc:'Contains digit 0 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='0')c++;return c>=4}},
-{id:'dc12',name:'Two 1s anywhere',desc:'Contains digit 1 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='1')c++;return c>=2}},
-{id:'dc13',name:'Three 1s anywhere',desc:'Contains digit 1 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='1')c++;return c>=3}},
-{id:'dc14',name:'Four 1s anywhere',desc:'Contains digit 1 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='1')c++;return c>=4}},
-{id:'dc22',name:'Two 2s anywhere',desc:'Contains digit 2 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='2')c++;return c>=2}},
-{id:'dc23',name:'Three 2s anywhere',desc:'Contains digit 2 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='2')c++;return c>=3}},
-{id:'dc24',name:'Four 2s anywhere',desc:'Contains digit 2 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='2')c++;return c>=4}},
-{id:'dc32',name:'Two 3s anywhere',desc:'Contains digit 3 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='3')c++;return c>=2}},
-{id:'dc33',name:'Three 3s anywhere',desc:'Contains digit 3 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='3')c++;return c>=3}},
-{id:'dc34',name:'Four 3s anywhere',desc:'Contains digit 3 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='3')c++;return c>=4}},
-{id:'dc42',name:'Two 4s anywhere',desc:'Contains digit 4 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='4')c++;return c>=2}},
-{id:'dc43',name:'Three 4s anywhere',desc:'Contains digit 4 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='4')c++;return c>=3}},
-{id:'dc44',name:'Four 4s anywhere',desc:'Contains digit 4 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='4')c++;return c>=4}},
-{id:'dc52',name:'Two 5s anywhere',desc:'Contains digit 5 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='5')c++;return c>=2}},
-{id:'dc53',name:'Three 5s anywhere',desc:'Contains digit 5 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='5')c++;return c>=3}},
-{id:'dc54',name:'Four 5s anywhere',desc:'Contains digit 5 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='5')c++;return c>=4}},
-{id:'dc62',name:'Two 6s anywhere',desc:'Contains digit 6 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='6')c++;return c>=2}},
-{id:'dc63',name:'Three 6s anywhere',desc:'Contains digit 6 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='6')c++;return c>=3}},
-{id:'dc64',name:'Four 6s anywhere',desc:'Contains digit 6 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='6')c++;return c>=4}},
-{id:'dc72',name:'Two 7s anywhere',desc:'Contains digit 7 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='7')c++;return c>=2}},
-{id:'dc73',name:'Three 7s anywhere',desc:'Contains digit 7 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='7')c++;return c>=3}},
-{id:'dc74',name:'Four 7s anywhere',desc:'Contains digit 7 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='7')c++;return c>=4}},
-{id:'dc82',name:'Two 8s anywhere',desc:'Contains digit 8 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='8')c++;return c>=2}},
-{id:'dc83',name:'Three 8s anywhere',desc:'Contains digit 8 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='8')c++;return c>=3}},
-{id:'dc84',name:'Four 8s anywhere',desc:'Contains digit 8 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='8')c++;return c>=4}},
-{id:'dc92',name:'Two 9s anywhere',desc:'Contains digit 9 at least twice',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='9')c++;return c>=2}},
-{id:'dc93',name:'Three 9s anywhere',desc:'Contains digit 9 at least 3 times',rarity:'Uncommon',ep:2000,emoji:'3️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='9')c++;return c>=3}},
-{id:'dc94',name:'Four 9s anywhere',desc:'Contains digit 9 at least 4 times',rarity:'Rare',ep:10000,emoji:'4️⃣',check:n=>{const s=n+'';let c=0;for(let i=0;i<s.length;i++)if(s[i]==='9')c++;return c>=4}},
-{id:'se2',name:'Sum 2',desc:'Digit sum equals 2',rarity:'Common',ep:500,emoji:'2️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===2}},
-{id:'se3',name:'Sum 3',desc:'Digit sum equals 3',rarity:'Common',ep:500,emoji:'3️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===3}},
-{id:'se4',name:'Sum 4',desc:'Digit sum equals 4',rarity:'Common',ep:500,emoji:'4️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===4}},
-{id:'se5',name:'Sum 5',desc:'Digit sum equals 5',rarity:'Common',ep:500,emoji:'5️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===5}},
-{id:'se6',name:'Sum 6',desc:'Digit sum equals 6',rarity:'Common',ep:500,emoji:'6️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===6}},
-{id:'se7',name:'Sum 7',desc:'Digit sum equals 7',rarity:'Common',ep:500,emoji:'7️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===7}},
-{id:'se8',name:'Sum 8',desc:'Digit sum equals 8',rarity:'Common',ep:500,emoji:'8️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===8}},
-{id:'se9',name:'Sum 9',desc:'Digit sum equals 9',rarity:'Common',ep:500,emoji:'9️⃣',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===9}},
-{id:'se10',name:'Sum 10',desc:'Digit sum equals 10',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===10}},
-{id:'se11',name:'Sum 11',desc:'Digit sum equals 11',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===11}},
-{id:'se12',name:'Sum 12',desc:'Digit sum equals 12',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===12}},
-{id:'se13',name:'Sum 13',desc:'Digit sum equals 13',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===13}},
-{id:'se14',name:'Sum 14',desc:'Digit sum equals 14',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===14}},
-{id:'se15',name:'Sum 15',desc:'Digit sum equals 15',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===15}},
-{id:'se16',name:'Sum 16',desc:'Digit sum equals 16',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===16}},
-{id:'se17',name:'Sum 17',desc:'Digit sum equals 17',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===17}},
-{id:'se18',name:'Sum 18',desc:'Digit sum equals 18',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===18}},
-{id:'se19',name:'Sum 19',desc:'Digit sum equals 19',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===19}},
-{id:'se20',name:'Sum 20',desc:'Digit sum equals 20',rarity:'Common',ep:500,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===20}},
-
-// === ULTRA RARE (30) ===
-{id:'ur_0',name:'Zilch',desc:'Exactly 0',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg>',check:n=>n===0},
-{id:'ur_999999',name:'Maximum',desc:'Exactly 999999',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>n===999999},
-{id:'ur_123456',name:'Perfect Staircase',desc:'Exactly 123456',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===123456},
-{id:'ur_654321',name:'Perfect Reverse',desc:'Exactly 654321',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-arrow-right"/></svg>',check:n=>n===654321},
-{id:'ur_111111',name:'All Ones',desc:'Exactly 111111',rarity:'Mythic',ep:350000,emoji:'1️⃣',check:n=>n===111111},
-{id:'ur_222222',name:'All Twos',desc:'Exactly 222222',rarity:'Mythic',ep:350000,emoji:'2️⃣',check:n=>n===222222},
-{id:'ur_333333',name:'All Threes',desc:'Exactly 333333',rarity:'Mythic',ep:350000,emoji:'3️⃣',check:n=>n===333333},
-{id:'ur_444444',name:'All Fours',desc:'Exactly 444444',rarity:'Mythic',ep:350000,emoji:'4️⃣',check:n=>n===444444},
-{id:'ur_555555',name:'All Fives',desc:'Exactly 555555',rarity:'Mythic',ep:350000,emoji:'5️⃣',check:n=>n===555555},
-{id:'ur_666666',name:'All Sixes',desc:'Exactly 666666',rarity:'Mythic',ep:350000,emoji:'6️⃣',check:n=>n===666666},
-{id:'ur_777777',name:'All Sevens',desc:'Exactly 777777',rarity:'Anomaly',ep:500000,emoji:'7️⃣',check:n=>n===777777},
-{id:'ur_888888',name:'All Eights',desc:'Exactly 888888',rarity:'Anomaly',ep:500000,emoji:'8️⃣',check:n=>n===888888},
-{id:'ur_9nines',name:'All Nines',desc:'Exactly 999999',rarity:'Anomaly',ep:500000,emoji:'9️⃣',check:n=>n===999999},
-{id:'ur_007',name:'Golden 007',desc:'Exactly 7',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>n===7},
-{id:'ur_123321',name:'Mirror Staircase',desc:'Exactly 123321',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>n===123321},
-{id:'ur_121212',name:'Clockwork',desc:'Exactly 121212',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clock"/></svg>',check:n=>n===121212},
-{id:'ur_101010',name:'Binary Clock',desc:'Exactly 101010',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>n===101010},
-{id:'ur_112358',name:'Fibonacci Sequence',desc:'Contains 112358',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-sparkles"/></svg>',check:n=>/112358/.test(n+'')},
-{id:'ur_235711',name:'Primes',desc:'Contains 235711',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>/235711/.test(n+'')},
-{id:'ur_1984',name:'Orwell',desc:'Exactly 1984',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-book-open"/></svg>',check:n=>n===1984},
-{id:'ur_2001',name:'Odyssey',desc:'Exactly 2001',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>n===2001},
-{id:'ur_867530',name:'Jenny Full',desc:'Contains 867530',rarity:'Anomaly',ep:500000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',check:n=>/867530/.test(n+'')},
-{id:'ur_42',name:'Deep Thought',desc:'Exactly 42',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-globe"/></svg>',check:n=>n===42},
-{id:'ur_80085',name:'Boobs',desc:'Contains 80085',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-eye"/></svg>',check:n=>/80085/.test(n+'')},
-{id:'ur_69',name:'Nice',desc:'Contains 69',rarity:'Mythic',ep:350000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>',check:n=>/69/.test(n+'')},
-{id:'ur_sum42',name:'Sum of Everything',desc:'Digit sum equals 42',rarity:'Legendary',ep:200000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-globe"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===42}},
-{id:'ur_sumpi',name:'Pi Sum',desc:'Digit sum equals 15 (π digits)',rarity:'Rare',ep:10000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>',check:n=>{let t=0;const x=n+'';for(let i=0;i<x.length;i++)t+=+x[i];return t===15}},
-{id:'ur_primepal',name:'Prime Palindrome',desc:'Number is both prime and palindrome',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-refresh"/></svg>',check:n=>{const s=n+'';if(s!==s.split('').reverse().join('')||n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true}},
-{id:'ur_powerpal',name:'Power Palindrome',desc:'Palindrome and a perfect square',rarity:'Epic',ep:50000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-calculator"/></svg>',check:n=>{const s=n+'';if(s!==s.split('').reverse().join(''))return false;const r=Math.round(Math.sqrt(n));return r*r===n}},
-{id:'ur_godly',name:'Godly Roll',desc:'Contains your badge collection count',rarity:'Anomaly',ep:500000,emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',check:n=>new RegExp(nrState.badgeCount+'').test(n+'')},
-
-]
-for(let i=NR_BADGES.length-1;i>=0;i--)if(NR_BADGES[i]==null)NR_BADGES.splice(i,1)
-const nrLookup=new Map()
-NR_BADGES.forEach(b=>{if(b&&b.id)nrLookup.set(b.id,b)})
+function getMillisUntilUTCMidnight(){
+  const now=new Date()
+  const next=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,0,0,0))
+  return next.getTime()-now.getTime()
+}
+function nrIsToday(dateStr){
+  if(!dateStr)return false
+  const d=new Date(dateStr)
+  return d.getUTCFullYear()===new Date().getUTCFullYear()&&d.getUTCMonth()===new Date().getUTCMonth()&&d.getUTCDate()===new Date().getUTCDate()
+}
+function nrFormatCountdown(ms){
+  const s=Math.max(0,Math.floor(ms/1000))
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60
+  return h+'h '+m+'m '+ss+'s'
+}
+function nrRarityEmoji(r){
+  return {trash:'🗑️',common:'⬜',uncommon:'🟩',rare:'🟦',epic:'🟪',anomaly:'🟧',mythic:'🟥'}[r]||'⬜'
+}
+function nrCardRarity(score){
+  const R=window.RNGDLE
+  return R.getCardTierFromPercentile(R.getPercentileForScore(score))
+}
 
 function initNr(){
   if(nrStarted)return
   nrStarted=true
+  const R=window.RNGDLE
   const key='nr_'+getUsername()
   try{
     const d=JSON.parse(localStorage.getItem(key))
-    if(d){nrState.ep=d.ep||0;nrState.rolls=d.rolls||0;nrState.badgeCount=d.badgeCount||0;nrState.badges=d.badges||{};nrState.collection=new Set(d.collection||[]);nrState.lastNumber=d.lastNumber;nrState.lastBadges=d.lastBadges||[];nrState.pastRolls=d.pastRolls||[];nrState.lastEpGain=d.lastEpGain||0;nrState.lastBaseEp=d.lastBaseEp||0;nrState.bestEp=d.bestEp||0;nrState.streak=d.streak||0;nrState.lastRollDate=d.lastRollDate||null;nrState.rarityCounts=d.rarityCounts||{trash:0,common:0,uncommon:0,rare:0,epic:0,anomaly:0,mythic:0}
+    if(d){
+      nrState.ep=d.ep||0
+      nrState.rolls=d.rolls||0
+      nrState.badgeCount=d.badgeCount||0
+      nrState.badges=d.badges||{}
+      nrState.collection=new Set((d.collection||[]).filter(id=>R.RNGDLE_BADGE_MAP.has(id)))
+      nrState.lastResult=d.lastResult||null
+      nrState.pastRolls=d.pastRolls||[]
+      nrState.lastEpGain=d.lastEpGain||0
+      nrState.bestEp=d.bestEp||0
+      nrState.streak=d.streak||0
+      nrState.lastRollDate=d.lastRollDate||null
+      nrState.rarityCounts=d.rarityCounts||{trash:0,common:0,uncommon:0,rare:0,epic:0,anomaly:0,mythic:0}
       if(!nrState.bestEp&&nrState.pastRolls.length)nrState.bestEp=Math.max(...nrState.pastRolls.map(r=>r.ep||0))
     }
   }catch(e){}
@@ -3510,104 +2753,150 @@ function initNr(){
   nrUpdateButton()
 }
 function saveNr(){
-  try{localStorage.setItem('nr_'+getUsername(),JSON.stringify({ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount,badges:nrState.badges,collection:[...nrState.collection],lastNumber:nrState.lastNumber,lastBadges:nrState.lastBadges,pastRolls:nrState.pastRolls,lastEpGain:nrState.lastEpGain,lastBaseEp:nrState.lastBaseEp,bestEp:nrState.bestEp,streak:nrState.streak,lastRollDate:nrState.lastRollDate,rarityCounts:nrState.rarityCounts}))}catch(e){}
+  try{localStorage.setItem('nr_'+getUsername(),JSON.stringify({ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount,badges:nrState.badges,collection:[...nrState.collection],lastResult:nrState.lastResult,pastRolls:nrState.pastRolls,lastEpGain:nrState.lastEpGain,bestEp:nrState.bestEp,streak:nrState.streak,lastRollDate:nrState.lastRollDate,rarityCounts:nrState.rarityCounts}))}catch(e){}
 }
-function getRollRarity(ep){
-  if(ep<=0)return {label:'Trash',color:'var(--text-muted)',emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trash"/></svg>'}
-  if(ep<8000)return {label:'Common',color:'var(--text-dim)',emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-circle"/></svg>'}
-  if(ep<25000)return {label:'Uncommon',color:'#4fc3f7',emoji:'🟦'}
-  if(ep<75000)return {label:'Rare',color:'#ab47bc',emoji:'🟣'}
-  if(ep<200000)return {label:'Epic',color:'#ff6f00',emoji:'🟠'}
-  if(ep<500000)return {label:'Anomaly',color:'#ffd700',emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg>'}
-  return {label:'Mythic',color:'#ff1744',emoji:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg>'}
-}
-function renderNr(){
-  const n=nrState.lastNumber
-  const c=nrState.lastBadges||[]
-  const rr=getRollRarity(nrState.lastEpGain)
-  const rKey=rr.label.toLowerCase()
-  const today=new Date().toDateString()
-  const rolledToday=nrState.lastRollDate&&new Date(nrState.lastRollDate).toDateString()===today
-  let html='<div class="nr-wrap rngdle">'
-  // Big number display
-  html+='<div class="nr-big-number" id="nrNumber">'+(n!==undefined?n.toLocaleString():'? ? ? ? ? ?')+'</div>'
-  html+='<div class="nr-subtitle">One roll per day. One number. What will yours be?</div>'
-  // Generate button
-  if(rolledToday){
-    html+='<button class="nr-generate-btn rolled" id="nrRollBtn" disabled>COME BACK TOMORROW</button>'
-  }else{
-    html+='<button class="nr-generate-btn" id="nrRollBtn" onclick="rollNr()">GENERATE</button>'
-  }
-  // Result card
-  if(n!==undefined){
-    html+='<div class="nr-result-card rarity-border-'+rKey+'">'
-    html+='<div class="nr-result-number rarity-'+rKey+'">'+n.toLocaleString()+'</div>'
-    // Badges as pills
-    if(c.length){
-      html+='<div class="nr-pill-row">'
-      c.forEach(id=>{
-        const bg=nrLookup.get(id)
-        if(!bg)return
-        const isNew=nrState.newBadges&&nrState.newBadges.has(id)
-        html+='<span class="nr-pill '+bg.rarity.toLowerCase()+(isNew?' new':'')+'" onclick="nrBadgeDetail(\''+id+'\')" title="'+bg.desc+'">'+bg.emoji+' '+bg.name+'</span>'
-      })
-      html+='</div>'
+
+function nrRenderBadgeCard(b,idx,isNewSet){
+  const R=window.RNGDLE
+  const tier=R.getBadgeTierFromEp(b.score)
+  const newPill=(isNewSet&&isNewSet.has(b.id))
+  const isScoring=b.isScoring!==false
+  let hl=''
+  try{
+    const c=R.getBadgeContributors(b.id,nrState.lastResult?nrState.lastResult.number:0)
+    const s=String(nrState.lastResult?nrState.lastResult.number:'')
+    const digits=s.split('')
+    const mark={}
+    if(c){
+      if(c.type==='whole'){for(let i=0;i<digits.length;i++)mark[i]=true}
+      else if(c.type==='range'){for(let i=c.start;i<c.end&&i<digits.length;i++)mark[i]=true}
+      else if(c.type==='indices'){for(const i of c.indices||[])mark[i]=true}
     }
-    // EP display
-    html+='<div class="nr-ep-pill">'+rr.emoji+' <span id="nrEpGain">'+nrState.lastEpGain.toLocaleString()+'</span> EP</div>'
-    // Roll count
-    html+='<div class="nr-roll-meta">'+nrState.rolls.toLocaleString()+' rolls today</div>'
+    hl=digits.map((ch,i)=>'<span class="nr-hl-digit'+(mark[i]?' on':'')+'">'+ch+'</span>').join('')
+  }catch(e){}
+  return '<div class="nr-badge-card nr-badge-'+tier+(isScoring?' scoring':'')+'" style="animation-delay:'+(0.15+idx*0.07)+'s">'+
+    '<div class="nr-badge-card-emoji">'+b.emoji+'</div>'+
+    '<div class="nr-badge-card-body">'+
+      '<div class="nr-badge-card-title">'+b.label+(newPill?' <span class="nr-badge-new">NEW</span>':'')+'</div>'+
+      '<div class="nr-badge-card-pills">'+
+        '<span class="nr-badge-rarity-pill '+tier+'">'+tier.toUpperCase()+'</span>'+
+        (isScoring?'<span class="nr-badge-ep-pill">+'+b.score.toLocaleString()+' EP</span>':'<span class="nr-badge-ep-pill muted">not scored</span>')+
+      '</div>'+
+      '<div class="nr-badge-card-desc">'+b.description+'</div>'+
+      '<div class="nr-hl-row">'+hl+'</div>'+
+    '</div>'+
+  '</div>'
+}
+
+function renderNr(){
+  const R=window.RNGDLE
+  const r=nrState.lastResult
+  const rolledToday=nrIsToday(nrState.lastRollDate)
+  const totalBadges=R.RNGDLE_BADGES.length
+  let html='<div class="nr-wrap rngdle">'
+  html+='<div class="nr-big-number" id="nrNumber">'+(r?'<span class="nr-num-final">'+r.number.toLocaleString()+'</span>':'<span class="nr-num-placeholder">? ? ? ? ? ?</span>')+'</div>'
+  html+='<div class="nr-subtitle">One roll per day. One number. What will yours be?</div>'
+  if(rolledToday){
+    html+='<button class="nr-generate-btn rolled" id="nrRollBtn" disabled><span class="nr-btn-label">COME BACK TOMORROW</span><span class="nr-btn-countdown" id="nrCountdown">'+nrFormatCountdown(getMillisUntilUTCMidnight())+'</span></button>'
+  }else{
+    html+='<button class="nr-generate-btn" id="nrRollBtn" onclick="rollNr()"><span class="nr-btn-label">GENERATE</span></button>'
+  }
+  if(r){
+    const pct=(typeof r.percentile==='number')?r.percentile:R.getPercentileForScore(r.totalScore)
+    const cr=r.rarity||nrCardRarity(r.totalScore)
+    const topPct=(100-pct)
+    html+='<div class="nr-result-card nr-rarity-'+cr+'">'
+    html+='<div class="nr-result-number nr-rarity-'+cr+'">'+r.number.toLocaleString()+'</div>'
+    html+='<div class="nr-rarity-pill-row"><span class="nr-rarity-pill '+cr+'">'+nrRarityEmoji(cr)+' '+cr.toUpperCase()+'</span><span class="nr-top-pill">TOP '+(topPct<0.01?'0.00':topPct.toFixed(2))+'%</span></div>'
+    html+='<div class="nr-ep-pill">+'+r.totalScore.toLocaleString()+' EP</div>'
+    html+='<div class="nr-lifetime-ep" id="nrLifetimeEp">Lifetime EP: '+nrState.ep.toLocaleString()+'</div>'
+    if(r.badges&&r.badges.length){
+      html+='<div class="nr-badges-title">Badges</div>'
+      html+='<div class="nr-badge-cards" id="nrBadgeCards">'+r.badges.map((b,i)=>nrRenderBadgeCard(b,i,nrState._newSet)).join('')+'</div>'
+    }else{
+      html+='<div class="nr-badges-title">No badges on this roll</div>'
+    }
+    html+='<div class="nr-action-row">'
+    html+='<button class="nr-share-btn" onclick="nrShareRoll()">📋 Share Roll</button>'
+    html+='<button class="nr-action-btn" onclick="toggleNrCollection()">Collection ('+nrState.badgeCount+'/'+totalBadges+')</button>'
+    html+='<button class="nr-action-btn" onclick="nrShowPastRolls()">History ('+nrState.pastRolls.length+')</button>'
+    html+='</div>'
+    html+='<div class="nr-next-roll">Next roll in <span id="nrCountdown2">'+nrFormatCountdown(getMillisUntilUTCMidnight())+'</span></div>'
+    html+='</div>'
+  }else{
+    html+='<div class="nr-action-row">'
+    html+='<button class="nr-action-btn" onclick="toggleNrCollection()">Collection ('+nrState.badgeCount+'/'+totalBadges+')</button>'
+    html+='<button class="nr-action-btn" onclick="nrShowPastRolls()">History ('+nrState.pastRolls.length+')</button>'
     html+='</div>'
   }
-  // Streak
   if(nrState.streak>1)html+='<div class="nr-streak-line">☀ '+nrState.streak+' day streak!</div>'
-  // Stats row
-  html+='<div class="nr-stats-row"><span>Total EP: '+nrState.ep.toLocaleString()+'</span><span>Badges: '+nrState.badgeCount+'/'+NR_BADGES.length+'</span></div>'
-  // Action buttons
-  html+='<div class="nr-action-row"><button class="nr-action-btn" onclick="toggleNrCollection()">Collection ('+nrState.badgeCount+'/'+NR_BADGES.length+')</button>'
-  html+='<button class="nr-action-btn" onclick="nrShowPastRolls()">History ('+nrState.pastRolls.length+')</button></div>'
-  // Collection panel
+  html+='<div class="nr-stats-row"><span>Rolls: '+nrState.rolls.toLocaleString()+'</span><span>Badges: '+nrState.badgeCount+'/'+totalBadges+'</span><span>Best: '+nrState.bestEp.toLocaleString()+' EP</span></div>'
   html+='<div class="nr-collection" id="nrCollection"><h3>Badge Collection</h3><div class="nr-col-grid">'
-  ;[...NR_BADGES].sort((a,b)=>a.ep-b.ep).forEach(b=>{
+  ;[...R.RNGDLE_BADGES].sort((a,b)=>a.score-b.score).forEach(b=>{
     const owned=nrState.collection.has(b.id)
-    html+='<div class="nr-col-badge'+(owned?' unlocked '+b.rarity.toLowerCase():'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="'+b.desc+'">'+b.emoji+' '+b.name+(owned?' ✓':'')+'</div>'
+    const tier=R.getBadgeTierFromEp(b.score)
+    html+='<div class="nr-col-badge'+(owned?' unlocked '+tier:'')+'" onclick="nrBadgeDetail(\''+b.id+'\')" title="'+b.label+' — '+b.score.toLocaleString()+' EP">'+b.emoji+' '+b.label+(owned?' ✓':'')+'</div>'
   })
   html+='</div></div>'
   html+='<div id="lbContainer"></div>'
   html+='</div>'
   document.getElementById('nrContent').innerHTML=html
   lbFetch().then(()=>{const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()})
+  if(rolledToday){
+    nrStartCountdown()
+  }
+}
+function nrStartCountdown(){
+  const upd=()=>{
+    const ms=getMillisUntilUTCMidnight()
+    const txt=nrFormatCountdown(ms)
+    const a=document.getElementById('nrCountdown')
+    const b=document.getElementById('nrCountdown2')
+    if(a)a.textContent=txt
+    if(b)b.textContent=txt
+    if(ms<=0){renderNr()}
+  }
+  upd()
+  if(window._nrCdTimer)clearInterval(window._nrCdTimer)
+  window._nrCdTimer=setInterval(upd,1000)
 }
 function toggleNrCollection(){
   const el=document.getElementById('nrCollection')
   if(el)el.classList.toggle('open')
 }
 function nrShareRoll(){
-  const n=nrState.lastNumber
-  if(n===undefined)return
-  const rr=getRollRarity(nrState.lastEpGain)
-  const c=nrState.lastBadges||[]
-  const badgeEmojis=c.map(id=>{const b=nrLookup.get(id);return b?b.emoji:''}).filter(Boolean).join('')
-  const text='⚅ '+n.toLocaleString()+'\n'+rr.emoji+' '+rr.label+' Roll — '+nrState.lastEpGain.toLocaleString()+' EP\n'+badgeEmojis+'\n'+c.length+' badges · #'+nrState.rolls+' roll\n\n⚅ Number Roll'
+  const r=nrState.lastResult
+  if(!r)return
+  const R=window.RNGDLE
+  const pct=(typeof r.percentile==='number')?r.percentile:R.getPercentileForScore(r.totalScore)
+  const cr=r.rarity||nrCardRarity(r.totalScore)
+  const topPct=(100-pct)
+  const scoring=r.badges?r.badges.filter(b=>b.isScoring!==false):[]
+  const emojis=scoring.map(b=>b.emoji).join('')
+  const text='🎲 '+r.number.toLocaleString()+'\n'+cr.toUpperCase()+' · TOP '+topPct.toFixed(2)+'% · '+r.totalScore.toLocaleString()+' EP\n'+emojis+'\n'+scoring.length+' badges · #'+nrState.rolls+' roll\n\n🎲 Number Roll'
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>{const btn=document.querySelector('.nr-share-btn');if(btn){btn.textContent='✅ Copied!';setTimeout(()=>{btn.innerHTML='📋 Share Roll'},1500)}})}
 }
 function nrUpdateButton(){
   const btn=document.querySelector('.gs-btn[data-game="numberroll"]')
   if(btn){
-    if(nrState.lastNumber!==undefined)btn.textContent='⚅ '+nrState.lastNumber.toLocaleString()
-    else btn.textContent='⚅ Number Roll'
+    if(nrState.lastResult)btn.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
+    else btn.textContent='🎲 Number Roll'
   }
   const hdr=document.getElementById('nrHeaderDisplay')
   if(hdr){
-    if(nrState.lastNumber!==undefined)hdr.textContent='⚅ '+nrState.lastNumber.toLocaleString()
-    else hdr.textContent='⚅ ?'
+    if(nrState.lastResult)hdr.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
+    else hdr.textContent='🎲 ?'
   }
+  const hdrep=document.getElementById('nrHeaderEp')
+  if(hdrep)hdrep.textContent=nrState.ep.toLocaleString()
 }
 function nrBadgeDetail(id){
-  const bg=nrLookup.get(id)
+  const R=window.RNGDLE
+  const bg=R.RNGDLE_BADGE_MAP.get(id)
   if(!bg)return
   const owned=nrState.collection.has(id)
   const count=nrState.badges[id]||0
+  const tier=R.getBadgeTierFromEp(bg.score)
   const existing=document.getElementById('nrBadgeModal')
   if(existing)existing.remove()
   const modal=document.createElement('div')
@@ -3616,11 +2905,11 @@ function nrBadgeDetail(id){
   modal.onclick=function(e){if(e.target===this)this.remove()}
   modal.innerHTML='<div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:360px;width:90%;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:10px">'+bg.emoji+'</div>'+
-    '<h3 style="font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text)">'+bg.name+'</h3>'+
-    '<p style="color:var(--text-dim);font-size:14px;margin-bottom:12px">'+bg.desc+'</p>'+
+    '<h3 style="font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text)">'+bg.label+'</h3>'+
+    '<p style="color:var(--text-dim);font-size:14px;margin-bottom:12px">'+bg.description+'</p>'+
     '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">'+
-      '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface);color:var(--text-muted);border:1px solid var(--border-light)">'+bg.rarity+'</span>'+
-      '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface);color:var(--text-muted);border:1px solid var(--border-light)">'+rngdleEp(bg.ep,bg.rarity)+' EP</span>'+
+      '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface);color:var(--text-muted);border:1px solid var(--border-light)">'+tier.toUpperCase()+'</span>'+
+      '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface);color:var(--text-muted);border:1px solid var(--border-light)">'+bg.score.toLocaleString()+' EP</span>'+
     '</div>'+
     '<div style="color:'+(owned?'var(--ctp-green)':'var(--text-muted)')+';font-size:13px;font-weight:600;margin-bottom:16px">'+
       (owned?'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-check"/></svg> Unlocked! (×'+count+')':'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-x-circle"/></svg> Not yet unlocked')+
@@ -3640,24 +2929,25 @@ function nrShowPastRolls(){
     m.onclick=function(e){if(e.target===this)this.remove()}
     m.innerHTML='<div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:360px;width:90%;text-align:center">'+
       '<h3 style="font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text)"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-clipboard"/></svg> Past Rolls</h3>'+
-      '<p style="color:var(--text-dim);font-size:14px">No rolls yet. Click ⚅ Roll to start!</p>'+
+      '<p style="color:var(--text-dim);font-size:14px">No rolls yet. Click 🎲 Roll to start!</p>'+
       '<button onclick="this.closest(\'#nrPastModal\').remove()" style="margin-top:16px;padding:8px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#ff6b35,#f7c948);color:#1a1a1a;font-weight:700;font-size:13px;cursor:pointer">Close</button></div>'
     document.body.appendChild(m)
     return
   }
   let sortMode='date'
   let expanded={}
-  function getBadgeCount(r){return Array.isArray(r.badges)?r.badges.length:r.badges||0}
+  function getBadgeCount(r){return Array.isArray(r.badges)?r.badges.length:(r.badges||0)}
   function rowHtml(r,idx){
     const bc=getBadgeCount(r)
-    const epStr=r.ep>0?'<span style="color:var(--ctp-green);font-weight:700">+'+r.ep+'EP</span>'+(r.mult?' <span style="color:var(--text-muted);font-size:11px">(base '+r.base+' ×'+r.mult.toFixed(1)+')</span>':''):'<span style="color:var(--text-muted)">0EP</span>'
+    const cr=r.rarity?r.rarity:nrCardRarity(r.ep||0)
+    const epStr=r.ep>0?'<span style="color:var(--ctp-green);font-weight:700">+'+r.ep.toLocaleString()+'EP</span>':'<span style="color:var(--text-muted)">0EP</span>'
     const uid='pr_'+idx
     const open=expanded[uid]
-    const badges=r.badgeNames&&r.badgeNames.length?r.badgeNames.map(b=>'<span title="'+b.name+' ['+b.ep+'EP] · '+b.rarity+'" style="font-size:16px;cursor:pointer" onclick="nrBadgeDetail(\''+b.id+'\')">'+b.emoji+'</span>').join(''):'<span style="color:var(--text-muted);font-size:12px">-</span>'
+    const badges=r.badgeNames&&r.badgeNames.length?r.badgeNames.map(b=>'<span title="'+b.label+' ['+b.score.toLocaleString()+'EP] · '+(b.tier||'').toUpperCase()+'" style="font-size:16px;cursor:pointer" onclick="nrBadgeDetail(\''+b.id+'\')">'+b.emoji+'</span>').join(''):'<span style="color:var(--text-muted);font-size:12px">-</span>'
     return '<div style="padding:6px 10px;border-radius:6px;background:'+(idx%2===0?'var(--surface)':'transparent')+';cursor:pointer" onclick="nrToggleRoll(\''+uid+'\',this)">'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
       '<span><span class="pr_arr" style="color:var(--text-muted);margin-right:6px;font-size:10px">'+(open?'▼':'▶')+'</span><span style="color:var(--ctp-yellow);font-weight:700;font-family:monospace">'+(idx+1)+'. '+r.n.toLocaleString()+'</span></span>'+
-      '<span>'+epStr+' <span style="color:var(--text-dim)">'+bc+'</span></span></div>'+
+      '<span>'+epStr+' <span style="color:var(--text-dim)">'+bc+'</span> <span style="color:var(--text-muted);font-size:10px;text-transform:uppercase">'+cr+'</span></span></div>'+
       '<div class="pr_bdgs" style="display:'+(open?'flex':'none')+';flex-wrap:wrap;gap:4px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light)">'+badges+'</div></div>'
   }
   function buildList(){
@@ -3685,91 +2975,95 @@ function nrShowPastRolls(){
     '<button onclick="this.closest(\'#nrPastModal\').remove();delete window.nrToggleRoll;delete window.nrSortPastRolls" style="margin-top:12px;padding:8px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#ff6b35,#f7c948);color:#1a1a1a;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0">Close</button></div>'
   document.body.appendChild(modal)
 }
-function rngdleEp(baseEp,rarity){
-  const r=(rarity||'common').toLowerCase()
-  const caps={common:50,uncommon:200,rare:1000,epic:5000,anomaly:25000,mythic:100000}
-  const cap=caps[r]||50
-  if(baseEp<=cap)return baseEp
-  return Math.round(cap*Math.pow(baseEp/cap,0.4))
+
+function nrRevealNumber(target){
+  const el=document.getElementById('nrNumber')
+  if(!el)return Promise.resolve()
+  const digits=String(target).split('')
+  const d=digits.length
+  el.innerHTML=''
+  const spans=[]
+  for(let i=0;i<d;i++){
+    const sp=document.createElement('span')
+    sp.className='nr-digit-slot'+(i===0?' first':'')
+    sp.textContent='?'
+    el.appendChild(sp)
+    spans.push(sp)
+  }
+  return new Promise(res=>{
+    let idx=0
+    const iv=setInterval(()=>{
+      if(idx<d){
+        spans[idx].textContent=digits[idx]
+        spans[idx].classList.add('revealed')
+        idx++
+      }else{
+        clearInterval(iv)
+        el.classList.add('done')
+        res()
+      }
+    },260)
+  })
 }
+
 function rollNr(){
-  const today=new Date().toDateString()
-  if(nrState.lastRollDate&&new Date(nrState.lastRollDate).toDateString()===today){
+  const R=window.RNGDLE
+  const today=new Date()
+  if(nrIsToday(nrState.lastRollDate)){
     const btn=document.getElementById('nrRollBtn')
-    if(btn){btn.disabled=true;btn.textContent='COME BACK TOMORROW'}
+    if(btn){btn.disabled=true}
     return
   }
   const btn=document.getElementById('nrRollBtn')
-  if(btn)btn.disabled=true
-  const numEl=document.getElementById('nrNumber')
-  const n=Math.floor(Math.random()*1000000)
-  let frame=0
-  const perDigit=8
-  const total=6*perDigit
-  const s=n.toString().padStart(6,'0')
-  if(numEl){numEl.className='nr-big-number';numEl.textContent='· · · · · ·'}
-  const iv=setInterval(()=>{
-    frame++
-    const rolling=Math.min(Math.floor(frame/perDigit),6)
-    let d=''
-    for(let i=0;i<6;i++){
-      if(i<rolling)d+=s[i]+' '
-      else if(i===rolling)d+=Math.floor(Math.random()*10)+' '
-      else d+='? '
+  if(btn){btn.disabled=true;const lbl=btn.querySelector('.nr-btn-label');if(lbl)lbl.textContent='PROCESSING…'}
+  const n=R.rollRandomNumber()
+  nrRevealNumber(n).then(()=>{
+    try{
+      const composed=R.composeRollResult(n,nrState.collection)
+      composed.percentile=R.getPercentileForScore(composed.totalScore)
+      composed.rarity=nrCardRarity(composed.totalScore)
+      const scoringIds=new Set(composed.badges.filter(b=>b.isScoring).map(b=>b.id))
+      nrState._newSet=new Set()
+      composed.badges.forEach(b=>{
+        if(!nrState.collection.has(b.id)){nrState.collection.add(b.id);nrState.badgeCount++;nrState._newSet.add(b.id)}
+        nrState.badges[b.id]=(nrState.badges[b.id]||0)+1
+      })
+      const epGain=composed.totalScore
+      const prevEp=nrState.ep
+      nrState.lastResult=composed
+      nrState.lastEpGain=epGain
+      nrState.ep+=epGain
+      nrState.rolls++
+      if(epGain>nrState.bestEp)nrState.bestEp=epGain
+      const cr=nrCardRarity(epGain)
+      nrState.rarityCounts[cr]=(nrState.rarityCounts[cr]||0)+1
+      const todayStr=new Date().toISOString()
+      if(nrState.lastRollDate){
+        const last=new Date(nrState.lastRollDate)
+        const y=new Date(Date.now()-86400000)
+        const sameDay=d=>d.getUTCFullYear()===y.getUTCFullYear()&&d.getUTCMonth()===y.getUTCMonth()&&d.getUTCDate()===y.getUTCDate()
+        if(sameDay(last))nrState.streak++
+        else if(!nrIsToday(nrState.lastRollDate))nrState.streak=1
+      }else{nrState.streak=1}
+      nrState.lastRollDate=todayStr
+      nrState.pastRolls.unshift({n:n,ep:epGain,rarity:cr,pct:composed.percentile,badges:composed.badges.filter(b=>b.isScoring).length,badgeNames:composed.badges.map(b=>({id:b.id,emoji:b.emoji,label:b.label,score:b.score,tier:R.getBadgeTierFromEp(b.score)}))})
+      if(nrState.pastRolls.length>100)nrState.pastRolls.length=100
+      saveNr()
+      renderNr()
+      nrUpdateButton()
+      updateStats('mg6',{ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount})
+      renderLeaderboard()
+      dailyCheckProgress('roll1',1)
+      lbSubmit(epGain).then(s=>{
+        const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()
+        if(s==='full'){const el=document.querySelector('.nr-result-card');if(el){const m=document.createElement('div');m.style.cssText='margin-top:8px;font-size:12px;color:var(--text-muted)';m.textContent='Leaderboard full — top 20 all-time only';el.appendChild(m)}}
+      })
+    }catch(e){
+      console.error('Roll error',e)
+      const el=document.getElementById('nrNumber')
+      if(el)el.textContent=n.toLocaleString()
     }
-    if(numEl)numEl.textContent=d.trim()
-    if(frame>=total){
-      clearInterval(iv)
-      if(numEl)numEl.textContent=n.toLocaleString()
-      try{
-        const earned=[]
-        nrState.newBadges=new Set()
-        const badges=typeof NR_BADGES!=='undefined'?NR_BADGES:[]
-        for(let i=0;i<badges.length;i++){const b=badges[i];if(!b)continue;try{if(b.check(n))earned.push(b.id)}catch(e){console.warn('Badge check error',b.id,e)}}
-        nrState.lastNumber=n
-        nrState.lastBadges=earned
-        let epGain=0
-        earned.forEach(id=>{
-          const bg=nrLookup.get(id)
-          if(!bg)return
-          const scaledEp=rngdleEp(bg.ep,bg.rarity)
-          epGain+=scaledEp
-          if(!nrState.collection.has(id)){nrState.collection.add(id);nrState.badgeCount++;nrState.newBadges.add(id)}
-          nrState.badges[id]=(nrState.badges[id]||0)+1
-        })
-        const totalEp=epGain
-        nrState.lastEpGain=totalEp
-        nrState.lastBaseEp=epGain
-        nrState.ep+=totalEp
-        nrState.rolls++
-        if(totalEp>nrState.bestEp)nrState.bestEp=totalEp
-        const rr=getRollRarity(totalEp)
-        const rKey=rr.label.toLowerCase()
-        if(nrState.rarityCounts)nrState.rarityCounts[rKey]=(nrState.rarityCounts[rKey]||0)+1
-        const today=new Date().toDateString()
-        if(nrState.lastRollDate){
-          const last=new Date(nrState.lastRollDate).toDateString()
-          const yesterday=new Date(Date.now()-86400000).toDateString()
-          if(last===yesterday)nrState.streak++
-          else if(last!==today)nrState.streak=1
-        }else{nrState.streak=1}
-        nrState.lastRollDate=new Date().toISOString()
-        nrState.pastRolls.unshift({n:n,ep:totalEp,base:epGain,badges:earned,badgeNames:earned.map(id=>{const b=nrLookup.get(id);return b?{id:b.id,emoji:b.emoji,name:b.name,ep:rngdleEp(b.ep,b.rarity),rarity:b.rarity}:{id:id,emoji:'?',name:id,ep:0,rarity:''}}).filter(Boolean)})
-        if(nrState.pastRolls.length>100)nrState.pastRolls.length=100
-        saveNr()
-        renderNr()
-        nrUpdateButton()
-        updateStats('mg6',{ep:nrState.ep,rolls:nrState.rolls,badgeCount:nrState.badgeCount})
-        renderLeaderboard()
-        dailyCheckProgress('roll1',1)
-        lbSubmit(totalEp).then(s=>{
-          const c=document.getElementById('lbContainer');if(c)c.innerHTML=lbRender()
-          if(s==='full'){const el=document.querySelector('.nr-result-card');if(el){const m=document.createElement('div');m.style.cssText='margin-top:8px;font-size:12px;color:var(--text-muted)';m.textContent='Leaderboard full — top 20 all-time only';el.appendChild(m)}}
-        })
-      }catch(e){console.error('Roll error',e);if(numEl)numEl.textContent=n.toLocaleString()}
-      if(btn)btn.disabled=false
-    }
-  },70)
+  })
 }
 
 // ===== USERNAME =====
@@ -3966,7 +3260,7 @@ function opWipeAll(){
   if(!confirm('Last chance! All progress, stats, saves, and settings will be gone.'))return
   localStorage.clear()
   _statsCache=null
-  nrState={ep:0,rolls:0,badgeCount:0,badges:{},collection:new Set(),lastBadges:[],pastRolls:[],lastEpGain:0,lastBaseEp:0}
+  nrState={ep:0,rolls:0,badgeCount:0,badges:{},collection:new Set(),lastResult:null,pastRolls:[],lastEpGain:0,bestEp:0,streak:0,lastRollDate:null,rarityCounts:{trash:0,common:0,uncommon:0,rare:0,epic:0,anomaly:0,mythic:0}}
   document.getElementById('opResult').textContent='<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-alert-triangle"/></svg> All localStorage wiped! Reloading...'
   setTimeout(()=>location.reload(),1500)
 }
@@ -5574,6 +4868,8 @@ if(_homeCardCompare){
   }
 }
 
+// PokéClicker moved to clicker.js
+
 // Init username on load
 loadUsername()
 updateOperatorTab()
@@ -6019,3 +5315,4 @@ function wlBtn(cardId,name,set,price){
   const list=wlGet();const has=list.some(w=>w.cardId===cardId)
   return '<span style="cursor:pointer;font-size:14px;color:'+(has?'var(--ctp-red)':'var(--text-muted)')+'" onclick="wlToggle(\''+cardId+'\',\''+name.replace(/'/g,"\\'")+'\',\''+(set||'').replace(/'/g,"\\'")+'\',\''+(price||'').replace(/'/g,"\\'")+'\')" title="'+(has?'Remove from wishlist':'Add to wishlist')+'">'+(has?'♥':'♡')+'</span>'
 }
+
