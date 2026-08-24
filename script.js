@@ -1711,6 +1711,7 @@ function chSelectStarter(id){
 }
 function chShowHub(){
   showCh('chHub')
+  const hubBg=document.querySelector('#chHub .ch-bg'); if(hubBg) hubBg.className='ch-bg era-'+(ch.era||'medieval');
   const p=ch.team[0],hpPct=Math.max(0,p.currentHp/p.maxHp*100),xpPct=Math.min(100,p.xp/p.xpNext*100)
   const trainers=ERAS[ch.era].trainers
   const t=trainers[Math.min(ch.trainerIdx,trainers.length-1)]
@@ -1719,6 +1720,8 @@ function chShowHub(){
   const w=WEATHER_TYPES[ch.weather]||WEATHER_TYPES.clear
   const activeTask=FIELD_TASKS.find(t=>!ch.researchComplete.includes(t.id))||FIELD_TASKS[0]
   const fusionInfo=ch.fusion?ch.fusion:null
+  const isDailyAvail=localStorage.getItem('pokeDailyDate')!==new Date().toISOString().split('T')[0]
+  const streakHot=ch.winStreak>=2?' streak-hot':''
   document.getElementById('chHubContent').innerHTML=
     '<div class="hub-header"><h2>Pokémon Champions</h2>'+
       '<div style="display:flex;gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap">'+
@@ -1743,7 +1746,7 @@ function chShowHub(){
     '</div>'+
     '<div class="hub-stats">'+
       '<span><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-trophy"/></svg> Rank: '+rank+'</span>'+
-      '<span><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg> Streak: '+ch.winStreak+'</span>'+
+      '<span class="'+streakHot.trim()+'"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-fire"/></svg> Streak: '+ch.winStreak+(ch.winStreak>=3?' 🔥':'')+'</span>'+
       '<span><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg> '+ch.stardust+' SD</span>'+
       '<span><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-diamond"/></svg> '+candyAmt+' Candy</span>'+
       '<span><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-pokeball"/></svg> '+ch.pokeballs+' Balls</span>'+
@@ -1755,8 +1758,7 @@ function chShowHub(){
       '<button class="b-btn b-btn-secondary" onclick="chShowFusion()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crystal"/></svg> Fusion Lab</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chShowResearch()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-list"/></svg> Field Research</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chShowTrainerShop()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-credit-card"/></svg> Shop</button>'+
-      '<button class="b-btn b-btn-secondary" onclick="chShowBooster()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-package"/></svg> Booster</button>'+
-      '<button class="b-btn b-btn-secondary" onclick="chShowDaily()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg> Daily</button>'+
+      '<button class="b-btn b-btn-secondary'+(isDailyAvail?' has-notif':'')+'" onclick="chShowDaily()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-star"/></svg> Daily</button>'+
       '<button class="b-btn b-btn-secondary" onclick="chHealAll()"><svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-heart"/></svg> Heal All</button>'+
     '</div>'
 }
@@ -2245,7 +2247,8 @@ function chRenderMoves(pkmn){
     const sel=i===ch.selectedMove?'selected':''
     const noEnergy=!chCanUseMove(pkmn,m)
     const disabled=m.pp<=0||noEnergy
-    const cls='ch-move-btn type-'+m.t+' '+sel+(disabled?' disabled':'')
+    const isSuper=eff>1&&!disabled
+    const cls='ch-move-btn type-'+m.t+' '+sel+(disabled?' disabled':'')+(isSuper?' super':'')
     const have=pkmn.energy[m.t]||0
     const dots=Array.from({length:m.e||0},(_,j)=>j<have?'<span class="e-dot filled">'+m.t.substring(0,1).toUpperCase()+'</span>':'<span class="e-dot"></span>').join('')
     return '<div class="'+cls+'" onclick="chSelectMove('+i+')">'+
@@ -2423,19 +2426,38 @@ function chCancelSwitch(){
 
 function chHitEffect(img,result){
   if(!img)return
+  const slot=img.closest('.ch-pkmn-slot')
   if(result.dmg>0){
-    img.classList.remove('ch-hit-anim','ch-hit-opp-anim','ch-shake')
+    img.classList.remove('ch-hit-anim','ch-hit-opp-anim','ch-shake','hit-flash')
     void img.offsetWidth
     img.classList.add(result.eff>1?'ch-shake':'ch-hit-anim')
+    // hit flash
+    if(slot){slot.classList.add('hit-flash');setTimeout(()=>slot.classList.remove('hit-flash'),160)}
+    // lunge attacker
+    const isOppHit=slot&&slot.id==='chOppSlot'
+    const atkSlot=document.getElementById(isOppHit?'chPlayerSlot':'chOppSlot')
+    const atkImg=atkSlot?atkSlot.querySelector('.sprite'):null
+    if(atkImg){atkImg.classList.remove('ch-lunge-player','ch-lunge-opp');void atkImg.offsetWidth;atkImg.classList.add(isOppHit?'ch-lunge-player':'ch-lunge-opp');setTimeout(()=>atkImg.classList.remove('ch-lunge-player','ch-lunge-opp'),320)}
+    // damage pop
+    if(slot){
+      const pop=document.createElement('div')
+      pop.className='ch-dmg-pop'+(result.crit?' crit':'')+(result.eff>1?' super':'')
+      pop.textContent='-'+result.dmg+(result.crit?'!':'')
+      slot.style.position='relative'
+      slot.appendChild(pop)
+      setTimeout(()=>pop.remove(),760)
+    }
   }
   if(result.crit){
     const c=document.getElementById('chBattleBg')
     if(c){c.classList.remove('ch-shake');void c.offsetWidth;c.classList.add('ch-shake')}
-    // Critical hit flash overlay
     const flash=document.createElement('div')
     flash.className='ch-crit-flash'
     const arena=document.querySelector('.ch-arena')
-    if(arena){arena.appendChild(flash);setTimeout(()=>flash.remove(),400)}
+    if(arena){arena.appendChild(flash);setTimeout(()=>flash.remove(),420)}
+  } else if(result.eff>1){
+    const c=document.getElementById('chBattleBg')
+    if(c){c.style.transition='filter .15s';c.style.filter='brightness(1.08)';setTimeout(()=>c.style.filter='',180)}
   }
 }
 async function chEndBattle(win){
@@ -2794,14 +2816,14 @@ function renderNr(){
   const rolledToday=nrIsToday(nrState.lastRollDate)
   const totalBadges=R.RNGDLE_BADGES.length
   let html='<div class="nr-wrap rngdle">'
-  html+='<div class="nr-big-number" id="nrNumber">'+(r?'<span class="nr-num-final">'+r.number.toLocaleString()+'</span>':'<span class="nr-num-placeholder">? ? ? ? ? ?</span>')+'</div>'
+  html+='<div class="nr-big-number" id="nrNumber">'+(rolledToday&&r?'<span class="nr-num-final">'+r.number.toLocaleString()+'</span>':'<span class="nr-num-placeholder">? ? ? ? ? ?</span>')+'</div>'
   html+='<div class="nr-subtitle">One roll per day. One number. What will yours be?</div>'
   if(rolledToday){
     html+='<button class="nr-generate-btn rolled" id="nrRollBtn" disabled><span class="nr-btn-label">COME BACK TOMORROW</span><span class="nr-btn-countdown" id="nrCountdown">'+nrFormatCountdown(getMillisUntilUTCMidnight())+'</span></button>'
   }else{
     html+='<button class="nr-generate-btn" id="nrRollBtn" onclick="rollNr()"><span class="nr-btn-label">GENERATE</span></button>'
   }
-  if(r){
+  if(r&&rolledToday){
     const pct=(typeof r.percentile==='number')?r.percentile:R.getPercentileForScore(r.totalScore)
     const cr=r.rarity||nrCardRarity(r.totalScore)
     const topPct=(100-pct)
@@ -2877,14 +2899,15 @@ function nrShareRoll(){
   if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>{const btn=document.querySelector('.nr-share-btn');if(btn){btn.textContent='✅ Copied!';setTimeout(()=>{btn.innerHTML='📋 Share Roll'},1500)}})}
 }
 function nrUpdateButton(){
+  const rolledToday=nrIsToday(nrState.lastRollDate)
   const btn=document.querySelector('.gs-btn[data-game="numberroll"]')
   if(btn){
-    if(nrState.lastResult)btn.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
+    if(nrState.lastResult&&rolledToday)btn.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
     else btn.textContent='🎲 Number Roll'
   }
   const hdr=document.getElementById('nrHeaderDisplay')
   if(hdr){
-    if(nrState.lastResult)hdr.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
+    if(nrState.lastResult&&rolledToday)hdr.textContent='🎲 '+nrState.lastResult.number.toLocaleString()
     else hdr.textContent='🎲 ?'
   }
   const hdrep=document.getElementById('nrHeaderEp')
@@ -3103,10 +3126,17 @@ function lbPlayerId(){
 async function lbFetch(){
   if(LB_KEY==='YOUR_SCOREDROP_API_KEY')return lbCache||[]
   try{
-    const r=await fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=20')
-    if(!r.ok)return lbCache||[]
-    const d=await r.json()
-    if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))
+    const [r1,r2]=await Promise.all([
+      fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=10&page=1'),
+      fetch('https://leaderboard-game.vercel.app/api/top?key='+LB_KEY+'&limit=10&page=2')
+    ])
+    let scores=[]
+    if(r1&&r1.ok){const d=await r1.json();if(d.scores)scores=scores.concat(d.scores)}
+    if(r2&&r2.ok){const d=await r2.json();if(d.scores)scores=scores.concat(d.scores)}
+    scores.sort((a,b)=>b.score-a.score)
+    if(scores.length>20)scores=scores.slice(0,20)
+    if(scores.length)lbCache=scores.map(s=>({user:s.player,score:s.score}))
+    else if(r1&&r1.ok){const d=await r1.json();if(d.scores)lbCache=d.scores.map(s=>({user:s.player,score:s.score}))}
     return lbCache||[]
   }catch(e){return lbCache||[]}
 }

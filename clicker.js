@@ -120,7 +120,6 @@ var css = "\n\
 /* Coin display pop */\n\
 .ck-display.pop{animation:ckCoinPop .18s ease}\n\
 @keyframes ckCoinPop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}\n\
-.ck-space-hint{font-size:10px;color:var(--text-muted);margin-top:6px;opacity:.7}\n\
 @media(max-width:900px){.ck-wrap{flex-direction:column;align-items:stretch}.ck-left{flex:none;position:static}.ck-right{flex:none;position:static}.ck-pokeball{width:140px;height:140px}.ck-display{font-size:36px}}\n\
 ";
 
@@ -381,6 +380,7 @@ function doClick(e){
   if(window.ckAPI&&window.ckAPI.onClick)for(var i=0;i<window.ckAPI.onClick.length;i++)window.ckAPI.onClick[i](pow,e);
 }
 function spawnParticle(x,y,val){
+  
   activeParticles++;
   var el=document.createElement('div');
   el.className='ck-particle';
@@ -389,7 +389,8 @@ function spawnParticle(x,y,val){
   document.body.appendChild(el);
   setTimeout(function(){if(el.parentNode)el.remove();activeParticles--},800);
 }
-function spawnSparkles(x,y){
+function spawnSparkles(x,y){ return; // disabled - no sparkles
+  
   var colors=['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#a6e3a1'];
   for(var i=0;i<4;i++){ // 4 instead of 6
     var s=document.createElement('div');
@@ -437,7 +438,8 @@ function buyUpgrade(i){
 }
 
 // ==================== GOLDEN POKEBALL ====================
-function spawnGolden(){
+function spawnGolden(){ return; // disabled - no golden pokeball
+  
   if(goldenEl)return;
   var wrap=document.getElementById('ckGoldenWrap');
   if(!wrap)return;
@@ -494,13 +496,7 @@ function removeGolden(){
   el.style.animation='ckGoldenFadeIn .3s ease reverse forwards';
   setTimeout(function(){if(el.parentNode)el.remove()},300);
 }
-function scheduleGolden(){
-  var delay=60000+Math.random()*120000;
-  goldenSpawnTimer=setTimeout(function(){
-    spawnGolden();
-    scheduleGolden();
-  },delay);
-}
+function scheduleGolden(){ /* disabled */ if(goldenSpawnTimer){clearTimeout(goldenSpawnTimer);goldenSpawnTimer=null;} }
 
 // ==================== RECENT EARNINGS TRACKING ====================
 function trackEarned(amt){
@@ -889,25 +885,7 @@ function initClicker(){
       var t=e.touches[0];
       doClick({clientX:t.clientX,clientY:t.clientY});
     },{passive:false});
-    // Spacebar to click
-    var hint=ball.querySelector('.ck-space-hint');
-    if(!hint&&ball.parentNode){
-      hint=document.createElement('div');
-      hint.className='ck-space-hint';
-      hint.textContent='press SPACE to click';
-      ball.parentNode.appendChild(hint);
-    }
   }
-  document.addEventListener('keydown',function(e){
-    if(e.code!=='Space'&&e.key!==' ')return;
-    var tag=(document.activeElement&&document.activeElement.tagName)||'';
-    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||document.activeElement&&document.activeElement.isContentEditable)return;
-    var gc=document.getElementById('gameClicker');
-    if(!gc||gc.style.display==='none')return;
-    e.preventDefault();
-    var r=ball?ball.getBoundingClientRect():null;
-    doClick({clientX:r?r.left+r.width/2:window.innerWidth/2,clientY:r?r.top+r.height/2:window.innerHeight/2});
-  });
   updateUI();
   renderPanel();
 

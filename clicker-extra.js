@@ -373,7 +373,7 @@ function updateStreak(pow, e){
   XS.streakTimer = 2;
   XS.lastClickTime = now;
   if(XS.streak > XS.stats.bestStreak) XS.stats.bestStreak = XS.streak;
-  var streakEl = document.getElementById('ckStreak');
+  var streakEl = null; // disabled // document.getElementById('ckStreak');
   if(streakEl){
     if(XS.streak >= 2){
       streakEl.textContent = CLICK_STREAK_NAMES[XS.streak] + ' x' + XS.streak;
@@ -385,7 +385,8 @@ function updateStreak(pow, e){
 }
 
 // ==================== SHINY POKEMON ====================
-function checkShiny(){
+function checkShiny(){ return false; // disabled - no shiny flash
+  //
   var rate = 0.001 * getPrestigeUpgVal('shinyRate');
   if(Math.random() < rate){
     XS.shinyClicks++;
@@ -402,7 +403,7 @@ function checkShiny(){
 }
 
 // ==================== WILD POKEMON ====================
-function spawnWild(){
+function spawnWild(){ return; // disabled
   if(wildEl) return;
   var wrap = document.getElementById('ckGoldenWrap');
   if(!wrap) return;
@@ -439,15 +440,7 @@ function catchWild(pkmn){
   api().addNews('Caught wild ' + pkmn.name + '! +' + fmt(coins) + ' coins!');
   api().saveGame();
 }
-function scheduleWild(){
-  var base = 45000 + Math.random() * 45000;
-  var rate = getPrestigeUpgVal('wildRate');
-  var delay = base / rate;
-  wildSpawnTimer = setTimeout(function(){
-    spawnWild();
-    scheduleWild();
-  }, delay);
-}
+function scheduleWild(){ /* disabled - wild spawns off */ if(wildSpawnTimer){clearTimeout(wildSpawnTimer);wildSpawnTimer=null;} }
 
 // ==================== EGG HATCHING ====================
 var EGG_POKEMON = [
@@ -519,7 +512,8 @@ function trackEarnedExt(amt){
 }
 
 // ==================== MILK BACKGROUND & PARADE ====================
-function updateMilk(){
+function updateMilk(){ return; // disabled - no parade
+  
   var panel = document.getElementById('ckPanel');
   if(!panel) return;
   var milk = panel.querySelector('.ck-milk');
