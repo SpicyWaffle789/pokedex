@@ -93,6 +93,10 @@ async function preCacheOfflineData(){
   }else{
     try{allSets=JSON.parse(localStorage.getItem('pokeTcgSets'))}catch(e){}
   }
+  ensureAnniversarySets()
+  // Background refresh so new releases (like 30th Celebration) appear
+  // even when an old list is cached.
+  refreshSetsInBackground(()=>{if(currentTab==='sets')renderSets()})
   if(!localStorage.getItem('pokeAllMovesList')){
     if(typeof OFFLINE_MOVES!=='undefined'&&OFFLINE_MOVES.length){
       allMoves=OFFLINE_MOVES
@@ -352,6 +356,46 @@ document.addEventListener('keydown',e=>{
 
 let allSets=[],setCardsCache={}
 
+// 30th Anniversary — built-in fallback so the set shows even with a stale
+// localStorage cache or offline. Matches upstream pokemon-tcg-data (me55/me55c).
+const ANNIVERSARY_SETS=[
+  {id:'me55',name:'30th Celebration',series:'Mega Evolution',printedTotal:128,total:161,ptcgoCode:'30C',releaseDate:'2026/09/16',updatedAt:'2026/09/14 15:00:00',legalities:{unlimited:'Legal',standard:'Legal',expanded:'Legal'},images:{symbol:'https://images.scrydex.com/pokemon/me55-symbol/symbol',logo:'https://images.scrydex.com/pokemon/me55-logo/logo'}},
+  {id:'me55c',name:'30th Celebration: Classic Collection',series:'Mega Evolution',printedTotal:30,total:30,ptcgoCode:'30C',releaseDate:'2026/09/16',updatedAt:'2026/09/14 15:00:00',legalities:{unlimited:'Legal',standard:'Legal',expanded:'Legal'},images:{symbol:'https://images.scrydex.com/pokemon/me55c-symbol/symbol',logo:'https://images.scrydex.com/pokemon/me55c-logo/logo'}}
+]
+function ensureAnniversarySets(){
+  let changed=false
+  ANNIVERSARY_SETS.forEach(s=>{
+    if(!allSets.some(x=>x.id===s.id)){allSets.push(s);changed=true}
+  })
+  // Repair older cached copies that miss fields (e.g. me55c without printedTotal)
+  allSets.forEach(s=>{
+    const ref=ANNIVERSARY_SETS.find(r=>r.id===s.id)
+    if(ref){
+      if(!s.printedTotal&&ref.printedTotal){s.printedTotal=ref.printedTotal;changed=true}
+      if(!s.images?.logo&&ref.images.logo){s.images=ref.images;changed=true}
+      if(!s.releaseDate){s.releaseDate=ref.releaseDate;changed=true}
+    }
+  })
+  if(changed){try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}}
+  return changed
+}
+async function refreshSetsInBackground(rerender){
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
+    if(!res.ok)return
+    const fresh=await res.json()
+    if(!Array.isArray(fresh)||!fresh.length)return
+    const ids=new Set(allSets.map(s=>s.id))
+    let grew=false
+    fresh.forEach(s=>{if(!ids.has(s.id)){allSets.push(s);grew=true}})
+    ensureAnniversarySets()
+    if(grew){
+      try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
+      if(rerender)rerender()
+    }
+  }catch(e){}
+}
+
 function switchTab(tab){
   const gameNames=['wordle','whosthat','typespeed','memory','speedrun','typequiz','numberroll','achievements','clicker']
   if(gameNames.includes(tab)){currentTab='games';currentGame=tab;setTimeout(()=>selectGame(tab),10)}
@@ -408,6 +452,7 @@ function switchTab(tab){
   if(tab==='battle')initBattle()
   if(tab==='tools')selectTool(currentTool||'teambuilder')
   if(tab==='collection')renderCollection()
+  if(tab==='wallpaper'){try{wpRenderPresets();wpRenderGallery()}catch(e){}}
 }
 
 async function loadSets(){
@@ -416,7 +461,9 @@ async function loadSets(){
   if(cached){
     try{
       allSets=JSON.parse(cached)
+      ensureAnniversarySets()
       renderSets()
+      refreshSetsInBackground(renderSets)
       return
     }catch(e){}
   }
@@ -424,30 +471,55 @@ async function loadSets(){
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
     allSets=await res.json()
     try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
+    ensureAnniversarySets()
     renderSets()
   }catch(e){
-    document.getElementById('setsContent').innerHTML='<div class="set-loading">Failed to load sets — go online once to cache</div>'
+    // Offline fallback: still show the 30th Anniversary sets
+    ensureAnniversarySets()
+    if(allSets.length)renderSets()
+    else document.getElementById('setsContent').innerHTML='<div class="set-loading">Failed to load sets — go online once to cache</div>'
   }
 }
 
 function renderSets(){
+  ensureAnniversarySets()
   const series={}
   allSets.forEach(s=>{
     const key=s.series||'Other'
     if(!series[key])series[key]=[]
     series[key].push(s)
   })
+  const isAnniv=s=>s.id==='me55'||s.id==='me55c'
   let html=''
+  // Featured 30th Anniversary banner so the new set is impossible to miss
+  const annivSets=allSets.filter(isAnniv)
+  if(annivSets.length){
+    html+='<div class="series-group" style="border:1px solid rgba(247,201,72,0.4);border-radius:12px;padding:12px;background:linear-gradient(135deg,rgba(247,201,72,0.12),rgba(238,129,48,0.08))"><h2 style="display:flex;align-items:center;gap:8px">🎂 30th Anniversary <span style="font-size:10px;font-weight:800;color:#1a1a2e;background:#f7c948;border-radius:20px;padding:2px 8px;letter-spacing:1px">NEW</span></h2><div class="sets-grid">'
+    annivSets.forEach(s=>{
+      const year=s.releaseDate?s.releaseDate.split('/')[0]:'2026'
+      const count=s.printedTotal||s.total||'?'
+      const fallback=s.name.charAt(0)+s.name.charAt(s.name.length-1)
+      html+='<div class="set-card" style="border-color:rgba(247,201,72,0.5)" onclick="openSet(\''+s.id+'\')">'+
+        '<div class="set-logo"><img src="'+(s.images?.logo||'')+'" alt="'+s.name+'" loading="lazy" onerror="this.outerHTML=\''+fallback+'\'" style="max-width:100%;max-height:100%;object-fit:contain"></div>'+
+        '<div class="set-name">'+s.name+'</div>'+
+        '<div class="set-series">'+(s.series||'Mega Evolution')+'</div>'+
+        '<div class="set-meta">'+(year?year+' · ':'')+count+' cards · 30C</div>'+
+        '</div>'
+    })
+    html+='</div></div>'
+  }
   Object.entries(series).forEach(([name,sets])=>{
     html+='<div class="series-group"><h2>'+name+'</h2><div class="sets-grid">'
     sets.forEach(s=>{
       const year=s.releaseDate?s.releaseDate.split('/')[0]:''
+      const count=s.printedTotal||s.total||'?'
+      const badge=isAnniv(s)?' <span style="font-size:9px;font-weight:800;color:#1a1a2e;background:#f7c948;border-radius:10px;padding:1px 6px;vertical-align:middle">NEW</span>':''
       const fallback=s.name.charAt(0)+s.name.charAt(s.name.length-1)
       html+='<div class="set-card" onclick="openSet(\''+s.id+'\')">'+
-        '<div class="set-logo"><img src="'+(s.images?.logo||'')+'" alt="'+s.name+'" onerror="this.outerHTML=\''+fallback+'\'" style="max-width:100%;max-height:100%;object-fit:contain"></div>'+
-        '<div class="set-name">'+s.name+'</div>'+
+        '<div class="set-logo"><img src="'+(s.images?.logo||'')+'" alt="'+s.name+'" loading="lazy" onerror="this.outerHTML=\''+fallback+'\'" style="max-width:100%;max-height:100%;object-fit:contain"></div>'+
+        '<div class="set-name">'+s.name+badge+'</div>'+
         '<div class="set-series">'+name+'</div>'+
-        '<div class="set-meta">'+(year?year+' · ':'')+s.printedTotal+' cards</div>'+
+        '<div class="set-meta">'+(year?year+' · ':'')+count+' cards</div>'+
         '</div>'
     })
     html+='</div></div>'
@@ -479,13 +551,15 @@ async function openSet(setId){
 }
 
 function renderSetDetail(cards){
-  const set=allSets.find(s=>s.id===cards[0]?.id?.split('-')[0])
+  const setId=cards[0]?.id?.split('-')[0]
+  const set=allSets.find(s=>s.id===setId)||ANNIVERSARY_SETS.find(s=>s.id===setId)
   window._setCards=cards
-  window._setTotal=set?.printedTotal||0
+  window._setTotal=set?.printedTotal||set?.total||cards.length||0
+  const rel=set?.releaseDate?set.releaseDate.split('/').reverse().join('/'):''
   document.getElementById('setDetailContent').innerHTML=
     '<div class="modal-header">'+
       '<div class="poke-name">'+(set?.name||'Set Cards')+'</div>'+
-      (set?'<div style="font-size:13px;color:var(--text-dim)">'+(set.series||'')+' · '+set.printedTotal+' cards · Released '+set.releaseDate.split('/').reverse().join('/')+'</div>':'')+
+      (set?'<div style="font-size:13px;color:var(--text-dim)">'+(set.series||'')+' · '+(set.printedTotal||set.total||cards.length)+' cards'+(rel?' · Released '+rel:'')+'</div>':'')+
     '</div>'+
     '<div class="set-cards-grid">'+
     cards.map((c,i)=>{
@@ -1961,7 +2035,7 @@ function chBpRenderOpened(){
   if(!el||!bpOpenedCards.length)return
   el.innerHTML=bpOpenedCards.map((c,i)=>{
     const r=(c.rarity||'Common').toLowerCase()
-    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')
+    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')||r.includes('futuristic')||r.includes('illustration')
     const isRare=r.includes('rare')||r.includes('holo')
     const borderCol=isUltra?'#f7c948':isRare?'#6390f0':r.includes('uncommon')?'#4caf50':'var(--border)'
     const glow=isUltra?'box-shadow:0 0 16px rgba(247,201,72,0.4)':isRare?'box-shadow:0 0 10px rgba(99,144,240,0.3)':''
@@ -3879,6 +3953,7 @@ function tsBuyOrEquip(id,type,cost){
 const BOOSTER_COST=300
 const PACK_TYPES=[
   {id:'random',name:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-package"/></svg> Random Pack',desc:'Pick any set below',cost:BOOSTER_COST,icon:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-package"/></svg>'},
+  {id:'anniversary',name:'🎂 30th Celebration',desc:'30th Anniversary + Classic Collection',cost:BOOSTER_COST,icon:'🎂',sets:['me55','me55c']},
   {id:'classic',name:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-package"/></svg> Classic Series',desc:'Base Set through Team Rocket',cost:BOOSTER_COST,icon:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-package"/></svg>',sets:['base1','base2','base3','base4','base5','dp1','dp2','gym1','gym2']},
   {id:'modern',name:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg> Modern Era',desc:'Sword & Shield & Scarlet & Violet',cost:BOOSTER_COST,icon:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-zap"/></svg>',sets:['sv1','sv2','sv3','sv4','sv5','sv6','swsh1','swsh2','swsh3','swsh4','swsh5','swsh6','swsh7','swsh8','swsh9']},
   {id:'legendary',name:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg> Legendary Collection',desc:'Promos, Gold Stars & Secret Rares',cost:500,icon:'<svg class="ico" width="1em" height="1em"><use href="icons.svg#ico-crown"/></svg>',sets:['pop1','pop2','pop3','pop4','pop5','pop6','pop7','pop8','pop9','pop10']},
@@ -3939,13 +4014,15 @@ function bpRenderSetPicker(){
 }
 async function loadSetsForBooster(){
   const cached=localStorage.getItem('pokeTcgSets')
-  if(cached){try{allSets=JSON.parse(cached);bpRenderSetPicker();return}catch(e){}}
+  if(cached){try{allSets=JSON.parse(cached);ensureAnniversarySets();bpRenderSetPicker();refreshSetsInBackground(bpRenderSetPicker);return}catch(e){}}
   try{
     const res=await fetch('https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json')
     allSets=await res.json()
     try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
+    ensureAnniversarySets()
     bpRenderSetPicker()
   }catch(e){
+    ensureAnniversarySets()
     if(allSets.length){bpRenderSetPicker();return}
     const el=document.getElementById('chBpSetPicker')||document.getElementById('bpSetPicker')
     if(el)el.innerHTML='<div style="text-align:center;color:var(--ctp-red);font-size:11px">Failed to load sets</div>'
@@ -3996,7 +4073,8 @@ async function bpFetchSetCards(setId){
       allSets=await sRes.json()
       try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     }
-    const setInfo=allSets.find(s=>s.id===setId)
+    ensureAnniversarySets()
+    const setInfo=allSets.find(s=>s.id===setId)||ANNIVERSARY_SETS.find(s=>s.id===setId)
     const cacheKey='pokeTcgCards_'+setId
     const cached=localStorage.getItem(cacheKey)
     if(cached){
@@ -4020,6 +4098,7 @@ async function bpFetchRandomCards(count){
       allSets=await sRes.json()
       try{localStorage.setItem('pokeTcgSets',JSON.stringify(allSets))}catch(e){}
     }
+    ensureAnniversarySets()
     const playable=allSets.filter(s=>s.total&&s.total>20)
     const picks=[]
     const used=new Set()
@@ -4038,8 +4117,8 @@ function bpDistributeRarity(allCards){
   const rarityBuckets={common:[],uncommon:[],rare:[],ultra:[]}
   allCards.forEach(c=>{
     const r=(c.rarity||'').toLowerCase()
-    if(r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold'))rarityBuckets.ultra.push(c)
-    else if(r.includes('rare')||r.includes('holo'))rarityBuckets.rare.push(c)
+    if(r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')||r.includes('futuristic')||r.includes('illustration')||r.includes('futuristic')||r.includes('illustration')||r.includes('special'))rarityBuckets.ultra.push(c)
+    else if(r.includes('rare')||r.includes('holo')||r.includes('double')||r.includes(' ex'))rarityBuckets.rare.push(c)
     else if(r.includes('uncommon'))rarityBuckets.uncommon.push(c)
     else rarityBuckets.common.push(c)
   })
@@ -4061,7 +4140,7 @@ function bpRenderOpenedCards(){
   if(!el||!bpOpenedCards.length)return
   el.innerHTML=bpOpenedCards.map((c,i)=>{
     const r=(c.rarity||'Common').toLowerCase()
-    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')
+    const isUltra=r.includes('secret')||r.includes('ultra')||r.includes('hyper')||r.includes('rainbow')||r.includes('gold')||r.includes('futuristic')||r.includes('illustration')
     const isRare=r.includes('rare')||r.includes('holo')
     const borderCol=isUltra?'#f7c948':isRare?'#6390f0':r.includes('uncommon')?'#4caf50':'var(--border)'
     const glow=isUltra?'box-shadow:0 0 20px rgba(247,201,72,0.4)':isRare?'box-shadow:0 0 12px rgba(99,144,240,0.3)':''
@@ -4201,9 +4280,14 @@ function dwBattle(id,lvl,isShiny){
 
 // ===== WALLPAPER GENERATOR =====
 let wpSelectedId=null,wpSelectedName='',wpImg=null
+let wpTeam=[],wpSceneSeed=42,wpBgUploadImg=null,wpBgUploadName='',wpLiveTimer=null,wpLastSettings=null
+function wpVal(id,fb){const el=document.getElementById(id);return el?(el.value!==undefined?el.value:fb):fb}
+function wpChecked(id,fb){const el=document.getElementById(id);return el?!!el.checked:!!fb}
+function wpNum(id,fb){const v=parseFloat(wpVal(id,''));return isNaN(v)?fb:v}
 function wpSetColor(c){
   document.getElementById('wpColorPick').value=c
   document.querySelectorAll('.wp-color-swatch').forEach(s=>s.classList.toggle('active',s.dataset.c===c))
+  wpLiveGen()
 }
 function wpSearchPokemon(q){
   const el=document.getElementById('wpSearchResults')
@@ -4215,20 +4299,85 @@ function wpSearchPokemon(q){
   el.style.display='block'
 }
 function wpPick(id,name){
-  wpSelectedId=id;wpSelectedName=name
-  document.getElementById('wpSearch').value=name
+  if(!wpTeam.some(t=>t.id===id)){
+    if(wpTeam.length>=5){alert('Max 5 Pokémon — remove one first!');return}
+    wpTeam.push({id,name})
+  }
+  wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name
+  document.getElementById('wpSearch').value=''
   document.getElementById('wpSearchResults').style.display='none'
-  document.getElementById('wpSelected').style.display='block'
-  document.getElementById('wpSelectedImg').src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png'
-  document.getElementById('wpSelectedName').textContent=name
+  wpRenderTeam()
+  wpLiveGen(true)
+}
+function wpRemoveTeam(idx){
+  wpTeam.splice(idx,1)
+  if(wpTeam.length){wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name}else{wpSelectedId=null;wpSelectedName=''}
+  wpRenderTeam()
+}
+function wpFeatureTeam(idx){
+  if(idx<=0||idx>=wpTeam.length)return
+  const t=wpTeam.splice(idx,1)[0];wpTeam.unshift(t)
+  wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name
+  wpRenderTeam();wpLiveGen(true)
+}
+function wpMoveTeam(idx,dir){
+  const j=idx+dir;if(j<0||j>=wpTeam.length)return
+  const tmp=wpTeam[idx];wpTeam[idx]=wpTeam[j];wpTeam[j]=tmp
+  wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name
+  wpRenderTeam();wpLiveGen(true)
+}
+function wpRenderTeam(){
+  const list=document.getElementById('wpTeamList')
+  const single=document.getElementById('wpSelected')
+  if(!wpTeam.length){if(list){list.style.display='none';list.innerHTML=''}if(single)single.style.display='none';return}
+  if(single)single.style.display='none'
+  if(!list)return
+  list.style.display='flex'
+  list.innerHTML=wpTeam.map((t,i)=>'<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid '+(i===0?'var(--ctp-yellow)':'var(--border)')+';border-radius:10px;padding:6px 8px">'+
+    '<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+t.id+'.png" onclick="wpFeatureTeam('+i+')" title="Click to feature" style="width:40px;height:40px;image-rendering:pixelated;cursor:pointer;flex-shrink:0">'+
+    '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(i===0?'★ ':'')+t.name+'</div><div style="font-size:10px;color:var(--text-muted)">#'+String(t.id).padStart(4,'0')+'</div></div>'+
+    (i>0?'<button onclick="wpMoveTeam('+i+',-1)" title="Move up" style="padding:2px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer">↑</button>':'')+
+    (i<wpTeam.length-1?'<button onclick="wpMoveTeam('+i+',1)" title="Move down" style="padding:2px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer">↓</button>':'')+
+    '<button onclick="wpRemoveTeam('+i+')" style="padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer">✕</button>'+
+  '</div>').join('')+'<div style="font-size:10px;color:var(--text-muted);text-align:center">'+wpTeam.length+'/5 selected'+(wpTeam.length>1?' · layouts Row/Grid/Scatter/Split shine with teams':'')+'</div>'
+}
+function wpRandomTeam(n){
+  if(!allPokemon||!allPokemon.length){alert('Pokémon list not loaded yet!');return}
+  wpTeam=[]
+  const pool=allPokemon.filter(p=>p.id>=1&&p.id<=1025)
+  for(let i=0;i<(n||1);i++){
+    const p=pool[Math.floor(Math.random()*pool.length)]
+    if(p&&!wpTeam.some(t=>t.id===p.id))wpTeam.push({id:p.id,name:p.name})
+  }
+  if(wpTeam.length){wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name}
+  wpRenderTeam();wpGenerate()
 }
 function wpClear(){
-  wpSelectedId=null;wpSelectedName='';wpImg=null
+  wpSelectedId=null;wpSelectedName='';wpImg=null;wpTeam=[]
   document.getElementById('wpSearch').value=''
-  document.getElementById('wpSelected').style.display='none'
+  const s=document.getElementById('wpSelected');if(s)s.style.display='none'
+  const l=document.getElementById('wpTeamList');if(l){l.style.display='none';l.innerHTML=''}
   document.getElementById('wpCanvas').style.display='none'
   document.getElementById('wpPlaceholder').style.display='block'
   document.getElementById('wpDownloadArea').style.display='none'
+}
+function wpReseedScene(){wpSceneSeed=Math.floor(Math.random()*100000);wpLiveGen(true)}
+function wpUploadBg(input){
+  const f=input&&input.files&&input.files[0];if(!f)return
+  const rd=new FileReader()
+  rd.onload=function(){const img=new Image();img.onload=function(){wpBgUploadImg=img;wpBgUploadName=f.name;wpLiveGen(true)};img.src=rd.result}
+  rd.readAsDataURL(f)
+}
+function wpClearBgUpload(){wpBgUploadImg=null;wpBgUploadName='';const el=document.getElementById('wpBgUpload');if(el)el.value='';wpLiveGen()}
+function wpLiveGen(force){
+  if(!wpChecked('wpLive',true)&&!force)return
+  if(!wpTeam.length&&!wpSelectedId)return
+  if(!document.getElementById('wpCanvas'))return
+  // Only auto-regenerate if a preview already exists, unless forced by team change
+  const hasPreview=document.getElementById('wpCanvas').style.display==='block'
+  if(!hasPreview&&!force)return
+  clearTimeout(wpLiveTimer)
+  wpLiveTimer=setTimeout(()=>{try{wpGenerate(true)}catch(e){}},350)
 }
 function wpGetSpriteUrl(id,style){
   const base='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon'
@@ -4238,9 +4387,9 @@ function wpGetSpriteUrl(id,style){
   if(style==='home')return base+'/other/home/'+id+'.png'
   return base+'/'+id+'.png'
 }
-function wpDrawScene(ctx,W,H,scene){
+function wpDrawScene(ctx,W,H,scene,seed){
   function rng(seed){let s=seed;return()=>{s=(s*16807+0)%2147483647;return(s-1)/2147483646}}
-  const r=rng(42)
+  const r=rng((seed===undefined?wpSceneSeed:seed)||42)
   if(scene==='forest'){
     const sky=ctx.createLinearGradient(0,0,0,H*0.6);sky.addColorStop(0,'#0a2818');sky.addColorStop(0.5,'#1a4a2e');sky.addColorStop(1,'#2d5a3f');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H*0.6)
     for(let i=0;i<3;i++){const mx=r()*W;const my=r()*H*0.3;const mr=r()*40+20;const mg=ctx.createRadialGradient(mx,my,0,mx,my,mr);mg.addColorStop(0,'rgba(120,200,120,0.04)');mg.addColorStop(1,'transparent');ctx.fillStyle=mg;ctx.fillRect(mx-mr,my-mr,mr*2,mr*2)}
@@ -4377,151 +4526,443 @@ function wpDrawScene(ctx,W,H,scene){
     for(let i=0;i<2;i++){const ix=W*0.3+r()*W*0.4;const iy=H*0.7+r()*H*0.15;ctx.beginPath();ctx.moveTo(ix,iy);ctx.lineTo(ix+4,iy-15);ctx.lineTo(ix+8,iy);ctx.strokeStyle='rgba(140,170,200,0.15)';ctx.lineWidth=1;ctx.stroke()}
   }
 }
-function wpGenerate(){
-  if(!wpSelectedId){alert('Select a Pokémon first!');return}
-  const res=document.getElementById('wpResolution').value.split('x').map(Number)
+function wpGenerate(silent){
+  if(!wpTeam.length&&!wpSelectedId){if(!silent)alert('Select a Pokémon first!');return}
+  if(wpTeam.length===0&&wpSelectedId)wpTeam=[{id:wpSelectedId,name:wpSelectedName}]
+  const res=wpGetResolution()
   const W=res[0],H=res[1]
   const canvas=document.getElementById('wpCanvas')
   canvas.width=W;canvas.height=H
   const ctx=canvas.getContext('2d')
-  const bg=document.getElementById('wpColorPick').value
-  const style=document.getElementById('wpBgStyle').value
-  const layout=document.getElementById('wpLayout').value
-  const sprite=document.getElementById('wpSprite').value
-  const text=document.getElementById('wpText').value
-  const textSize=document.getElementById('wpTextSize').value
-  const textPos=document.getElementById('wpTextPos').value
-  function hexToRgb(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return{r,g,b}}
-  const rgb=hexToRgb(bg)
+  const bg=wpVal('wpColorPick','#1a1a2e')
+  const bg2=wpVal('wpColor2','#2d3a5f')
+  const gradDir=wpVal('wpGradientDir','diag')
+  const style=wpVal('wpBgStyle','gradient')
+  const layout=wpVal('wpLayout','center')
+  const sprite=wpVal('wpSprite','official')
+  const text=wpVal('wpText','')
+  const text2=wpVal('wpText2','')
+  const textSize=wpVal('wpTextSize','medium')
+  const textPos=wpVal('wpTextPos','bottom')
+  const textColor=wpVal('wpTextColor','#ffffff')
+  const showName=wpChecked('wpShowName',false),showId=wpChecked('wpShowId',false),showTypes=wpChecked('wpShowTypes',false),showDate=wpChecked('wpShowDate',false)
+  const textStroke=wpChecked('wpTextStroke',true)
+  const patScale=wpNum('wpPatternScale',60)
+  const sceneDim=wpNum('wpSceneDim',0)/100
+  const spacing=wpNum('wpSpacing',100)/100
+  const offY=wpNum('wpOffsetY',0)/100
+  const advSize=wpNum('wpSize',100)/100
+  const advRot=wpNum('wpRotation',0)
+  const advOp=wpNum('wpOpacity',100)/100
+  const advFlip=wpChecked('wpFlip',false)
+  const advShadow=wpChecked('wpShadow',true)
+  const shadowStr=wpNum('wpShadowStrength',20)
+  const advBri=wpNum('wpBrightness',100)
+  const advSat=wpNum('wpSaturation',100)
+  const advCon=wpNum('wpContrast',100)
+  const advHue=wpNum('wpHue',0)
+  const advSep=wpNum('wpSepia',0)
+  const advVig=wpNum('wpVignette',0)/100
+  const advGrain=wpNum('wpGrain',0)/100
+  const advGlow=wpNum('wpGlow',0)/100
+  const glowColor=wpVal('wpGlowColor','#00c8ff')
+  const advPixel=wpChecked('wpPixelate',false)
+  const advBorder=wpVal('wpBorder','none')
+  const advTint=wpVal('wpTint','#000000')
+  const tintStr=wpNum('wpTintStrength',12)/100
+  const advFont=wpVal('wpFont','sans')
+  const fontMap={sans:'"Segoe UI",system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',mono:'"Courier New",monospace',pixel:'"Courier New",monospace',display:'Impact,"Arial Black",sans-serif',rounded:'"Trebuchet MS","Comic Sans MS",sans-serif',hand:'"Segoe Print","Comic Sans MS",cursive'}
+  wpLastSettings=wpGetSettings()
+  function hexToRgb(h){try{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return{r,g,b}}catch(e){return{r:26,g:26,b:46}}}
+  // --- background ---
   if(style.startsWith('scene_')){
-    wpDrawScene(ctx,W,H,style.replace('scene_',''))
+    wpDrawScene(ctx,W,H,style.replace('scene_',''),wpSceneSeed)
+    if(sceneDim>0){ctx.save();ctx.fillStyle='rgba(0,0,0,'+sceneDim+')';ctx.fillRect(0,0,W,H);ctx.restore()}
   }else if(style==='gradient'){
-    const grd=ctx.createLinearGradient(0,0,W,H)
-    grd.addColorStop(0,bg)
-    grd.addColorStop(1,'rgb('+Math.min(255,rgb.r+40)+','+Math.min(255,rgb.g+40)+','+Math.min(255,rgb.b+60)+')')
-    ctx.fillStyle=grd
+    let grd
+    if(gradDir==='vertical')grd=ctx.createLinearGradient(0,0,0,H)
+    else if(gradDir==='horizontal')grd=ctx.createLinearGradient(0,0,W,0)
+    else if(gradDir==='radial-center')grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.7)
+    else grd=ctx.createLinearGradient(0,0,W,H)
+    grd.addColorStop(0,bg);grd.addColorStop(1,bg2)
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H)
   }else if(style==='radial'){
     const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.7)
-    grd.addColorStop(0,'rgb('+Math.min(255,rgb.r+50)+','+Math.min(255,rgb.g+50)+','+Math.min(255,rgb.b+70)+')')
-    grd.addColorStop(1,bg)
-    ctx.fillStyle=grd
+    grd.addColorStop(0,bg2);grd.addColorStop(1,bg)
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H)
   }else if(style==='neon'){
-    ctx.fillStyle=bg
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H)
     const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.5)
-    grd.addColorStop(0,'rgba(0,200,255,0.15)')
-    grd.addColorStop(0.5,'rgba(255,0,200,0.08)')
-    grd.addColorStop(1,'transparent')
-    ctx.fillRect(0,0,W,H)
-    ctx.fillStyle=grd
+    grd.addColorStop(0,'rgba(0,200,255,0.15)');grd.addColorStop(0.5,'rgba(255,0,200,0.08)');grd.addColorStop(1,'transparent')
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H)
   }else if(style==='pattern'){
-    ctx.fillStyle=bg
-    ctx.fillRect(0,0,W,H)
-    ctx.fillStyle='rgba(255,255,255,0.03)'
-    for(let y=0;y<H;y+=60)for(let x=0;x<W;x+=60){ctx.beginPath();ctx.arc(x+30,y+30,4,0,Math.PI*2);ctx.fill()}
-  }else if(style==='dark'){
-    ctx.fillStyle=bg
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H)
+    ctx.fillStyle='rgba(255,255,255,0.05)'
+    for(let y=0;y<H;y+=patScale)for(let x=0;x<W;x+=patScale){ctx.beginPath();ctx.arc(x+patScale/2,y+patScale/2,Math.max(2,patScale*0.07),0,Math.PI*2);ctx.fill()}
   }else{
-    ctx.fillStyle=bg
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H)
   }
-  if(!style.startsWith('scene_'))ctx.fillRect(0,0,W,H)
-  const img=new Image()
-  img.crossOrigin='anonymous'
-  img.onload=function(){
-    let sx,sy,sw,sh
-    const aspect=img.width/img.height
-    const advSize=+(document.getElementById('wpSize').value||100)/100
-    const advRot=+(document.getElementById('wpRotation').value||0)
-    const advOp=+(document.getElementById('wpOpacity').value||100)/100
-    const advFlip=document.getElementById('wpFlip').checked
-    const advShadow=document.getElementById('wpShadow').checked
-    const advBri=+(document.getElementById('wpBrightness').value||100)
-    const advVig=+(document.getElementById('wpVignette').value||0)/100
-    const advGrain=+(document.getElementById('wpGrain').value||0)/100
-    const advBorder=document.getElementById('wpBorder').value||'none'
-    const advTint=document.getElementById('wpTint').value
-    const advFont=document.getElementById('wpFont').value||'sans'
-    const fontMap={sans:'"Segoe UI",system-ui,sans-serif',serif:'Georgia,Times,serif',mono:'"Courier New",monospace',pixel:'"Courier New",monospace'}
-    if(layout==='center'){
-      const maxH=H*0.65;const maxW=W*0.6
-      if(aspect>maxW/maxH){sw=maxW;sh=sw/aspect}else{sh=maxH;sw=sh*aspect}
-      sw*=advSize;sh*=advSize
-      sx=(W-sw)/2;sy=(H-sh)/2
-      if(text&&textPos==='top')sy=H*0.22-sh/2
-      if(text&&textPos==='bottom')sy=H*0.15
+  // custom uploaded backdrop (drawn over bg, under sprites)
+  if(wpBgUploadImg){
+    try{
+      const fit=wpVal('wpBgFit','cover')
+      ctx.save();ctx.globalAlpha=1
+      if(fit==='blurfill'){
+        ctx.filter='blur('+Math.round(W*0.01)+'px) brightness(0.7)';ctx.drawImage(wpBgUploadImg,0,0,W,H);ctx.filter='none'
+        // contain sharp on top
+        const iw=wpBgUploadImg.width,ih=wpBgUploadImg.height
+        const s=Math.min(W/iw,H/ih);const dw=iw*s,dh=ih*s
+        ctx.drawImage(wpBgUploadImg,(W-dw)/2,(H-dh)/2,dw,dh)
+      }else if(fit==='contain'){
+        const iw=wpBgUploadImg.width,ih=wpBgUploadImg.height
+        const s=Math.min(W/iw,H/ih);const dw=iw*s,dh=ih*s
+        ctx.drawImage(wpBgUploadImg,(W-dw)/2,(H-dh)/2,dw,dh)
+      }else if(fit==='stretch'){ctx.drawImage(wpBgUploadImg,0,0,W,H)}
+      else{
+        const iw=wpBgUploadImg.width,ih=wpBgUploadImg.height
+        const s=Math.max(W/iw,H/ih);const dw=iw*s,dh=ih*s
+        ctx.drawImage(wpBgUploadImg,(W-dw)/2,(H-dh)/2,dw,dh)
+      }
+      ctx.restore()
+    }catch(e){}
+  }
+  const team=wpTeam.length?wpTeam.slice():[{id:wpSelectedId,name:wpSelectedName}]
+  function loadOne(t){
+    return new Promise(resolve=>{
+      const im=new Image();im.crossOrigin='anonymous'
+      im.onload=()=>resolve({img:im,meta:t})
+      im.onerror=()=>{const fb=new Image();fb.crossOrigin='anonymous';fb.onload=()=>resolve({img:fb,meta:t});fb.onerror=()=>resolve(null);fb.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+t.id+'.png'}
+      im.src=wpGetSpriteUrl(t.id,sprite)
+    })
+  }
+  Promise.all(team.map(loadOne)).then(results=>{
+    const imgs=results.filter(Boolean)
+    if(!imgs.length){alert('Failed to load sprites.');return}
+    const filterStr='brightness('+(advBri/100)+') saturate('+(advSat/100)+') contrast('+(advCon/100)+') hue-rotate('+advHue+'deg) sepia('+(advSep/100)+')'
+    const useFilter=filterStr!=='brightness(1) saturate(1) contrast(1) hue-rotate(0deg) sepia(0)'
+    function drawSprite(im,cx,cy,dw,dh,alpha,rot,extraGlow){
+      const dw2=dw,dh2=dh
       ctx.save()
-      ctx.globalAlpha=advOp
-      ctx.translate(sx+sw/2,sy+sh/2)
-      ctx.rotate(advRot*Math.PI/180)
+      ctx.globalAlpha=alpha
+      ctx.translate(cx,cy+H*offY)
+      ctx.rotate((rot||0)*Math.PI/180)
       if(advFlip)ctx.scale(-1,1)
-      if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=20;ctx.shadowOffsetX=8;ctx.shadowOffsetY=8}
-      if(advBri!==100)ctx.filter='brightness('+advBri/100+')'
-      ctx.drawImage(img,-sw/2,-sh/2,sw,sh)
+      if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=shadowStr;ctx.shadowOffsetX=Math.round(shadowStr/2.5);ctx.shadowOffsetY=Math.round(shadowStr/2.5)}
+      if(extraGlow||advGlow>0){ctx.shadowColor=extraGlow||glowColor;ctx.shadowBlur=Math.max(shadowStr,(advGlow*80))}
+      if(useFilter)ctx.filter=filterStr
+      ctx.imageSmoothingEnabled=!advPixel
+      if(advPixel){
+        // pixelate: draw tiny then scale up
+        const px=Math.max(24,Math.round(dw2/24))
+        const off=document.createElement('canvas');off.width=px;off.height=Math.max(1,Math.round(px*(im.height/im.width)))
+        const octx=off.getContext('2d');octx.imageSmoothingEnabled=false;octx.drawImage(im,0,0,off.width,off.height)
+        ctx.drawImage(off,-dw2/2,-dh2/2,dw2,dh2)
+      }else{
+        ctx.drawImage(im,-dw2/2,-dh2/2,dw2,dh2)
+      }
       ctx.restore()
-      if(style==='neon'){ctx.save();ctx.globalAlpha=advOp*0.6;ctx.translate(sx+sw/2,sy+sh/2);ctx.rotate(advRot*Math.PI/180);if(advFlip)ctx.scale(-1,1);ctx.shadowColor='rgba(0,200,255,0.6)';ctx.shadowBlur=60;ctx.filter='brightness('+advBri/100+')';ctx.drawImage(img,-sw/2,-sh/2,sw,sh);ctx.restore()}
+    }
+    function sizeFor(im,baseW,baseH){
+      const aspect=im.width/im.height
+      let sw,sh
+      if(aspect>baseW/baseH){sw=baseW;sh=sw/aspect}else{sh=baseH;sw=sh*aspect}
+      return{w:sw*advSize,h:sh*advSize}
+    }
+    const n=imgs.length
+    if(layout==='center'){
+      if(n===1){
+        const s=sizeFor(imgs[0].img,W*0.6,H*0.65)
+        let cy=H/2
+        if((text||text2||showName)&&textPos==='top')cy=H*0.22+H*0.28
+        else if((text||text2||showName)&&textPos==='bottom')cy=H*0.15+H*0.22
+        drawSprite(imgs[0].img,W/2,cy,s.w,s.h,advOp,advRot,style==='neon'?'rgba(0,200,255,0.6)':null)
+      }else{
+        const slotW=(W*0.85)/n
+        imgs.forEach((o,i)=>{
+          const s=sizeFor(o.img,slotW*spacing,H*0.55)
+          const cx=W*0.075+slotW*(i+0.5)
+          drawSprite(o.img,cx,H/2,s.w,s.h,advOp,advRot,null)
+        })
+      }
+      if(style==='neon'&&n===1){/* glow pass already via extraGlow */}
     }else if(layout==='bottom'){
-      sw=img.width;sh=img.height
-      const scale=Math.min(W*0.5/sw,H*0.5/sh)*advSize
-      sw*=scale;sh*=scale
-      sx=(W-sw)/2;sy=H-sh-H*0.08
-      ctx.save();ctx.globalAlpha=advOp;ctx.translate(sx+sw/2,sy+sh/2);ctx.rotate(advRot*Math.PI/180);if(advFlip)ctx.scale(-1,1);if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=20;ctx.shadowOffsetX=8;ctx.shadowOffsetY=8}if(advBri!==100)ctx.filter='brightness('+advBri/100+')';ctx.drawImage(img,-sw/2,-sh/2,sw,sh);ctx.restore()
+      if(n===1){
+        const iw=imgs[0].img.width,ih=imgs[0].img.height
+        const sc=Math.min(W*0.5/iw,H*0.5/ih)*advSize
+        drawSprite(imgs[0].img,W/2,H-(ih*sc)/2-H*0.08,iw*sc,ih*sc,advOp,advRot,null)
+      }else{
+        const slotW=(W*0.9)/n
+        imgs.forEach((o,i)=>{const s=sizeFor(o.img,slotW*spacing,H*0.42);const cx=W*0.05+slotW*(i+0.5);drawSprite(o.img,cx,H-s.h/2-H*0.06,s.w,s.h,advOp,advRot,null)})
+      }
     }else if(layout==='corner'){
-      sw=img.width;sh=img.height
-      const scale=Math.min(W*0.35/sw,H*0.35/sh)*advSize
-      sw*=scale;sh*=scale
-      sx=W-sw-W*0.05;sy=H-sh-H*0.05
-      ctx.save();ctx.globalAlpha=advOp;ctx.translate(sx+sw/2,sy+sh/2);ctx.rotate(advRot*Math.PI/180);if(advFlip)ctx.scale(-1,1);if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=20;ctx.shadowOffsetX=8;ctx.shadowOffsetY=8}if(advBri!==100)ctx.filter='brightness('+advBri/100+')';ctx.drawImage(img,-sw/2,-sh/2,sw,sh);ctx.restore()
+      if(n===1){
+        const iw=imgs[0].img.width,ih=imgs[0].img.height
+        const sc=Math.min(W*0.35/iw,H*0.35/ih)*advSize
+        drawSprite(imgs[0].img,W-(iw*sc)/2-W*0.05,H-(ih*sc)/2-H*0.05,iw*sc,ih*sc,advOp,advRot,null)
+      }else{
+        imgs.forEach((o,i)=>{const s=sizeFor(o.img,W*0.28,H*0.28);const cx=W*0.15+(W*0.7)*(i/(n-1||1));const cy=H*0.75-Math.abs(i-(n-1)/2)*H*0.03;drawSprite(o.img,cx,cy,s.w*spacing,s.h*spacing,advOp,advRot,null)})
+      }
     }else if(layout==='tiled'){
-      const tileW=Math.min(160,W/5);const tileH=tileW*(img.height/img.width)
-      ctx.save();ctx.globalAlpha=0.15*advOp;if(advBri!==100)ctx.filter='brightness('+advBri/100+')'
-      for(let y=-tileH;y<H+tileH;y+=tileH*1.5){for(let x=0;x<W;x+=tileW*1.3){const ox=x+((y/tileH)%2===0?0:tileW*0.65);ctx.drawImage(img,ox,y,tileW,tileH)}}
+      const tileW=Math.min(160,W/5);const tileH=tileW*(imgs[0].img.height/imgs[0].img.width)
+      ctx.save();ctx.globalAlpha=0.15*advOp;if(useFilter)ctx.filter=filterStr
+      let ti=0
+      for(let y=-tileH;y<H+tileH;y+=tileH*1.5){for(let x=0;x<W;x+=tileW*1.3){const ox=x+((Math.round(y/tileH)%2===0)?0:tileW*0.65);const timg=imgs[ti%imgs.length].img;try{ctx.drawImage(timg,ox,y,tileW,tileW*(timg.height/timg.width))}catch(e){}ti++}}
       ctx.restore()
-      const big=Math.min(W*0.4,H*0.5)*advSize;const bh=big*(img.height/img.width)
-      ctx.save();ctx.globalAlpha=advOp;ctx.translate(W/2,H/2);ctx.rotate(advRot*Math.PI/180);if(advFlip)ctx.scale(-1,1);if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=20;ctx.shadowOffsetX=8;ctx.shadowOffsetY=8}if(advBri!==100)ctx.filter='brightness('+advBri/100+')';ctx.drawImage(img,-big/2,-bh/2,big,bh);ctx.restore()
+      if(n===1){
+        const big=Math.min(W*0.4,H*0.5)*advSize;const bh=big*(imgs[0].img.height/imgs[0].img.width)
+        drawSprite(imgs[0].img,W/2,H/2,big,bh,advOp,advRot,null)
+      }else{
+        const slotW=(W*0.8)/n
+        imgs.forEach((o,i)=>{const s=sizeFor(o.img,slotW*spacing,H*0.45);drawSprite(o.img,W*0.1+slotW*(i+0.5),H/2,s.w,s.h,advOp,advRot,null)})
+      }
     }else if(layout==='silhouette'){
-      const silW=W*0.9;const silH=silW*(img.height/img.width)
-      ctx.save();ctx.globalAlpha=0.08*advOp;ctx.drawImage(img,(W-silW)/2,(H-silH)/2,silW,silH);ctx.restore()
-      const fW=W*0.35*advSize;const fH=fW*(img.height/img.width)
-      ctx.save();ctx.globalAlpha=advOp;ctx.translate(W/2,H/2);ctx.rotate(advRot*Math.PI/180);if(advFlip)ctx.scale(-1,1);if(advShadow){ctx.shadowColor='rgba(0,0,0,0.6)';ctx.shadowBlur=20;ctx.shadowOffsetX=8;ctx.shadowOffsetY=8}if(advBri!==100)ctx.filter='brightness('+advBri/100+')';ctx.drawImage(img,-fW/2,-fH/2,fW,fH);ctx.restore()
+      const sil=imgs[0]
+      const silW=W*0.9;const silH=silW*(sil.img.height/sil.img.width)
+      ctx.save();ctx.globalAlpha=0.08*advOp;try{ctx.drawImage(sil.img,(W-silW)/2,(H-silH)/2+H*offY,silW,silH)}catch(e){}ctx.restore()
+      if(n===1){
+        const fW=W*0.35*advSize;const fH=fW*(sil.img.height/sil.img.width)
+        drawSprite(sil.img,W/2,H/2,fW,fH,advOp,advRot,null)
+      }else{
+        const slotW=(W*0.85)/n
+        imgs.forEach((o,i)=>{const s=sizeFor(o.img,slotW*spacing,H*0.5);drawSprite(o.img,W*0.075+slotW*(i+0.5),H/2,s.w,s.h,advOp,advRot,null)})
+      }
+    }else if(layout==='row'){
+      const slotW=(W*0.88)/n
+      imgs.forEach((o,i)=>{const s=sizeFor(o.img,slotW*spacing,H*0.6);const cx=W*0.06+slotW*(i+0.5);drawSprite(o.img,cx,H/2,s.w,s.h,advOp,advRot+((i-(n-1)/2)*4),null)})
+    }else if(layout==='grid'){
+      const cols=n<=2?2:n<=4?2:3,rows=Math.ceil(n/cols)
+      const cw=W*0.85/cols,ch=H*0.7/rows
+      imgs.forEach((o,i)=>{const c=i%cols,r2=Math.floor(i/cols);const s=sizeFor(o.img,cw*0.85*spacing,ch*0.85);const cx=W*0.075+cw*(c+0.5);const cy=H*0.15+ch*(r2+0.5);drawSprite(o.img,cx,cy,s.w,s.h,advOp,advRot,null)})
+    }else if(layout==='scatter'){
+      const rr=(function(seed){let s=seed||1234;return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}})(wpSceneSeed+7)
+      imgs.forEach((o,i)=>{
+        const s=sizeFor(o.img,W*0.35,H*0.4)
+        const cx=W*0.15+rr()*W*0.7,cy=H*0.2+rr()*H*0.55
+        drawSprite(o.img,cx,cy,s.w*spacing,s.h*spacing,advOp,advRot+(rr()*30-15),null)
+      })
+    }else if(layout==='split'){
+      if(n===1){
+        const s=sizeFor(imgs[0].img,W*0.55,H*0.7)
+        drawSprite(imgs[0].img,W/2,H/2,s.w,s.h,advOp,advRot,null)
+        ctx.save();ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(W/2-2,0,4,H);ctx.restore()
+      }else{
+        const left=imgs.slice(0,Math.ceil(n/2)),right=imgs.slice(Math.ceil(n/2))
+        ctx.save();ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fillRect(0,0,W/2,H);ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(W/2,0,W/2,H);ctx.restore()
+        left.forEach((o,i)=>{const s=sizeFor(o.img,W*0.35,H*0.5);drawSprite(o.img,W*0.25,H*(0.3+0.4*(i/Math.max(1,left.length-1||1))||0.5),s.w*spacing,s.h*spacing,advOp,advRot,null)})
+        right.forEach((o,i)=>{const s=sizeFor(o.img,W*0.35,H*0.5);drawSprite(o.img,W*0.75,H*(0.3+0.4*(i/Math.max(1,right.length-1||1))||0.5),s.w*spacing,s.h*spacing,advOp,-advRot,null)})
+        ctx.save();ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='900 '+Math.round(W*0.05)+'px '+fontMap[advFont];ctx.textAlign='center';ctx.fillText('VS',W/2,H/2);ctx.restore()
+      }
     }
-    if(advGrain>0){ctx.save();ctx.globalAlpha=advGrain*0.4;const id=ctx.createImageData(W,H);for(let i=0;i<id.data.length;i+=4){const n=Math.random()*255;id.data[i]=n;id.data[i+1]=n;id.data[i+2]=n;id.data[i+3]=255}ctx.putImageData(id,0,0);ctx.restore()}
+    // --- overlays: grain (fast tiled noise) ---
+    if(advGrain>0){
+      try{
+        const nw=240,nh=Math.max(1,Math.round(nw*H/W))
+        const off=document.createElement('canvas');off.width=nw;off.height=nh
+        const octx=off.getContext('2d');const id=octx.createImageData(nw,nh)
+        for(let i=0;i<id.data.length;i+=4){const v=Math.random()*255;id.data[i]=v;id.data[i+1]=v;id.data[i+2]=v;id.data[i+3]=255}
+        octx.putImageData(id,0,0)
+        ctx.save();ctx.globalAlpha=Math.min(0.5,advGrain*0.45);ctx.imageSmoothingEnabled=true;ctx.drawImage(off,0,0,W,H);ctx.restore()
+      }catch(e){}
+    }
     if(advVig>0){ctx.save();const grd=ctx.createRadialGradient(W/2,H/2,W*0.2,W/2,H/2,W*0.75);grd.addColorStop(0,'transparent');grd.addColorStop(1,'rgba(0,0,0,'+advVig+')');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);ctx.restore()}
-    if(advTint&&advTint!=='#000000'){ctx.save();ctx.globalAlpha=0.12;ctx.fillStyle=advTint;ctx.fillRect(0,0,W,H);ctx.restore()}
-    if(advBorder!=='none'){ctx.save();ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.fillStyle='rgba(255,255,255,0.8)';if(advBorder==='thin'){ctx.lineWidth=4;ctx.strokeRect(2,2,W-4,H-4)}else if(advBorder==='thick'){ctx.lineWidth=12;ctx.strokeRect(6,6,W-12,H-12)}else if(advBorder==='rounded'){ctx.lineWidth=6;const r=20;if(ctx.roundRect){ctx.beginPath();ctx.roundRect(3,3,W-6,H-6,r);ctx.stroke()}else{ctx.strokeRect(3,3,W-6,H-6)}}else if(advBorder==='polaroid'){const fw=16,fb=50;ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(0,0,W,H);ctx.clearRect(fw,fw,W-fw*2,H-fw-fb);ctx.fillStyle='rgba(245,245,245,1)';ctx.fillRect(0,H-fw-fb,W,fb)}ctx.restore()}
-    if(text){
-      const sizeMap={small:Math.round(W*0.025),medium:Math.round(W*0.04),large:Math.round(W*0.06),huge:Math.round(W*0.09)}
-      const fontSize=sizeMap[textSize]||sizeMap.medium
-      ctx.font='bold '+fontSize+'px '+fontMap[advFont]
-      ctx.textAlign='center'
-      ctx.fillStyle='rgba(0,0,0,0.5)'
-      const ty=textPos==='top'?fontSize+H*0.06:H-H*0.04
-      ctx.fillText(text,W/2+2,ty+2)
-      ctx.fillStyle='#fff'
-      ctx.fillText(text,W/2,ty)
+    if(advTint&&advTint!=='#000000'){ctx.save();ctx.globalAlpha=tintStr;ctx.fillStyle=advTint;ctx.fillRect(0,0,W,H);ctx.restore()}
+    if(advBorder!=='none'){
+      ctx.save();ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.fillStyle='rgba(255,255,255,0.8)'
+      if(advBorder==='thin'){ctx.lineWidth=Math.max(2,W*0.002);ctx.strokeRect(2,2,W-4,H-4)}
+      else if(advBorder==='thick'){ctx.lineWidth=Math.max(6,W*0.006);ctx.strokeRect(6,6,W-12,H-12)}
+      else if(advBorder==='rounded'){ctx.lineWidth=Math.max(3,W*0.003);const r=Math.round(W*0.02);if(ctx.roundRect){ctx.beginPath();ctx.roundRect(3,3,W-6,H-6,r);ctx.stroke()}else{ctx.strokeRect(3,3,W-6,H-6)}}
+      else if(advBorder==='polaroid'){const fw=Math.round(W*0.02),fb=Math.round(H*0.06);ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(0,0,W,fw);ctx.fillRect(0,H-fb,W,fb);ctx.fillRect(0,0,fw,H);ctx.fillRect(W-fw,0,fw,H)}
+      else if(advBorder==='neon-frame'){ctx.strokeStyle=glowColor;ctx.shadowColor=glowColor;ctx.shadowBlur=30;ctx.lineWidth=Math.max(4,W*0.004);ctx.strokeRect(8,8,W-16,H-16);ctx.strokeRect(14,14,W-28,H-28)}
+      else if(advBorder==='vignette-frame'){const grd=ctx.createLinearGradient(0,0,0,H);grd.addColorStop(0,'rgba(255,255,255,0.7)');grd.addColorStop(0.15,'transparent');grd.addColorStop(0.85,'transparent');grd.addColorStop(1,'rgba(255,255,255,0.7)');ctx.strokeStyle=grd;ctx.lineWidth=Math.max(6,W*0.008);ctx.strokeRect(4,4,W-8,H-8)}
+      ctx.restore()
     }
+    // --- text & badges ---
+    (function(){
+      const lines=[]
+      if(text)lines.push({t:text,scale:1})
+      if(text2)lines.push({t:text2,scale:0.7})
+      const auto=[]
+      if(showName&&team.length===1)auto.push(team[0].name.charAt(0).toUpperCase()+team[0].name.slice(1))
+      else if(showName&&team.length>1)auto.push(team.map(t=>t.name.charAt(0).toUpperCase()+t.name.slice(1)).join('  ·  '))
+      if(showId&&team.length===1)auto.push('#'+String(team[0].id).padStart(4,'0'))
+      if(showDate)auto.push(new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}))
+      if(auto.length)lines.push({t:auto.join('   '),scale:0.55,dim:true})
+      if(!lines.length&&!showTypes)return
+      const sizeMap={small:Math.round(W*0.025),medium:Math.round(W*0.04),large:Math.round(W*0.06),huge:Math.round(W*0.09)}
+      const base=sizeMap[textSize]||sizeMap.medium
+      ctx.textAlign='center';ctx.textBaseline='alphabetic'
+      let startY=textPos==='top'?base+H*0.05:textPos==='center'?H/2-(lines.length-1)*base*0.65:H-H*0.04-(lines.length-1)*base*1.15
+      lines.forEach((ln,idx)=>{
+        const fs=Math.round(base*ln.scale*(ln.dim?0.9:1))
+        ctx.font='bold '+fs+'px '+fontMap[advFont]
+        const y=startY+idx*fs*1.25+(textPos==='center'&&showTypes?-fs*0.4:0)
+        if(textStroke){ctx.lineWidth=Math.max(2,fs*0.12);ctx.strokeStyle='rgba(0,0,0,0.75)';ctx.strokeText(ln.t,W/2,y)}
+        else{ctx.fillStyle='rgba(0,0,0,0.45)';try{ctx.fillText(ln.t,W/2+2,y+2)}catch(e){}}
+        ctx.fillStyle=ln.dim?'rgba(255,255,255,0.85)':textColor
+        ctx.fillText(ln.t,W/2,y)
+      })
+      if(showTypes){
+        try{
+          const typesOf=team[0]&&allPokemon.find(p=>p.id===team[0].id)?.types
+            ||(pokemonCache[team[0].id]?.types?.map(t=>t.type.name))
+          const tlist=typesOf||[]
+          if(tlist.length){
+            const fs=Math.round(base*0.42)
+            ctx.font='700 '+fs+'px '+fontMap[advFont]
+            const cols={normal:'#A8A878',fire:'#F08030',water:'#6890F0',electric:'#F8D030',grass:'#78C850',ice:'#98D8D8',fighting:'#C03028',poison:'#A040A0',ground:'#E0C068',flying:'#A890F0',psychic:'#F85888',bug:'#A8B820',rock:'#B8A038',ghost:'#705898',dragon:'#7038F8',dark:'#705848',steel:'#B8B8D0',fairy:'#EE99AC'}
+            const widths=tlist.map(t=>ctx.measureText(t.toUpperCase()).width+fs*1.2)
+            const gap=fs*0.5,total=widths.reduce((a,b)=>a+b,0)+gap*(tlist.length-1)
+            let bx=W/2-total/2
+            const by=(textPos==='top'?startY+lines.length*base*0.7+fs:textPos==='center'?H/2+lines.length*base*0.7:H-fs*0.6)
+            tlist.forEach((t,i)=>{
+              const bw=widths[i],bh=fs*1.7
+              ctx.save()
+              if(ctx.roundRect){ctx.beginPath();ctx.roundRect(bx,by,bw,bh,bh/2);ctx.fillStyle=cols[t]||'#68A090';ctx.fill()}
+              else{ctx.fillStyle=cols[t]||'#68A090';ctx.fillRect(bx,by,bw,bh)}
+              ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(t.toUpperCase(),bx+bw/2,by+bh*0.72)
+              ctx.restore();bx+=bw+gap
+            })
+          }
+        }catch(e){}
+      }
+    })();
     if(style==='dark'){
       const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7)
-      grd.addColorStop(0,'transparent')
-      grd.addColorStop(1,'rgba(0,0,0,0.4)')
-      ctx.fillStyle=grd
-      ctx.fillRect(0,0,W,H)
+      grd.addColorStop(0,'transparent');grd.addColorStop(1,'rgba(0,0,0,0.4)')
+      ctx.fillStyle=grd;ctx.fillRect(0,0,W,H)
     }
     document.getElementById('wpCanvas').style.display='block'
     document.getElementById('wpPlaceholder').style.display='none'
     document.getElementById('wpDownloadArea').style.display='block'
-    document.getElementById('wpResInfo').textContent=W+'×'+H+' px'
-  }
-  img.onerror=function(){
-    const fb='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+wpSelectedId+'.png'
-    if(img.src!==fb){img.src=fb}else{alert('Failed to load sprite.')}
-  }
-  img.src=wpGetSpriteUrl(wpSelectedId,sprite)
+    document.getElementById('wpResInfo').textContent=W+'×'+H+' px · '+n+' Pokémon · '+layout
+    wpRenderGallery()
+  })
 }
+function wpGetResolution(){
+  const v=wpVal('wpResolution','1920x1080')
+  if(v==='custom'){
+    const w=Math.min(7680,Math.max(320,parseInt(wpVal('wpCustomW','1920'))||1920))
+    const h=Math.min(7680,Math.max(320,parseInt(wpVal('wpCustomH','1080'))||1080))
+    return[w,h]
+  }
+  return v.split('x').map(Number)
+}
+function wpGetSettings(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value:''}
+  const c=id=>{const el=document.getElementById(id);return el?el.checked:false}
+  return{team:wpTeam.map(t=>({id:t.id,name:t.name})),res:g('wpResolution'),cw:g('wpCustomW'),ch:g('wpCustomH'),bg:g('wpBgStyle'),c1:g('wpColorPick'),c2:g('wpColor2'),gdir:g('wpGradientDir'),pat:g('wpPatternScale'),dim:g('wpSceneDim'),fit:g('wpBgFit'),layout:g('wpLayout'),spacing:g('wpSpacing'),offY:g('wpOffsetY'),sprite:g('wpSprite'),text:g('wpText'),text2:g('wpText2'),tsize:g('wpTextSize'),tpos:g('wpTextPos'),tcolor:g('wpTextColor'),stroke:c('wpTextStroke'),sName:c('wpShowName'),sId:c('wpShowId'),sTypes:c('wpShowTypes'),sDate:c('wpShowDate'),size:g('wpSize'),rot:g('wpRotation'),op:g('wpOpacity'),bri:g('wpBrightness'),sat:g('wpSaturation'),con:g('wpContrast'),hue:g('wpHue'),sep:g('wpSepia'),vig:g('wpVignette'),grain:g('wpGrain'),glow:g('wpGlow'),glowC:g('wpGlowColor'),shStr:g('wpShadowStrength'),flip:c('wpFlip'),shadow:c('wpShadow'),pixel:c('wpPixelate'),border:g('wpBorder'),tint:g('wpTint'),tintStr:g('wpTintStrength'),font:g('wpFont'),seed:wpSceneSeed}
+}
+function wpApplySettings(s){
+  if(!s)return
+  if(s.team&&s.team.length){wpTeam=s.team.slice(0,5);wpSelectedId=wpTeam[0].id;wpSelectedName=wpTeam[0].name;wpRenderTeam()}
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.value=v}
+  const setC=(id,v)=>{const el=document.getElementById(id);if(el)el.checked=!!v}
+  set('wpResolution',s.res);set('wpCustomW',s.cw);set('wpCustomH',s.ch)
+  if(s.res==='custom'){const cr=document.getElementById('wpCustomRes');if(cr)cr.style.display='flex'}
+  set('wpBgStyle',s.bg);set('wpColorPick',s.c1);set('wpColor2',s.c2);set('wpGradientDir',s.gdir);set('wpPatternScale',s.pat);set('wpSceneDim',s.dim);set('wpBgFit',s.fit)
+  set('wpLayout',s.layout);set('wpSpacing',s.spacing);set('wpOffsetY',s.offY);set('wpSprite',s.sprite)
+  set('wpText',s.text);set('wpText2',s.text2);set('wpTextSize',s.tsize);set('wpTextPos',s.tpos);set('wpTextColor',s.tcolor)
+  setC('wpTextStroke',s.stroke);setC('wpShowName',s.sName);setC('wpShowId',s.sId);setC('wpShowTypes',s.sTypes);setC('wpShowDate',s.sDate)
+  set('wpSize',s.size);set('wpRotation',s.rot);set('wpOpacity',s.op);set('wpBrightness',s.bri);set('wpSaturation',s.sat);set('wpContrast',s.con);set('wpHue',s.hue);set('wpSepia',s.sep)
+  set('wpVignette',s.vig);set('wpGrain',s.grain);set('wpGlow',s.glow);set('wpGlowColor',s.glowC);set('wpShadowStrength',s.shStr)
+  setC('wpFlip',s.flip);setC('wpShadow',s.shadow);setC('wpPixelate',s.pixel)
+  set('wpBorder',s.border);set('wpTint',s.tint);set('wpTintStrength',s.tintStr);set('wpFont',s.font)
+  if(s.seed!==undefined)wpSceneSeed=s.seed
+  const pairs=[['wpSize','wpSizeVal','%'],['wpRotation','wpRotVal','°'],['wpOpacity','wpOpVal','%'],['wpBrightness','wpBriVal','%'],['wpSaturation','wpSatVal','%'],['wpContrast','wpConVal','%'],['wpHue','wpHueVal','°'],['wpSepia','wpSepVal','%'],['wpVignette','wpVigVal','%'],['wpGrain','wpGrainVal','%'],['wpGlow','wpGlowVal','%'],['wpPatternScale','wpPatVal','px'],['wpSceneDim','wpDimVal','%'],['wpSpacing','wpSpaceVal','%'],['wpOffsetY','wpOffVal','%'],['wpTintStrength','wpTintStrVal','%']]
+  pairs.forEach(([a,b,suf])=>{const A=document.getElementById(a),B=document.getElementById(b);if(A&&B)B.textContent=A.value+suf})
+  wpGenerate()
+}
+function wpRandomize(){
+  const pick=a=>a[Math.floor(Math.random()*a.length)]
+  const bgs=['gradient','solid','radial','pattern','dark','neon','scene_forest','scene_cave','scene_beach','scene_mountain','scene_volcano','scene_space','scene_aurora','scene_city','scene_ocean','scene_desert','scene_night','scene_storm','scene_cherry','scene_tundra']
+  const layouts=['center','bottom','corner','tiled','silhouette','row','grid','scatter','split']
+  const sprites=['official','front','shiny','dream','home']
+  const palettes=[['#1a1a2e','#2d3a5f'],['#0f0f23','#533483'],['#7b2d26','#f4a259'],['#0d1b2a','#1b6ca8'],['#134e13','#f9e04b'],['#2d132c','#c86bfa'],['#001219','#0a9396'],['#3a0ca3','#f72585']]
+  const pal=pick(palettes)
+  wpRandomTeam(Math.random()>0.6?3:1)
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v}
+  set('wpBgStyle',pick(bgs));set('wpColorPick',pal[0]);set('wpColor2',pal[1])
+  set('wpLayout',wpTeam.length>1?pick(['row','grid','scatter','split','center']):pick(layouts))
+  set('wpSprite',pick(sprites))
+  set('wpGradientDir',pick(['diag','vertical','horizontal','radial-center']))
+  wpSceneSeed=Math.floor(Math.random()*100000)
+  const texts=['I choose you!','Gotta catch em all!','Shiny hunt mode','Elite Four ready','Champion vibes','Too cute to battle','Legendary energy']
+  if(Math.random()>0.4)set('wpText',pick(texts));else set('wpText','')
+  set('wpText2','')
+  wpGenerate()
+}
+const WP_BUILTINS=[
+  {name:'Minimal Dark',s:{bg:'dark',c1:'#0a0a0a',c2:'#2d3a5f',gdir:'diag',layout:'center',sprite:'official',border:'thin',vig:'35',grain:'0',text:'',tsize:'medium',tpos:'bottom',tcolor:'#ffffff',font:'sans',size:'100',rot:'0',op:'100',bri:'100',sat:'100',con:'100',hue:'0',sep:'0',glow:'0',shadow:true,shStr:'20'}},
+  {name:'Neon Hero',s:{bg:'neon',c1:'#0f0f23',c2:'#2d3a5f',gdir:'diag',layout:'center',sprite:'official',border:'neon-frame',vig:'20',grain:'5',glow:'70',glowC:'#00c8ff',text:'',tsize:'large',tpos:'bottom',tcolor:'#ffffff',font:'display',size:'110',rot:'0',op:'100',bri:'110',sat:'130',con:'110',hue:'0',sep:'0',shadow:true,shStr:'20'}},
+  {name:'Team Showcase',s:{bg:'gradient',c1:'#1a1a2e',c2:'#533483',gdir:'diag',layout:'row',sprite:'official',border:'rounded',vig:'25',grain:'0',glow:'15',text:'',tsize:'medium',tpos:'bottom',tcolor:'#ffffff',font:'rounded',size:'95',rot:'0',op:'100',bri:'100',sat:'110',con:'105',hue:'0',sep:'0',shadow:true,shStr:'20'}},
+  {name:'Vintage Poster',s:{bg:'gradient',c1:'#7b2d26',c2:'#e8c878',gdir:'vertical',layout:'center',sprite:'official',border:'thick',vig:'40',grain:'35',sep:'45',text:'',tsize:'large',tpos:'top',tcolor:'#fff8d0',font:'serif',size:'100',rot:'0',op:'100',bri:'95',sat:'85',con:'105',hue:'0',glow:'0',shadow:true,shStr:'20'}}
+]
+function wpRenderPresets(){
+  const row=document.getElementById('wpPresetRow');if(!row)return
+  let customs=[]
+  try{customs=JSON.parse(localStorage.getItem('wpPresets')||'[]')}catch(e){}
+  row.innerHTML=WP_BUILTINS.map((p,i)=>'<button onclick="wpApplyBuiltin('+i+')" style="padding:5px 10px;border-radius:14px;border:1px solid rgba(137,180,250,0.35);background:rgba(137,180,250,0.1);color:var(--text);font-size:11px;cursor:pointer">'+p.name+'</button>').join('')+
+    customs.map((p,i)=>'<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 6px 5px 10px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-size:11px">'+p.name+'<button onclick="wpApplyCustom('+i+')" style="border:none;background:transparent;color:var(--ctp-green);cursor:pointer;font-size:11px">▶</button><button onclick="wpDeletePreset('+i+')" style="border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:11px">✕</button></span>').join('')
+}
+function wpApplyBuiltin(i){const b=WP_BUILTINS[i];if(!b)return;const cur=wpGetSettings();wpApplySettings(Object.assign({},cur,b.s))}
+function wpApplyCustom(i){try{const arr=JSON.parse(localStorage.getItem('wpPresets')||'[]');if(arr[i])wpApplySettings(Object.assign(wpGetSettings(),arr[i].s))}catch(e){}}
+function wpDeletePreset(i){try{const arr=JSON.parse(localStorage.getItem('wpPresets')||'[]');arr.splice(i,1);localStorage.setItem('wpPresets',JSON.stringify(arr));wpRenderPresets()}catch(e){}}
+function wpSavePreset(){
+  const name=(wpVal('wpPresetName','')||'').trim()||('Preset '+(new Date().toLocaleTimeString()))
+  try{
+    const arr=JSON.parse(localStorage.getItem('wpPresets')||'[]')
+    arr.push({name,s:wpGetSettings()})
+    localStorage.setItem('wpPresets',JSON.stringify(arr.slice(-20)))
+    document.getElementById('wpPresetName').value=''
+    wpRenderPresets()
+  }catch(e){alert('Could not save preset')}
+}
+function wpSaveToGallery(){
+  const cv=document.getElementById('wpCanvas');if(!cv||!cv.width){alert('Generate first!');return}
+  try{
+    const thumb=document.createElement('canvas');const tw=240;thumb.width=tw;thumb.height=Math.round(tw*cv.height/cv.width)
+    thumb.getContext('2d').drawImage(cv,0,0,thumb.width,thumb.height)
+    const arr=JSON.parse(localStorage.getItem('wpGallery')||'[]')
+    arr.unshift({img:thumb.toDataURL('image/jpeg',0.7),s:wpGetSettings(),t:Date.now()})
+    localStorage.setItem('wpGallery',JSON.stringify(arr.slice(0,12)))
+    wpRenderGallery()
+  }catch(e){alert('Gallery full or blocked — try a smaller resolution.')}
+}
+function wpRenderGallery(){
+  const wrap=document.getElementById('wpGallery'),grid=document.getElementById('wpGalleryGrid')
+  if(!wrap||!grid)return
+  let arr=[];try{arr=JSON.parse(localStorage.getItem('wpGallery')||'[]')}catch(e){}
+  if(!arr.length&&!document.getElementById('wpCanvas').width){wrap.style.display='none';return}
+  if(!arr.length){return}
+  wrap.style.display='block'
+  grid.innerHTML=arr.map((g,i)=>'<div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border)"><img src="'+g.img+'" onclick="wpLoadGallery('+i+')" title="Load settings" style="width:100%;display:block;cursor:pointer"><button onclick="wpDelGallery('+i+')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:6px;font-size:10px;padding:2px 6px;cursor:pointer">✕</button></div>').join('')
+  wpRenderPresets()
+}
+function wpLoadGallery(i){try{const arr=JSON.parse(localStorage.getItem('wpGallery')||'[]');if(arr[i])wpApplySettings(arr[i].s)}catch(e){}}
+function wpDelGallery(i){try{const arr=JSON.parse(localStorage.getItem('wpGallery')||'[]');arr.splice(i,1);localStorage.setItem('wpGallery',JSON.stringify(arr));wpRenderGallery()}catch(e){}}
 function wpDownload(){
   const canvas=document.getElementById('wpCanvas')
+  if(!canvas||!canvas.width){alert('Generate first!');return}
+  const fmt=wpVal('wpFormat','png')
+  const q=wpNum('wpQuality',92)/100
   const link=document.createElement('a')
-  link.download='pokemon_wallpaper_'+(wpSelectedName||'custom')+'.png'
-  link.href=canvas.toDataURL('image/png')
+  const names=(wpTeam.length?wpTeam.map(t=>t.name).join('-'):(wpSelectedName||'custom')).toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,60)
+  link.download='pokemon_wallpaper_'+names+'.'+(fmt==='png'?'png':fmt)
+  try{
+    try{link.href=canvas.toDataURL('image/'+fmt,fmt==='png'?undefined:q)}
+    catch(e){link.href=canvas.toDataURL('image/png');link.download='pokemon_wallpaper_'+names+'.png'}
+  }catch(e){alert('Export blocked (tainted canvas from Dream-World SVG). Switch Sprite Style to Official/Pixel and retry.');return}
   link.click()
+}
+function wpCopyImage(){
+  const canvas=document.getElementById('wpCanvas')
+  if(!canvas||!canvas.width){alert('Generate first!');return}
+  try{
+    canvas.toBlob(async blob=>{
+      try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);alert('Copied to clipboard!')}
+      catch(e){alert('Copy blocked by browser — use Download instead.')}
+    },'image/png')
+  }catch(e){alert('Copy not supported here.')}
 }
 
 // ===== POKEMON COMPARE =====
@@ -5291,7 +5732,7 @@ function pcExport(){
     for(let i=0;i<localStorage.length;i++){
       const k=localStorage.key(i)
       if(k.startsWith('pc_'))data.cards[k]=localStorage.getItem(k)
-      if(k.startsWith('wp_'))data.wallpapers[k]=localStorage.getItem(k)
+      if(k.startsWith('wp_')||k==='wpPresets'||k==='wpGallery')data.wallpapers[k]=localStorage.getItem(k)
       if(k==='pokeStats')data.stats[k]=localStorage.getItem(k)
       if(k==='pokeChampSave')data.saves={...data.saves,[k]:localStorage.getItem(k)}
       if(k==='nrState')data.saves={...data.saves,[k]:localStorage.getItem(k)}

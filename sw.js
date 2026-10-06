@@ -1,8 +1,9 @@
-const CACHE_NAME='pokedex-v1'
+const CACHE_NAME='pokedex-v2'
 const STATIC_ASSETS=['/','index.html','style.css','script.js','offline-data.js','icons.svg']
 const POKE_API='pokeapi.co'
 const SPRITE_HOST='raw.githubusercontent.com'
 const TCG_IMG_HOST='images.pokemontcg.io'
+const SCRYDEX_IMG_HOST='images.scrydex.com'
 const TCG_DATA_HOST='raw.githubusercontent.com'
 
 self.addEventListener('install',e=>{
@@ -37,8 +38,8 @@ self.addEventListener('fetch',e=>{
     return
   }
 
-  // TCG card images: cache first, network fallback
-  if(host===TCG_IMG_HOST){
+  // TCG card images: cache first, network fallback (pokemontcg.io + scrydex for 30th Celebration)
+  if(host===TCG_IMG_HOST||host===SCRYDEX_IMG_HOST){
     e.respondWith(caches.match(e.request).then(r=>{
       if(r)return r
       return fetch(e.request).then(res=>{

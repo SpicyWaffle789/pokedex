@@ -1418,9 +1418,17 @@ body.light #offlineIndicator{border-color:rgba(255,152,0,0.3);background:rgba(25
 .wp-color-swatch{width:28px;height:28px;border-radius:6px;border:2px solid rgba(205,214,244,0.15);cursor:pointer;display:inline-block;transition:all .2s}
 .wp-color-swatch:hover{transform:scale(1.15);border-color:var(--text-dim)}
 .wp-color-swatch.active{border-color:var(--ctp-blue);box-shadow:0 0 8px rgba(33,150,243,0.5)}
+#wpSearchResults{border:1px solid var(--border);border-radius:0 0 10px 10px;background:var(--bg-mid);box-shadow:0 8px 24px rgba(0,0,0,0.35)}
 #wpSearchResults div{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);transition:background .15s}
 #wpSearchResults div:hover{background:var(--surface-hover)}
 #wpSearchResults div img{width:32px;height:32px;image-rendering:pixelated}
+#wpTeamList>div{transition:border-color .2s}
+#wpTeamList img:hover{transform:scale(1.1)}
+#wpPresetRow button:hover{transform:translateY(-1px)}
+#wpGalleryGrid img{transition:transform .2s}
+#wpGalleryGrid img:hover{transform:scale(1.04)}
+#wallpaperPage input[type="range"]{accent-color:var(--ctp-blue);cursor:pointer}
+#wallpaperPage details summary:hover{color:var(--text)}
 body.light .wp-color-swatch{border-color:rgba(0,0,0,0.15)}
 body.light .wp-color-swatch.active{border-color:#1976d2;box-shadow:0 0 8px rgba(25,118,210,0.3)}
 
